@@ -186,7 +186,7 @@ pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: 
         rendered.append(self.frame_allocator.allocator(), win) catch {};
 
         const scene: types.RenderScene = .{
-            .ui_objects = req.ui_objects,
+            .ui_items = req.ui_items,
             .objects = &.{},
             .lights = &.{}
         };
