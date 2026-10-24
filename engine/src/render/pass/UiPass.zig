@@ -112,50 +112,53 @@ fn execute(self: *UiPass, ctx: pass.PassContext) void {
     const default_image_handle = ctx.resources.get(resource.default_image, .image) orelse @panic("default_image resource missing!");
     const default_sampler_handle = ctx.resources.get(resource.default_sampler, .sampler) orelse @panic("default_sampler resource missing!");
 
-    for (ctx.scene.ui_objects) |ui_obj| {
-        const is_rounded = blk: {
-            for (ui_obj.corners) |c| {
-                if (c > 0) break :blk true;
-            }
+    for (ctx.scene.ui_items) |item| switch (item) {
+        .quad => |obj| {
+            const is_rounded = blk: {
+                for (obj.corners) |c| {
+                    if (c > 0) break :blk true;
+                }
 
-            break :blk false;
-        };
-        const vs_params: GpuUiParams = .{
-            .ortho = ortho.m,
-            .pos = .{ ui_obj.pos[0] * scale, ui_obj.pos[1] * scale },
-            .size = .{ ui_obj.size[0] * scale, ui_obj.size[1] * scale },
-            .color = ui_obj.color.toArr(),
-            .uv_pos = ui_obj.uv_pos,
-            .uv_size = ui_obj.uv_size,
-            .is_text = @intCast(@intFromBool(ui_obj.is_text)),
-            .is_rounded = @intCast(@intFromBool(is_rounded)),
-            .corner_radii = blk: {
-                const vec: @Vector(4, f32) = ui_obj.corners;
-                break :blk vec * @as(@Vector(4, f32), @splat(scale));
-            },
-            .border_widths = blk: {
-                const vec: @Vector(4, f32) = ui_obj.borders;
-                break :blk vec * @as(@Vector(4, f32), @splat(scale));
-            },
-            .border_color = ui_obj.border_color.toArr()
-        };
+                break :blk false;
+            };
+            const vs_params: GpuUiParams = .{
+                .ortho = ortho.m,
+                .pos = .{ obj.pos[0] * scale, obj.pos[1] * scale },
+                .size = .{ obj.size[0] * scale, obj.size[1] * scale },
+                .color = obj.color.toArr(),
+                .uv_pos = obj.uv_pos,
+                .uv_size = obj.uv_size,
+                .is_text = @intCast(@intFromBool(obj.is_text)),
+                .is_rounded = @intCast(@intFromBool(is_rounded)),
+                .corner_radii = blk: {
+                    const vec: @Vector(4, f32) = obj.corners;
+                    break :blk vec * @as(@Vector(4, f32), @splat(scale));
+                },
+                .border_widths = blk: {
+                    const vec: @Vector(4, f32) = obj.borders;
+                    break :blk vec * @as(@Vector(4, f32), @splat(scale));
+                },
+                .border_color = obj.border_color.toArr()
+            };
 
-        self.vs_ubuf.update(std.mem.asBytes(&vs_params));
+            self.vs_ubuf.update(std.mem.asBytes(&vs_params));
 
-        const texture_handle = ui_obj.texture orelse default_image_handle;
-        const sampler_handle = ui_obj.sampler orelse default_sampler_handle;
+            const texture_handle = obj.texture orelse default_image_handle;
+            const sampler_handle = obj.sampler orelse default_sampler_handle;
 
-        self.pipeline.applyBindings(.{
-            .vertex_buffers = .{ self.ui_quad.vertex_buffer.handle, null, null, null },
-            .index_buffer = self.ui_quad.index_buffer.handle,
-            .resources = &.{
-                .{ .name = "vsParams", .handle = .{ .uniform_buffer = self.vs_ubuf.handle } },
-                .{ .name = "atlasTexture", .handle = .{ .texture = texture_handle } },
-                .{ .name = "atlasSampler", .handle = .{ .sampler = sampler_handle } }
-            }
-        });
-        self.pipeline.draw(0, self.ui_quad.index_count, 1);
-    }
+            self.pipeline.applyBindings(.{
+                .vertex_buffers = .{ self.ui_quad.vertex_buffer.handle, null, null, null },
+                .index_buffer = self.ui_quad.index_buffer.handle,
+                .resources = &.{
+                    .{ .name = "vsParams", .handle = .{ .uniform_buffer = self.vs_ubuf.handle } },
+                    .{ .name = "atlasTexture", .handle = .{ .texture = texture_handle } },
+                    .{ .name = "atlasSampler", .handle = .{ .sampler = sampler_handle } }
+                }
+            });
+            self.pipeline.draw(0, self.ui_quad.index_count, 1);
+        },
+        .painter => {}
+    };
 }
 
 pub fn node(self: *UiPass) pass.PassNode {

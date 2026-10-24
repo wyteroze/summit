@@ -17,6 +17,17 @@ pub const RenderObject = struct {
     material: Material
 };
 
+pub const UiItem = union(enum) {
+    quad: UiObject,
+    painter: PainterObject,
+};
+
+pub const PainterObject = struct {
+    origin: [2]f32,
+    size: [2]f32,
+
+};
+
 pub const UiObject = struct {
     pos: [2]f32,
     size: [2]f32,
@@ -38,7 +49,7 @@ pub const UiObject = struct {
 };
 
 pub const RenderScene = struct {
-    ui_objects: []const UiObject,
+    ui_items: []const UiItem,
     objects: []const RenderObject,
     lights: []const gpu.types.GpuLight,
     clear_color: core.Color = .fromRgbFloat(0, 0, 0, 1.0),
@@ -60,7 +71,7 @@ pub const RenderViewRequest = struct {
 
 pub const RenderWindowRequest = struct {
     window_id: u64,
-    ui_objects: []const UiObject,
+    ui_items: []const UiItem,
 };
 
 pub const RenderWindow = struct {

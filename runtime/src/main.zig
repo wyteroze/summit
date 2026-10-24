@@ -34,10 +34,10 @@ fn rootOf(e: ecs.Entity) ecs.Entity {
     return r;
 }
 
-fn collectUiObjects(
+fn collectUiItems(
     ui: *Ui,
     entity: ecs.Entity,
-    objs: *std.ArrayList(render.types.UiObject),
+    items: *std.ArrayList(render.types.UiItem),
     alloc: std.mem.Allocator,
 ) void {
     const cids = ui.component_ids;
@@ -55,7 +55,7 @@ fn collectUiObjects(
         const uv_pos: math.Vec2 = if (image) |i| i.crop.min else .zero;
         const uv_size: math.Vec2 = if (image) |i| i.crop.max.sub(i.crop.min) else .one;
 
-        objs.append(alloc, .{
+        items.append(alloc, .{ .quad = .{
             .pos = pos.arr(),
             .size = size.arr(),
             .color = color.srgbDecode(),
@@ -82,13 +82,13 @@ fn collectUiObjects(
                 };
             } else @splat(0),
             .border_color = if (borders) |b| b.color else .fromRgbFloat(0, 0, 0, 0)
-        }) catch @panic("Out of memory");
+        } }) catch @panic("Out of memory");
 
         if (ui.world.getComponent(entity, cids.text, Ui.types.Text)) |txt| {
             if (ui.world.getComponent(entity, cids.computed_text_layout, Ui.types.ComputedTextLayout)) |ct| {
                 if (txt.font) |f| if (f.ensureGpuGet(.font, .{}) catch null) |atlas| {
                     for (ct.quads) |quad| {
-                        objs.append(alloc, .{
+                        items.append(alloc, .{ .quad = .{
                             .pos = quad.pos,
                             .size = quad.size,
                             .color = txt.color.srgbDecode(),
@@ -97,7 +97,7 @@ fn collectUiObjects(
                             .sampler = atlas.sampler.handle,
                             .texture = atlas.texture.handle,
                             .is_text = true,
-                        }) catch @panic("Out of memory");
+                        } }) catch @panic("Out of memory");
                     }
                 };
             }
@@ -105,7 +105,7 @@ fn collectUiObjects(
     }
 
     for (entity.getChildren()) |child| {
-        collectUiObjects(ui, child, objs, alloc);
+        collectUiItems(ui, child, items, alloc);
     }
 }
 
@@ -189,12 +189,12 @@ fn submitToRenderer(w: *ecs.World, ui: *Ui, renderer: *render.Renderer) void {
 
     const ui_cids = ui.component_ids;
 
-    var window_lists: std.array_hash_map.Auto(u64, struct { id: u64, entity: ecs.Entity, objs: std.ArrayList(render.types.UiObject) }) = .{};
+    var window_lists: std.array_hash_map.Auto(u64, struct { id: u64, entity: ecs.Entity, items: std.ArrayList(render.types.UiItem) }) = .{};
     {
         var it = ui.world.query(&.{ ui_cids.window }).iterator();
         while (it.next()) |e| {
             const win = ui.world.getComponent(e, ui_cids.window, Ui.types.Window).?;
-            window_lists.put(allocator, e.toU64(), .{ .id = win.id, .entity = e, .objs = .empty }) catch @panic("Out of memory");
+            window_lists.put(allocator, e.toU64(), .{ .id = win.id, .entity = e, .items = .empty }) catch @panic("Out of memory");
         }
     }
 
@@ -245,25 +245,25 @@ fn submitToRenderer(w: *ecs.World, ui: *Ui, renderer: *render.Renderer) void {
             requests.append(allocator, .{
                 .frame = .{ .view_matrix = view_mat, .proj_matrix = proj, .viewport_size = px },
                 .scene = .{ .ambient = scene.environment.ambient, .clear_color = scene.environment.clear_color,
-                            .lights = lights.items, .objects = objects.items, .ui_objects = &.{} },
+                            .lights = lights.items, .objects = objects.items, .ui_items = &.{} },
                 .render_view_id = entity.toU64(),
             }) catch @panic("Out of memory");
 
-            list.objs.append(allocator, .{
+            list.items.append(allocator, .{ .quad = .{
                 .pos = position.arr(),
                 .size = size.arr(),
                 .texture = view.target.handle,
                 .sampler = renderer.default_sampler.handle,
                 .uv_size = @splat(1),
                 .color = .fromRgbFloat(1, 1, 1, 1),
-            }) catch @panic("Out of memory");
+            } }) catch @panic("Out of memory");
         }
     }
 
     var window_requests: std.ArrayList(render.types.RenderWindowRequest) = .empty;
     for (window_lists.values()) |*wl| {
-        collectUiObjects(ui, wl.entity, &wl.objs, allocator);
-        window_requests.append(allocator, .{ .window_id = wl.id, .ui_objects = wl.objs.items }) catch @panic("Out of memory");
+        collectUiItems(ui, wl.entity, &wl.items, allocator);
+        window_requests.append(allocator, .{ .window_id = wl.id, .ui_items = wl.items.items }) catch @panic("Out of memory");
     }
 
     renderer.render(requests.items, window_requests.items) catch |e| std.log.err("render() failed: {s}", .{ @errorName(e) });
