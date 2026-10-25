@@ -74,22 +74,6 @@ pub fn build(b: *std.Build) void {
         exe.root_module.addLibraryPath(.{ .cwd_relative = sdk_libs });
     }
 
-    // Docgen
-    const docgen_dep = b.dependency("docgen", .{
-        .target = b.graph.host, // this is running on our machine, not being distributed
-        .optimize = .Debug
-    });
-    const docgen_exe = docgen_dep.artifact("docgen");
-
-    const run_docgen = b.addRunArtifact(docgen_exe);
-    run_docgen.addArg("--registry");
-    run_docgen.addFileArg(b.path("engine/src/scripting/linker/registry.zig"));
-    run_docgen.addArg("--out");
-    run_docgen.addDirectoryArg(b.path("docs/api"));
-
-    const docs_step = b.step("docs", "Regenerate the Summit Lua API docs from source.");
-    docs_step.dependOn(&run_docgen.step);
-
     // invoked when running `zig build`
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);
