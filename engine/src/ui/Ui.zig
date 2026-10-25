@@ -243,7 +243,10 @@ pub fn createElement(self: *Ui, windowing: *Windowing, options: ?CreateElementOp
     try self.world.set(entity, self.component_ids.corner_radii, types.CornerRadii, if (opts.corner_radii) |c| c else .{});
 
     if (opts.layout) |l| try self.world.set(entity, self.component_ids.layout, types.Layout, l);
-    if (opts.text) |t| try self.world.set(entity, self.component_ids.text, types.Text, t);
+    if (opts.text) |*t| {
+        try @constCast(t).own(.{ .ui = self });
+        try self.world.set(entity, self.component_ids.text, types.Text, t.*);
+    }
     if (opts.image) |i| try self.world.set(entity, self.component_ids.image, types.Image, i);
     if (opts.painter) |p| try self.world.set(entity, self.component_ids.painter, Painter, p);
 
