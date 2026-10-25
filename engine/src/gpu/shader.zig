@@ -41,3 +41,11 @@ pub fn uiShaderDesc() desc.ShaderDesc {
         .{ .name = "UiShader: fragment", .stage = .fragment, .source = source, .entrypoint = "fragmentMain" }
     } };
 }
+
+pub fn painterShaderDesc() desc.ShaderDesc {
+    const source = @embedFile("shaders/src/painter.slang");
+    return .{ .stages = &.{
+        .{ .name = "PainterShader: vertex", .stage = .vertex, .source = source, .entrypoint = "vertexMain" },
+        .{ .name = "PainterShader: fragment", .stage = .fragment , .source = source, .entrypoint = "fragmentMain"} 
+    } };
+}
