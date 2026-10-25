@@ -126,8 +126,11 @@ pub fn Binder(comptime api: anytype) type {
                 .type_name = @typeName(T),
                 .size = @sizeOf(T),
                 .read = struct {
-                    fn f(l: *zlua.Lua, idx: i32, out: []u8) void {
-                        const v = M.parse(T, l, idx);
+                   fn f(l: *zlua.Lua, idx: i32, out: []u8) void {
+                        var v = M.parse(T, l, idx);
+                        if (comptime @hasDecl(T, "own"))
+                            v.own(Host.fromState(l)) catch l.raiseErrorStr("out of memory", .{});
+
                         @memcpy(out[0..@sizeOf(T)], std.mem.asBytes(&v));
                     }
                 }.f,

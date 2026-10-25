@@ -161,11 +161,11 @@ function Teapot.new(entity: Entity)
     -- win.Position
 
     print(windowing.MainWindow.Size)
-    -- local modal = Modal.new(Vec2.new(300, 150), Color.new(.1, .1, .1), jbMono, "You smell like updog", "What's updog")
-    -- modal.button.Activated:Connect(function()
-    --     local response = Modal.new(Vec2.new(300, 150), Color.new(.5, .5, .5), jbMono, "Not much how about you... lmao!!\ngottem!!", "Bruh.", true, "My hilarious joke")
-    --     response.button.Activated:Connect(function() response.win:Destroy() end)
-    -- end)
+    local modal = Modal.new(Vec2.new(300, 150), Color.new(.1, .1, .1), jbMono, "You smell like updog", "What's updog", false)
+    modal.button.Activated:Connect(function()
+        local response = Modal.new(Vec2.new(300, 150), Color.new(.5, .5, .5), jbMono, "Not much how about you... lmao!!\ngottem!!", "Bruh.", true, "My hilarious joke")
+        response.button.Activated:Connect(function() response.win:Destroy() end)
+    end)
 
     local elem = ui.CreateElement {
         Size = { Width = 300, Height = 300 },
@@ -173,7 +173,7 @@ function Teapot.new(entity: Entity)
     }
 
     elem.Components.Painter.OnPaint:Connect(function()
-        elem.Components.Painter:DrawLine(Vec2.new(0, 0), Vec2.new(50, 50), 10, Color.new(0, 0, 0, 1))
+        elem.Components.Painter:DrawLine(Vec2.new(0, 0), Vec2.new(30, (math.sin(self._timer)+1)*10), 2, Color.new(0, 0, 0, 1))
         print("Paint")
     end)
 

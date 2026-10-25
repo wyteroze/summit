@@ -283,12 +283,14 @@ pub const Text = struct {
     color: core.Color = .fromRgbFloat(1, 1, 1, 1),
     size: f32 = 13,
 
-    /// Since all components' strings must be heap-allocated, this frees the last
-    /// string and dupes the given string. You should use the same allocator
-    /// for every setText call.
-    pub fn setText(self: *Text, allocator: std.mem.Allocator, txt: []const u8) !void {
-        allocator.free(self.content);
-        self.content = try allocator.dupe(u8, txt);
+    // Called by Lua codec
+    pub fn own(self: *Text, host: anytype) !void {
+        if (self.content.len > 0) self.content = try host.ui.world.allocator.dupe(u8, self.content);
+    }
+
+    pub fn deinit(self: *Text, a: std.mem.Allocator) void {
+        if (self.content.len > 0) a.free(self.content);
+        self.content = "";
     }
 };
 
