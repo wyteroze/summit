@@ -15,6 +15,8 @@ pub const Vec2 = extern struct {
     pub fn simd(self: Vec2) Simd2 { return Simd2{ self.x, self.y }; }
     pub fn arr(self: Vec2) [2]f32 { return .{ self.x, self.y }; }
 
+    pub fn eq(self: Vec2, other: Vec2) bool { return @reduce(.And, self.simd() == other.simd()); }
+    pub fn neq(self: Vec2, other: Vec2) bool { return @reduce(.Or, self.simd() != other.simd()); }
     pub fn add(self: Vec2, other: Vec2) Vec2 { return .fromSimd(self.simd() + other.simd()); }
     pub fn sub(self: Vec2, other: Vec2) Vec2 { return .fromSimd(self.simd() - other.simd()); }
     pub fn mul(self: Vec2, other: Vec2) Vec2 { return .fromSimd(self.simd() * other.simd()); }
