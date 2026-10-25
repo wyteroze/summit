@@ -74,13 +74,3 @@ pub fn runAll(self: *SystemRegistry, world: *World, dt: f32) void {
     for (self.systems.items) |s| s.run(world, dt, s.ctx);
 }
 
-pub fn registerLua(l: anytype) void {
-    const linker = @import("../scripting/linker/linker.zig");
-
-    linker.reference(l, SystemEntry, .{
-        .name = .{ .named = "System" },
-        .methods = &.{
-            .named("Unregister", SystemEntry.unregister)
-        }
-    });
-}
