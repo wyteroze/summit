@@ -11,11 +11,12 @@ const Backend = @import("backend.zig").Backend;
 pub const GpuBuffer = struct {
     backend: Backend,
     handle: types.BufferHandle,
+    desc: desc.BufferDesc,
 
     pub fn init(b: Backend, d: desc.BufferDesc) !GpuBuffer {
         const handle = b.createBuffer(d);
 
-        return .{ .backend = b, .handle = handle };
+        return .{ .backend = b, .handle = handle, .desc = d };
     }
 
     pub fn deinit(self: GpuBuffer) void {
@@ -24,6 +25,18 @@ pub const GpuBuffer = struct {
 
     pub fn update(self: GpuBuffer, data: []const u8) void {
         self.backend.updateBuffer(self.handle, data);
+    }
+
+    /// Grows the buffer to the needed size.
+    /// Does nothing if the buffer is equal to or larger than the given size.
+    /// Contents of the buffer are lost when this is called.
+    pub fn grow(self: *GpuBuffer, needed: usize) void {
+        if (needed <= self.desc.size) return;
+
+        const new_size = @max(needed, self.desc.size + self.desc.size / 2);
+        self.backend.deleteBuffer(self.handle);
+        self.desc.size = new_size;
+        self.handle = self.backend.createBuffer(self.desc);
     }
 };
 
