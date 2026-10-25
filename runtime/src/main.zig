@@ -102,6 +102,19 @@ fn collectUiItems(
                 };
             }
         }
+
+        if (ui.world.getComponent(entity, cids.painter, Ui.Painter)) |settings| {
+            if (ui.painters.get(entity.toU64())) |st| {
+                if (st.mesh.indices.items.len > 0) items.append(alloc, .{ .painter = .{
+                    .origin = pos.arr(),
+                    .size = size.arr(),
+                    .vertices = st.mesh.vertices.items,
+                    .indices = st.mesh.indices.items,
+                    .clip = settings.clip,
+                    .antialiased = settings.antialiased,
+                } }) catch @panic("Out of memory");
+            }
+        }
     }
 
     for (entity.getChildren()) |child| {
@@ -528,6 +541,7 @@ pub fn main(init: std.process.Init) !void {
         world.update(dt_seconds);
         windowing.update();
         ui.update();
+        ui.paint();
         submitToRenderer(&world, &ui, &renderer);
         submitToAudio(&world, &audio);
 

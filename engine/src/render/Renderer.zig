@@ -62,9 +62,10 @@ pub fn init(allocator: std.mem.Allocator, gpu_device: *gpu.GpuDevice, skybox_cub
     forward_pass.* = try .init(gpu_device, forward_shader);
 
     const ui_shader = try gpu_device.createShader(gpu.shaders.uiShaderDesc());
+    const painter_shader = try gpu_device.createShader(gpu.shaders.painterShaderDesc());
     const ui_pass = try allocator.create(pass.UiPass);
     errdefer allocator.destroy(ui_pass);
-    ui_pass.* = try .init(gpu_device, ui_shader);
+    ui_pass.* = try .init(gpu_device, ui_shader, painter_shader);
 
     try scene_graph.addNode(depth_prepass.node());
     try scene_graph.addNode(skybox_pass.node());

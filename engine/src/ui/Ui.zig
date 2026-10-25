@@ -7,7 +7,9 @@ const core = @import("../core/core.zig");
 const math = @import("../core/math/math.zig");
 const render = @import("../render/render.zig");
 const reflow = @import("reflow.zig");
+const tessellate = @import("tessellate.zig").tessellate;
 const Windowing = @import("../windowing/Windowing.zig");
+pub const Painter = @import("Painter.zig");
 pub const types = @import("types.zig");
 
 const u64_max = std.math.maxInt(u64);
@@ -50,6 +52,7 @@ pub const ComponentIds = struct {
     signals: ecs.ComponentId,
     interactable: ecs.ComponentId,
     window: ecs.ComponentId,
+    painter: ecs.ComponentId,
 };
 
 const Ui = @This();
@@ -63,6 +66,8 @@ pressed: ?ecs.Entity = null,
 hovered: ?ecs.Entity = null,
 pointer_pos: math.Vec2 = .zero,
 roots: std.ArrayList(ecs.Entity) = .empty,
+painters: std.AutoHashMap(u64, *Painter.PainterState),
+paint_scratch: std.ArrayList(ecs.Entity) = .empty,
 
 pub fn init(allocator: std.mem.Allocator) !Ui {
     var world: ecs.World = .init(allocator);
@@ -83,12 +88,15 @@ pub fn init(allocator: std.mem.Allocator) !Ui {
     const signals = try world.registerComponent(ElementSignals, "ElementSignals");
     const interactable = try world.registerComponent(Interactable, "Interactable");
     const window = try world.registerComponent(types.Window, "Window");
+    const painter = try world.registerComponent(Painter, "Painter");
 
     return .{
         .allocator = allocator,
         .frame_allocator = .init(allocator),
         .world = world,
         .changed = .empty,
+        .painters = .init(allocator),
+        .paint_scratch = .empty,
         .component_ids = .{
             .position = position,
             .size = size,
@@ -106,11 +114,17 @@ pub fn init(allocator: std.mem.Allocator) !Ui {
             .signals = signals,
             .interactable = interactable,
             .window = window,
+            .painter = painter,
         },
     };
 }
 
 pub fn deinit(self: *Ui) void {
+    var it = self.painters.valueIterator();
+    while (it.next()) |s| { s.*.deinit(self.allocator); self.allocator.destroy(s.*); }
+    self.painters.deinit();
+    self.paint_scratch.deinit(self.allocator);
+
     self.world.deinit();
     self.roots.deinit(self.allocator);
     self.frame_allocator.deinit();
@@ -136,6 +150,65 @@ pub fn update(self: *Ui) void {
     self.world.changed_set.clearRetainingCapacity();
 }
 
+pub fn paint(self: *Ui) void {
+    const ids = self.component_ids;
+
+    {
+        var dead: std.ArrayList(u64) = .empty;
+        defer dead.deinit(self.allocator);
+        var it = self.painters.iterator();
+        while (it.next()) |kv| {
+            const e = kv.value_ptr.*.entity;
+            if (!e.isAlive() or e.getComponent(ids.painter, Painter) == null)
+                dead.append(self.allocator, kv.key_ptr.*) catch {};
+        }
+        for (dead.items) |k| if (self.painters.fetchRemove(k)) |kv| {
+            kv.value.deinit(self.allocator);
+            self.allocator.destroy(kv.value);
+        };
+    }
+
+    self.paint_scratch.clearRetainingCapacity();
+    var iter = self.world.query(&.{ ids.painter }).iterator();
+    while (iter.next()) |e| self.paint_scratch.append(self.allocator, e) catch @panic("Out of memory");
+
+    for (self.paint_scratch.items) |e| {
+        if (!e.isAlive()) continue;
+        const size = (e.getComponent(ids.computed_size, math.Vec2) orelse continue).*;
+        const st = self.painterState(e) catch continue;
+
+        if (st.needs_paint or !size.eq(st.drawn_size)) {
+            st.drawn_size = size;
+            st.needs_paint = false;
+
+            if (st.on_paint) |sig| {
+                st.commands.clearRetainingCapacity();
+                sig.fire(.{});
+                self.world.dispatcher.flush();
+            }
+            st.dirty = true;
+        }
+
+        if (st.dirty) {
+            tessellate(self.allocator, st.commands.items, &st.mesh) catch |err|
+                std.log.err("Failed to tessellate: {s}", .{ @errorName(err) });
+            st.dirty = false;
+        }
+    }
+}
+
+pub fn painterState(self: *Ui, e: ecs.Entity) !*Painter.PainterState {
+    const gop = try self.painters.getOrPut(e.toU64());
+    if (!gop.found_existing) {
+        errdefer _ = self.painters.remove(e.toU64());
+        const s = try self.allocator.create(Painter.PainterState);
+        s.* = .{ .entity = e };
+        gop.value_ptr.* = s;
+    }
+
+    return gop.value_ptr.*;
+}
+
 pub const CreateElementOptions = struct {
     parent: ?Element = null,
     size: ?types.SizeMode = null,
@@ -148,6 +221,7 @@ pub const CreateElementOptions = struct {
     corner_radii: ?types.CornerRadii = null,
     borders: ?types.Borders = null,
     interactable: ?Interactable = null,
+    painter: ?Painter = null,
 };
 
 pub fn createElement(self: *Ui, windowing: *Windowing, options: ?CreateElementOptions) !Element {
@@ -171,6 +245,7 @@ pub fn createElement(self: *Ui, windowing: *Windowing, options: ?CreateElementOp
     if (opts.layout) |l| try self.world.set(entity, self.component_ids.layout, types.Layout, l);
     if (opts.text) |t| try self.world.set(entity, self.component_ids.text, types.Text, t);
     if (opts.image) |i| try self.world.set(entity, self.component_ids.image, types.Image, i);
+    if (opts.painter) |p| try self.world.set(entity, self.component_ids.painter, Painter, p);
 
     return .{ .entity = entity };
 }
@@ -327,7 +402,9 @@ pub const api = bind.module("ui", .{
         bind.variant(types.SizeAxis, .{ .number = .fixed }),
         bind.variant(types.GridAxis, .{ .number = .fixed }),
         bind.func("CreateElement", Ui.createElement),
-        Element.sub_api
+        Element.sub_api,
+        Painter.sub_api,
+        Painter.PainterHandle.sub_api,
     }
 });
 

@@ -17,6 +17,27 @@ pub const RenderObject = struct {
     material: Material
 };
 
+pub const PainterVertex = extern struct {
+    pos: [2]f32,
+    uv: [2]f32,
+    color: [4]f32,
+};
+
+pub const PainterMesh = struct {
+    vertices: std.ArrayList(PainterVertex) = .empty,
+    indices: std.ArrayList(u32) = .empty,
+
+    pub fn clear(self: *PainterMesh) void {
+        self.vertices.clearRetainingCapacity();
+        self.indices.clearRetainingCapacity();
+    }
+
+    pub fn deinit(self: *PainterMesh, allocator: std.mem.Allocator) void {
+        self.vertices.deinit(allocator);
+        self.indices.deinit(allocator);
+    }
+};
+
 pub const UiItem = union(enum) {
     quad: UiObject,
     painter: PainterObject,
@@ -25,7 +46,10 @@ pub const UiItem = union(enum) {
 pub const PainterObject = struct {
     origin: [2]f32,
     size: [2]f32,
-
+    vertices: []const PainterVertex,
+    indices: []const u32,
+    clip: bool,
+    antialiased: bool
 };
 
 pub const UiObject = struct {
