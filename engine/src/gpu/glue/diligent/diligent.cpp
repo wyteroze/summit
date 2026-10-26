@@ -18,7 +18,9 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 
 #ifdef SUMMIT_D3D11_BACKEND
@@ -161,9 +163,25 @@ static std::vector<ShaderResourceVariableDesc> buildResourceVars(const SummitRes
     return vars;
 }
 
+void terminate_handler_diligent() {
+    auto ex_ptr = std::current_exception();
+    if (ex_ptr) {
+        try {
+            std::rethrow_exception(ex_ptr);
+        } catch (const std::exception& e) {
+            summit_panic(e.what());
+        } catch (...) {
+            summit_panic("Unhandled C++ exception");
+        }
+    }
+
+    summit_panic("std::terminate called from C++");
+}
+
 // Implementation
 
 SummitDiligentDeviceHandle diligent_init() {
+    std::set_terminate(terminate_handler_diligent);
     SetDebugMessageCallback([](DEBUG_MESSAGE_SEVERITY sev, const Char* msg, const Char*, const Char*, int) {
         std::cerr << "[Diligent] " << msg << "\n";
     });

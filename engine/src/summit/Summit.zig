@@ -26,6 +26,10 @@ const Camera = struct {
     near_plane: f32 = 0.1,
 };
 
+var instantiated: *Summit = undefined;
+pub fn singleton() *Summit {
+    return instantiated;
+}
 
 const Summit = @This();
 io: std.Io,
@@ -52,6 +56,8 @@ windowing: Windowing,
 platform: Platform,
 
 pub fn init(self: *Summit, p_init: std.process.Init) !void {
+    instantiated = self;
+
     self.running = true;
     self.memory = try .init(p_init.gpa);
 

@@ -2,6 +2,7 @@
 
 pub const math = @import("math/math.zig");
 pub const boot = @import("boot/boot.zig");
+pub const panic = @import("panic.zig");
 pub const threading = @import("threading/threading.zig");
 pub const TrackedAllocator = @import("TrackedAllocator.zig");
 pub const SizeFormatter = @import("SizeFormatter.zig");
