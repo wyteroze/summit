@@ -4,6 +4,19 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef SUMMIT_PANIC_HANDLER
+#define SUMMIT_PANIC_HANDLER
+[[noreturn]] void summit_panic(const char* msg);
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
 // Types from zig land. (../types.zig).
 
 typedef struct { void* ptr; } SummitBufferHandle;

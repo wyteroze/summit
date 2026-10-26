@@ -49,3 +49,10 @@ pub fn gcCount(self: Runtime) i32 {
 pub fn allocationRate(self: Runtime) ?i64 {
     return self.state.allocationRate();
 }
+
+pub fn traceback(self: Runtime) [:0]const u8 {
+    self.state.traceback(self.state, null, 0);
+    defer self.state.pop(1);
+    
+    return self.state.toString(-1) catch "<failed to get traceback>";
+}

@@ -28,6 +28,21 @@ static const char* profileForTarget(SummitSlangTargetKind kind) {
     return "sm_6_0";
 }
 
+void terminate_handler_slang() {
+    auto ex_ptr = std::current_exception();
+    if (ex_ptr) {
+        try {
+            std::rethrow_exception(ex_ptr);
+        } catch (const std::exception& e) {
+            summit_panic(e.what());
+        } catch (...) {
+            summit_panic("Unhandled C++ exception");
+        }
+    }
+
+    summit_panic("std::terminate called from C++");
+}
+
 // Compiler
 
 struct SummitSlangCompilerContext {
@@ -35,6 +50,7 @@ struct SummitSlangCompilerContext {
 };
 
 SummitSlangCompilerHandle slang_compiler_create() {
+    std::set_terminate(terminate_handler_slang);
     SummitSlangCompilerHandle compiler = new SummitSlangCompilerContext();
     slang::createGlobalSession(compiler->globalSession.writeRef());
 
