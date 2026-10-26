@@ -3,7 +3,7 @@
 const std = @import("std");
 const types = @import("types.zig");
 
-const skip = .{ "std", "builtin", "toml", "zlua", "scripting" };
+const skip = .{ "std", "builtin", "toml", "zlua", "scripting", "Summit" };
 
 pub fn discover(comptime Root: type) []const types.Member { comptime {
     @setEvalBranchQuota(1_000_000);

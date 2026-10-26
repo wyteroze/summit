@@ -11,6 +11,8 @@ pub const AssetData = @import("AssetData.zig");
 pub const AssetUri = @import("AssetUri.zig");
 pub const types = @import("types.zig");
 
+const purge_rate: std.Io.Duration = .fromMilliseconds(500);
+
 pub const UploadContext = struct {
     /// For images only
     is_cubemap: bool = false
@@ -138,6 +140,7 @@ allocator: std.mem.Allocator,
 gpu_device: *gpu.GpuDevice,
 slots: std.AutoHashMap(u64, AssetEntry),
 sources: std.StringHashMap(*DirSource),
+last_purge: std.Io.Timestamp,
 
 pub fn init(allocator: std.mem.Allocator, io: std.Io, gpu_device: *gpu.GpuDevice, proj_path: ?[]const u8) !Assets {
     var sources: std.StringHashMap(*DirSource) = .init(allocator);
@@ -159,7 +162,8 @@ pub fn init(allocator: std.mem.Allocator, io: std.Io, gpu_device: *gpu.GpuDevice
         .allocator = allocator,
         .gpu_device = gpu_device,
         .slots = .init(allocator),
-        .sources = sources
+        .sources = sources,
+        .last_purge = .now(io, .awake)
     };
 }
 
@@ -212,20 +216,18 @@ pub fn upload(self: *Assets, handle: AssetHandle, upload_ctx: UploadContext) !vo
     entry.gpu_data_refcount = 1;
 }
 
-pub fn tick(self: *Assets) usize {
-    var purged: usize = 0;
+pub fn tick(self: *Assets, now: std.Io.Timestamp) void {
+    if (self.last_purge.addDuration(purge_rate).compare(.gt, now)) return;
 
     var it = self.slots.iterator();
     while (it.next()) |e| {
         const entry = e.value_ptr;
         if (entry.cpu_data) |data| if (entry.cpu_data_refcount == 0) {
-            purged += 1;
             data.deinit(self.allocator);
             entry.cpu_data = null;
         };
 
         if (entry.gpu_data) |data| if (entry.gpu_data_refcount == 0) {
-            purged += 1;
             data.deinit();
             entry.gpu_data = null;
         };
@@ -235,8 +237,6 @@ pub fn tick(self: *Assets) usize {
             _ = self.slots.remove(e.key_ptr.*);
         }
     }
-
-    return purged;
 }
 
 pub fn cpuRef(self: *Assets, id: u64) !void {
