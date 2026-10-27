@@ -67,7 +67,6 @@ hovered: ?ecs.Entity = null,
 pointer_pos: math.Vec2 = .zero,
 roots: std.ArrayList(ecs.Entity) = .empty,
 painters: std.AutoHashMap(u64, *Painter.PainterState),
-paint_scratch: std.ArrayList(ecs.Entity) = .empty,
 
 pub fn init(allocator: std.mem.Allocator) !Ui {
     var world: ecs.World = .init(allocator);
@@ -96,7 +95,6 @@ pub fn init(allocator: std.mem.Allocator) !Ui {
         .world = world,
         .changed = .empty,
         .painters = .init(allocator),
-        .paint_scratch = .empty,
         .component_ids = .{
             .position = position,
             .size = size,
@@ -123,7 +121,6 @@ pub fn deinit(self: *Ui) void {
     var it = self.painters.valueIterator();
     while (it.next()) |s| { s.*.deinit(self.allocator); self.allocator.destroy(s.*); }
     self.painters.deinit();
-    self.paint_scratch.deinit(self.allocator);
 
     self.world.deinit();
     self.roots.deinit(self.allocator);
@@ -151,6 +148,7 @@ pub fn update(self: *Ui) void {
 }
 
 pub fn paint(self: *Ui) void {
+    const allocator = self.frame_allocator.allocator();
     const ids = self.component_ids;
 
     {
@@ -168,11 +166,11 @@ pub fn paint(self: *Ui) void {
         };
     }
 
-    self.paint_scratch.clearRetainingCapacity();
+    var paint_entities: std.ArrayList(ecs.Entity) = .empty;
     var iter = self.world.query(&.{ ids.painter }).iterator();
-    while (iter.next()) |e| self.paint_scratch.append(self.allocator, e) catch @panic("Out of memory");
+    while (iter.next()) |e| paint_entities.append(allocator, e) catch @panic("Out of memory");
 
-    for (self.paint_scratch.items) |e| {
+    for (paint_entities.items) |e| {
         if (!e.isAlive()) continue;
         const size = (e.getComponent(ids.computed_size, math.Vec2) orelse continue).*;
         const st = self.painterState(e) catch continue;
