@@ -10,7 +10,7 @@ pub fn tessellate(allocator: std.mem.Allocator, commands: []const types.PainterC
 
     for (commands) |cmd| switch (cmd) {
         .line => |l| try appendLine(allocator, mesh, l),
-        .rectangle => {}
+        .rectangle => |r| try appendRectangle(allocator, mesh, r)
     };
 }
 
@@ -36,6 +36,24 @@ fn appendLine(allocator: std.mem.Allocator, mesh: *PainterMesh, l: types.Painter
         .{ .pos = .{ l.end.x   + nx, l.end.y   + ny }, .uv = .{ half,  outer }, .color = color },
         .{ .pos = .{ l.end.x   - nx, l.end.y   - ny }, .uv = .{ half, -outer }, .color = color },
         .{ .pos = .{ l.start.x - nx, l.start.y - ny }, .uv = .{ half, -outer }, .color = color },
+    });
+    try mesh.indices.appendSlice(allocator, &.{
+        base, base+1, base+2,
+        base, base+2, base+3
+    });
+}
+
+fn appendRectangle(allocator: std.mem.Allocator, mesh: *PainterMesh, r: types.PainterRectangle) !void {
+    const color = r.color.srgbDecode().toArr();
+    const pos = r.position;
+    const size = r.size;
+
+    const base: u32 = @intCast(mesh.vertices.items.len);
+    try mesh.vertices.appendSlice(allocator, &.{
+        .{ .pos = .{ pos.x,          pos.y          }, .uv = .{ 1, 0 }, .color = color },
+        .{ .pos = .{ pos.x + size.x, pos.y          }, .uv = .{ 1, 0 }, .color = color },
+        .{ .pos = .{ pos.x + size.x, pos.y + size.y }, .uv = .{ 1, 0 }, .color = color },
+        .{ .pos = .{ pos.x,          pos.y + size.y }, .uv = .{ 1, 0 }, .color = color }
     });
     try mesh.indices.appendSlice(allocator, &.{
         base, base+1, base+2,
