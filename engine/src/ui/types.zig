@@ -312,7 +312,7 @@ pub const Image = struct {
 };
 
 pub const PainterLine = struct { start: math.Vec2 = .zero, end: math.Vec2 = .zero, thickness: f32 = 1, color: core.Color = .fromRgbFloat(1, 1, 1, null) };
-pub const PainterRectangle = struct {  };
+pub const PainterRectangle = struct { position: math.Vec2, size: math.Vec2, color: core.Color = .fromRgbFloat(1, 1, 1, null) };
 pub const PainterCommand = union(enum) {
     line: PainterLine,
     rectangle: PainterRectangle,

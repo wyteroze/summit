@@ -83,9 +83,9 @@ pub const PainterHandle = struct {
     }
 
     /// Draws a rectangle with the given settings.
-    pub fn drawRectangle(self: PainterHandle, rect: types.PainterRectangle) !void {
+    pub fn drawRectangle(self: PainterHandle, position: math.Vec2, size: math.Vec2, color: core.Color) !void {
         const s = try self.state();
-        try s.commands.append(self.ui.allocator, .{ .rectangle = rect });
+        try s.commands.append(self.ui.allocator, .{ .rectangle = .{ .position = position, .size = size, .color = color } });
         s.dirty = true;
     }
 

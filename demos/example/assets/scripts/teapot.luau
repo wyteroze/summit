@@ -172,9 +172,10 @@ function Teapot.new(entity: Entity)
         Painter = {}
     }
 
+    local hue = 0
     elem.Components.Painter.OnPaint:Connect(function()
         elem.Components.Painter:DrawLine(Vec2.new(0, 0), Vec2.new(30, (math.sin(self._timer)+1)*10), 2, Color.new(0, 0, 0, 1))
-        print("Paint")
+        elem.Components.Painter:DrawRectangle(Vec2.new(64, 64), Vec2.new(128, 128), Color.fromHSV(hue, 1, 1))
     end)
 
     entity.Updated:Connect(function(dt)
@@ -182,6 +183,7 @@ function Teapot.new(entity: Entity)
         local toAdd = self.Multiplier * dt
         local add = Vec3.new(toAdd * 5, toAdd * 10, toAdd * 20)
         
+        hue = (hue + dt/20) % 1
         self._entity.Components.Rotation += add
         elem.Components.Painter:Invalidate()
     end)
