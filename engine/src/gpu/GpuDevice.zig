@@ -1,7 +1,6 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const sokol = @import("sokol");
 const slang = @import("slang.zig");
 const shader_registry = @import("shaders/registry.zig");
 const types = @import("types.zig");
