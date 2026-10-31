@@ -81,7 +81,7 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     self.assets = try .init(try self.getAlloc("Assets"), io, &self.gpu_device, project_path);
 
     // Skybox
-    const skybox_cubemap = try self.assets.load("assets://images/skybox_island.png");
+    const skybox_cubemap = try self.assets.load("asset://images/skybox_island.png");
     try skybox_cubemap.upload(.{ .is_cubemap = true });
 
     self.renderer = try .init(try self.getAlloc("Renderer"), &self.gpu_device, try skybox_cubemap.gpuGet(.image));
@@ -183,13 +183,13 @@ pub fn setupTestScene(self: *Summit) !void {
 
     // Systems
     {
-        const src = try self.assets.load("assets://systems/fly_cam.luau");
+        const src = try self.assets.load("asset://systems/fly_cam.luau");
         defer src.cpuRelease();
         const script = try self.runtime.loadScript("fly_cam.luau", try src.cpuGet(.script_source));
         _ = self.runtime.instantiateSystem(script, world) catch |e| std.log.err("Failed to instantiate fly system: {t}", .{e});
     }
     {
-        const src = try self.assets.load("assets://systems/spin.luau");
+        const src = try self.assets.load("asset://systems/spin.luau");
         defer src.cpuRelease();
         const script = try self.runtime.loadScript("spin.luau", try src.cpuGet(.script_source));
         _ = self.runtime.instantiateSystem(script, world) catch |e| std.log.err("Failed to instantiate spin system: {t}", .{e});
@@ -228,14 +228,14 @@ pub fn setupTestScene(self: *Summit) !void {
 
     // Scripts
     {
-        const source = try self.assets.load("assets://scripts/camera.luau");
+        const source = try self.assets.load("asset://scripts/camera.luau");
         defer source.cpuRelease();
         const script = try self.runtime.loadScript("camera.luau", try source.cpuGet(.script_source));
         try world.set(camera, script_id, scripting.Runtime.ScriptHandle, script);
         self.runtime.instantiateEntity(script, camera) catch |e| std.log.err("Failed to instantiate camera script: {t}", .{e});
     }
     {
-        const source = try self.assets.load("assets://scripts/teapot.luau");
+        const source = try self.assets.load("asset://scripts/teapot.luau");
         defer source.cpuRelease();
         const script = try self.runtime.loadScript("teapot.luau", try source.cpuGet(.script_source));
         try world.set(entity, script_id, scripting.Runtime.ScriptHandle, script);
