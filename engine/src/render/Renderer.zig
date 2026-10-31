@@ -2,7 +2,7 @@
 
 const std = @import("std");
 const gpu = @import("../gpu/gpu.zig");
-const ecs = @import("../ecs/ecs.zig");
+const ecs = @import("../ecs/Ecs.zig");
 const assets = @import("../assets/Assets.zig");
 const types = @import("types.zig");
 const core = @import("../core/core.zig");

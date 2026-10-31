@@ -2,7 +2,7 @@
 
 const std = @import("std");
 const zlua = @import("zlua");
-const ecs = @import("ecs.zig");
+const ecs = @import("Ecs.zig");
 
 pub const ReadFn = *const fn (l: *zlua.Lua, idx: i32, out: []u8) void;
 pub const PushFn = *const fn (l: *zlua.Lua, bytes: []const u8) void;

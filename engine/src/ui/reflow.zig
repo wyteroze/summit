@@ -1,7 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const ecs = @import("../ecs/ecs.zig");
+const ecs = @import("../ecs/Ecs.zig");
 const math = @import("../core/math/math.zig");
 const text = @import("text.zig");
 const types = @import("types.zig");

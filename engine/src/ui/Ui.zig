@@ -2,7 +2,7 @@
 
 const std = @import("std");
 const bind = @import("../scripting/bind/bind.zig");
-const ecs = @import("../ecs/ecs.zig");
+const ecs = @import("../ecs/Ecs.zig");
 const core = @import("../core/core.zig");
 const math = @import("../core/math/math.zig");
 const render = @import("../render/render.zig");

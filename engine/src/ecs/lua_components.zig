@@ -2,7 +2,7 @@
 
 const std = @import("std");
 const zlua = @import("zlua");
-const ecs = @import("ecs.zig");
+const ecs = @import("Ecs.zig");
 const bind = @import("../scripting/bind/bind.zig");
 const Pushed = @import("../scripting/bind/wrap.zig").Pushed;
 
