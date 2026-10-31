@@ -153,11 +153,11 @@ pub fn Binder(comptime api: anytype) type {
             };
         }
 
-        pub fn pushValue(_: *Self, l: *zlua.Lua, val: anytype) void {
+        pub fn pushValue(_: *const Self, l: *zlua.Lua, val: anytype) void {
             M.push(l, val);
         }
 
-        pub fn parseValue(_: *Self, l: *zlua.Lua, comptime T: type, idx: i32) *T {
+        pub fn parseValue(_: *const Self, l: *zlua.Lua, comptime T: type, idx: i32) *T {
             M.parse(T, l, idx);
         }
 

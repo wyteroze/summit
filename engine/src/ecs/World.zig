@@ -229,17 +229,14 @@ pub fn query(self: *World, required: []const ComponentId) Query {
 }
 
 pub fn registerSystem(
-    self: *World,
-    name: []const u8,
-    comptime Ctx: type,
-    comptime run_fn: fn (world: *World, dt: f32, ctx: *Ctx) void,
-    ctx_ptr: *Ctx
-) !void {
-    try self.systems.register(name, Ctx, run_fn, ctx_ptr);
-}
-
-pub fn registerSystemErased(self: *World, name: []const u8, run: SystemRegistry.SystemFn, ctx: *anyopaque, dtor: ?*const fn (allocator: std.mem.Allocator, ctx: *anyopaque) void) !void {
-    try self.systems.registerErased(name, run, ctx, dtor);
+    self: *World, 
+    sys_query: []const ComponentId, 
+    init_fn: ?SystemRegistry.SystemInitFn, 
+    update_fn: SystemRegistry.SystemUpdateFn,
+    deinit_fn: ?SystemRegistry.SystemDeinitFn,
+    ctx: *anyopaque
+) !SystemRegistry.SystemHandle {
+    return self.systems.register(self, sys_query, init_fn, update_fn, deinit_fn, ctx);
 }
 
 pub fn unregisterSystem(self: *World, name: []const u8) void {
@@ -278,3 +275,5 @@ pub fn format(
 ) std.Io.Writer.Error!void {
     try writer.print("World", .{ });
 }
+
+const bind = @import("../scripting/bind/bind.zig");
