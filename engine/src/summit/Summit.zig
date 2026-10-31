@@ -60,6 +60,7 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
 
     self.running = true;
     self.memory = try .init(p_init.gpa);
+    errdefer self.memory.deinit();
 
     const io = p_init.io;
     self.io = io;
@@ -75,27 +76,38 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
 
     self.os = try .init(p_init, builtin.os.tag, "net.wyteroze.summit");
     try self.scheduler.init(try self.getAlloc("Scheduler"), io, &self.os);
+    errdefer self.scheduler.deinit();
     try self.platform.init(try self.getAlloc("Platform"), .initSdl());
+    errdefer self.platform.deinit();
     self.ui = try .init(try self.getAlloc("Ui"));
+    errdefer self.ui.deinit();
     self.gpu_device = try .init(try self.getAlloc("Gpu"), .initDiligent());
+    errdefer self.gpu_device.deinit();
     self.assets = try .init(try self.getAlloc("Assets"), io, &self.gpu_device, project_path);
+    errdefer self.assets.deinit();
 
     // Skybox
     const skybox_cubemap = try self.assets.load("asset://images/skybox_island.png");
     try skybox_cubemap.upload(.{ .is_cubemap = true });
 
     self.renderer = try .init(try self.getAlloc("Renderer"), &self.gpu_device, try skybox_cubemap.gpuGet(.image));
+    errdefer self.renderer.deinit();
     try self.windowing.init(try self.getAlloc("Windowing"), &self.platform, &self.renderer, &self.ui);
+    errdefer self.windowing.deinit();
 
     try self.input.init(try self.getAlloc("Input"), &self.platform, &self.ui, &self.windowing);
+    errdefer self.input.deinit();
 
     // Create the world
     self.world = .init(try self.getAlloc("ECSWorld"));
+    errdefer self.world.deinit();
 
     try self.audio.init(io, try self.getAlloc("Audio"), &self.platform);
+    errdefer self.audio.deinit();
 
     self.host = .{ .world = &self.world, .assets = &self.assets, .input = &self.input, .ui = &self.ui, .audio = &self.audio, .windowing = &self.windowing };
     self.runtime = try .init(try self.getAlloc("LuaRuntime"), &self.host);
+    errdefer self.runtime.deinit();
 
     // Register components
     // TODO: Register these once somewhere, and access them there
