@@ -97,23 +97,23 @@ const lua_components = @import("lua_components.zig");
 pub const sub_api = bind.handle(Entity, .{
     .alive = bind.func("isAlive", Entity.isAlive),
     .methods = &.{
-        bind.func("AddComponent", lua_components.addComponent),
-        bind.func("SetComponent", lua_components.setComponent),
-        bind.func("GetComponent", lua_components.getComponent),
-        bind.func("HasComponent", Entity.hasComponent),
-        bind.func("RemoveComponent", Entity.removeComponent),
-        bind.func("Destroy", Entity.destroy),
+        bind.func("addComponent", lua_components.addComponent),
+        bind.func("setComponent", lua_components.setComponent),
+        bind.func("getComponent", lua_components.getComponent),
+        bind.func("hasComponent", Entity.hasComponent),
+        bind.func("removeComponent", Entity.removeComponent),
+        bind.func("destroy", Entity.destroy),
     },
     .props = &.{
-        bind.readonly("Components", struct {
+        bind.readonly("components", struct {
             fn c(self: Entity) lua_components.Components {
                 return .{ .entity = self };
             }
         }.c),
     },
     .signals = &.{
-        bind.signal("Updated", Entity.updated),
-        bind.signal("Destroyed", Entity.destroyed),
+        bind.signal("updated", Entity.updated),
+        bind.signal("destroyed", Entity.destroyed),
     },
     .ops = .{ .eq = .{ .member = bind.func("eq", Entity.eql) }, .tostring = .auto },
 });

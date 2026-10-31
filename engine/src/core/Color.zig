@@ -223,9 +223,9 @@ pub const api = bind.value(Color, .{
     .name = "Color",
     .fields = &.{ "r", "g", "b", "a" },
     .methods = &.{
-        bind.func("Lerp", Color.lerp),
-        bind.func("ToRGBA", Color.toRgb),
-        bind.func("ToHSVA", Color.toHsv),
+        bind.func("lerp", Color.lerp),
+        bind.func("toRGBA", Color.toRgb),
+        bind.func("toHSVA", Color.toHsv),
         // bind.func("ToHex", struct {}.c)
     },
     .statics = &.{

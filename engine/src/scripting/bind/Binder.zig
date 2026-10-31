@@ -43,7 +43,7 @@ fn instanceEntries(comptime r: anytype) []const InstanceEntry {
         const T = @TypeOf(r);
 
         if (@hasField(T, "fields")) {
-            for (r.fields) |f| out = out ++ .{InstanceEntry{ .field = .{ .zig = f, .lua = names.pascal(f) } }};
+            for (r.fields) |f| out = out ++ .{InstanceEntry{ .field = .{ .zig = f, .lua = names.camel(f) } }};
         }
         if (@hasField(T, "props")) {
             for (r.props) |p| out = out ++ .{InstanceEntry{ .prop = .{ .m = p } }};

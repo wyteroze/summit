@@ -3,8 +3,8 @@
 -- MATH --
 
 declare extern type Vec2 with
-    read X: number
-    read Y: number
+    read x: number
+    read y: number
 
     --- Returns the length of this `Vec2`.
     function Length(self): number
@@ -15,18 +15,18 @@ declare extern type Vec2 with
 end
 
 declare extern type Vec3 with
-    read X: number
-    read Y: number
-    read Z: number
+    read x: number
+    read y: number
+    read z: number
 
     --- Returns the length of this `Vec3`.
-    function Length(self): number
+    function length(self): number
     --- Returns a normalized copy of this `Vec3`. If its length is zero, this results in `nan`.
-    function Normalize(self): Vec3
+    function normalize(self): Vec3
     --- Returns the dot product of this `Vec3` and the given `Vec3`.
-    function Dot(self, other: Vec3): number
+    function dot(self, other: Vec3): number
     --- Returns the cross product of this `Vec3` and the given `Vec3`.
-    function Cross(self, other: Vec3): Vec3
+    function cross(self, other: Vec3): Vec3
 
 	function __add(self, other: Vec3): Vec3
 	function __div(self, other: Vec3 | number): Vec3
@@ -38,86 +38,86 @@ end
 
 declare extern type Quat with
     --- The X (1st) component of this `Quat`.
-    read X: number
+    read x: number
     --- The Y (2nd) component of this `Quat`.
-    read Y: number
+    read y: number
     --- The Z (3rd) component of this `Quat`.
-    read Z: number
+    read z: number
     --- The W (4th) component of this `Quat`.
-    read W: number
+    read w: number
 
     --- Returns a normalized copy of this `Quat`. If its length is zero, this results in `nan`.
-    function Normalize(self): Quat
+    function normalize(self): Quat
     --- Returns the inverse of this `Quat`.
-    function Inverse(self): Quat
+    function inverse(self): Quat
     --- Interpolates this `Quat` to the target with the given alpha using spherical linear interpolation.
-    function Slerp(self, target: Quat, alpha: number): Quat
+    function slerp(self, target: Quat, alpha: number): Quat
     
     function __mul(self, other: Vec3): Vec3
     function __mul(self, other: Quat): Quat
 end
 
 declare extern type Mat4 with
-    read C00: number
-    read C01: number
-    read C02: number
-    read C03: number
+    read c00: number
+    read c01: number
+    read c02: number
+    read c03: number
 
-    read C10: number
-    read C11: number
-    read C12: number
-    read C13: number
+    read c10: number
+    read c11: number
+    read c12: number
+    read c13: number
 
-    read C20: number
-    read C21: number
-    read C22: number
-    read C23: number
+    read c20: number
+    read c21: number
+    read c22: number
+    read c23: number
 
-    read C30: number
-    read C31: number
-    read C32: number
-    read C33: number
+    read c30: number
+    read c31: number
+    read c32: number
+    read c33: number
 
     --- Returns the inverse of this `Mat4`.
-    function Inverse(self): Mat4
+    function inverse(self): Mat4
     --- Returns the transpose of this `Mat4`.
-    function Transpose(self): Mat4
+    function transpose(self): Mat4
     
     function __mul(self, other: Vec3): Vec3
     function __mul(self, other: Mat4): Mat4
 end
 
 declare extern type Transform with
-    read Position: Vec3
-    read Rotation: Quat
-    read Scale: Vec3
+    read position: Vec3
+    read rotation: Quat
+    read scale: Vec3
 
-    function ToMat4(self): Mat4
-    function ForwardVector(self): Vec3
-    function RightVector(self): Vec3
-    function UpVector(self): Vec3
+    function toMat4(self): Mat4
+    function forwardVector(self): Vec3
+    function rightVector(self): Vec3
+    function upVector(self): Vec3
 end
 
 declare extern type Color with
     --- The red component, ranging from 0.0-1.0
-    read R: number
+    read r: number
     --- The green component, ranging from 0.0-1.0
-    read G: number
+    read g: number
     --- The blue component, ranging from 0.0-1.0
-    read B: number
+    read b: number
     --- The alpha component, ranging from 0.0-1.0
-    read A: number
+    read a: number
 
     --- Linearly interpolates this `Color` to the target with the given alpha.
-    function Lerp(self, other: Color, alpha: number): Color
+    function lerp(self, other: Color, alpha: number): Color
     --- Returns the RGBA components of this `Color`, ranging from 0-255.
     --- This is different from accessing `.R`, `.G`, `.B`, `.A`, because they range from 0.0-1.0.
-    function ToRGBA(self): (number, number, number, number)
+    function toRGBA(self): (number, number, number, number)
     --- Returns the HSVA components of this `Color`, ranging from 0.0-1.0.
-    function ToHSVA(self): (number, number, number, number)
+    function toHSVA(self): (number, number, number, number)
     --- Returns the hex code of this `Color`, formated as `RRGGBBAA`.
     --- The returned hex code does not have any prefixes like `#` or `0x`.
-    function ToHex(self): string
+    function toHex(self): string
 end
 
 -- Math globals
@@ -155,7 +155,7 @@ declare Vec3: {
 --- A 4D value, commonly used for representing 3D rotation.
 declare Quat: {
     --- A `Quat` with zero rotation.
-    read Identity: Quat,
+    read identity: Quat,
     --- Creates a `Quat` with the given Euler rotation.
     read fromEuler: (euler: Vec3) -> Quat,
     --- Creates a `Quat` of the given axis rotated around the given angle in degrees.
@@ -228,14 +228,14 @@ export type ColorName =
 
 export type SignalConnection = {
     --- Disconnects this connection from the signal, meaning the callback will no longer be called by the signal.
-    read Disconnect: (self: SignalConnection) -> ()
+    read disconnect: (self: SignalConnection) -> ()
 }
 
 export type Signal<T...> = {
     --- Connects a callback to this signal.
-    read Connect: (self: Signal<T...>, callback: (T...) -> ()) -> SignalConnection,
+    read connect: (self: Signal<T...>, callback: (T...) -> ()) -> SignalConnection,
     --- Fires the signal. Callbacks are called at the end of this frame, rather than immediately.
-    read Fire: (self: Signal<T...>, T...) -> ()
+    read fire: (self: Signal<T...>, T...) -> ()
 }
 
 -- ASSETS --
@@ -243,14 +243,14 @@ export type Signal<T...> = {
 export type AssetPath = string
 export type LoadStatus = "Success" | "Fail" | "Waiting"
 export type Asset = {
-    read SourcePath: string,
-    read LoadStatus: LoadStatus,
+    read sourcePath: string,
+    read loadStatus: LoadStatus,
     --- Halts this thread until the asset finishes loading.
-    read Await: (self: Asset) -> (Asset)
+    read await: (self: Asset) -> (Asset)
 }
 
 export type ImageAsset = Asset & {
-    read Size: Vec2,
+    read size: Vec2,
 }
 
 export type FontAsset = Asset & {
@@ -262,9 +262,9 @@ export type MeshAsset = Asset & {
 }
 
 export type AudioAsset = Asset & {
-    read SampleRate: number,
-    read Channels: number,
-    read Duration: number,
+    read sampleRate: number,
+    read channels: number,
+    read duration: number,
 }
 
 -- ECS --
@@ -272,11 +272,12 @@ export type AudioAsset = Asset & {
 declare extern type Entity with
     --- Adds a pre-registered component of the given name with the given value. This does not implicitly register components.
     --- You must register custom components using `World:RegisterComponent()` prior to using this.
-    function AddComponent(self, name: string, value: any): ()
+    function addComponent(self, name: string, value: any): ()
 
     function __index(self, key: string): any?
     function __newindex(self, key: string, value: any): any?
-
+    
+    -- For accessing components. Trying to access/set a component that doesn't exist will error.
     [string]: any?
 end
 
@@ -350,34 +351,34 @@ export type MouseButton =
 
 declare extern type Keyboard with
     --- Fires when a key is pressed, with the pressed keycode as the first argument of the callback.
-    read KeyPressed: Signal<Keycode, boolean, any>
+    read keyPressed: Signal<Keycode, boolean, any>
     --- Fires when a key is released, with the released keycode as the first argument of the callback.
-    read KeyReleased: Signal<Keycode, boolean, any>
+    read keyReleased: Signal<Keycode, boolean, any>
 
     --- Returns true if the given keycode is pressed.
-    function IsKeyPressed(self, key: Keycode): boolean
+    function isKeyPressed(self, key: Keycode): boolean
 end
 
 declare extern type Mouse with
     --- Fires when a button is pressed, with the pressed button as the first argument of the callback.
-    read ButtonPressed: Signal<MouseButton, boolean, any>
+    read buttonPressed: Signal<MouseButton, boolean, any>
     --- Fires when a button is released, with the released button as the first argument of the callback.
-    read ButtonReleased: Signal<MouseButton, boolean, any>
+    read buttonReleased: Signal<MouseButton, boolean, any>
     --- Fires when the mouse moves, with the delta as the first argument of the callback, and the position as the second argument of the callback.
-    read Moved: Signal<Vec2, Vec2, boolean, any>
+    read moved: Signal<Vec2, Vec2, boolean, any>
     --- Fires when the scroll wheel moves, with the delta as the first argument of the callback.
     --- The X axis represents side-to-side scrolling, while the Y axis represents top-to-bottom-scrolling (most common).
-    read Scrolled: Signal<Vec2, boolean, any>
+    read scrolled: Signal<Vec2, boolean, any>
 
     --- Returns true if the given mouse button is pressed.
-    function IsButtonPressed(self, button: MouseButton): boolean
+    function isButtonPressed(self, button: MouseButton): boolean
     --- Returns the mouse move delta.
-    function GetMoveDelta(self): Vec2
+    function getMoveDelta(self): Vec2
     --- Returns the mouse scroll delta.
     --- The X axis represents side-to-side scrolling, while the Y axis represents top-to-bottom-scrolling (most common).
-    function GetScrollDelta(self): Vec2
+    function getScrollDelta(self): Vec2
     --- Returns the position of the mouse.
-    function GetPosition(self): Vec2
+    function getPosition(self): Vec2
 end
 
 -- AUDIO --
@@ -385,16 +386,16 @@ end
 --- A component used to emit audio from entities.
 declare extern type Speaker with
     --- Immediately begins playing an audio, and returns an `AudioTrack` that represents playback.
-    function Play(self, audio: Asset): AudioTrack
+    function play(self, audio: Asset): AudioTrack
     --- The volume of this speaker. The range of allowed values is from 0 to 10, and other values are clamped to this range.
-    Volume: number
+    volume: number
     --- The distance within which an `AudioListener` hears the speaker at full `Volume`.
     --- Beyond this distance, loudness falls off according to `Attenuation`.
-    MinDistance: number
+    minDistance: number
     --- The distance beyond which an `AudioListener` cannot hear the speaker at all.
-    MaxDistance: number
+    maxDistance: number
     --- Controls how loudness falls off between `MinDistance` and `MaxDistance` for this speaker.
-    Attenuation: AudioAttenuation
+    attenuation: AudioAttenuation
 end
 
 --- Represents the playback of a piece of audio.
@@ -402,19 +403,19 @@ declare extern type AudioTrack with
     --- Begins playback of this track, resuming it from its current time position.
     --- Calling this does not reset the time position of this audio,
     --- but can still be achieved by setting this track's `TimePosition` to 0.
-    function Play(self): ()
+    function play(self): ()
     --- Stops playback of this track.
-    function Stop(self): ()
+    function stop(self): ()
     --- Destroys this track, invalidating it and stopping playback.
     --- Attempting to access any properties or call any methods after destroying a track will result in an error.
-    function Destroy(self): ()
+    function destroy(self): ()
     
     --- Fires when this track is played.
-    read Played: Signal<()>
+    read played: Signal<()>
     --- Fires when this track is stopped.
-    read Stopped: Signal<()>
+    read stopped: Signal<()>
     --- Fires when this track loops.
-    read Looped: Signal<()>
+    read looped: Signal<()>
 end
 
 --- The falloff curve used to determine how loudness decreases with distance from a `Speaker`.

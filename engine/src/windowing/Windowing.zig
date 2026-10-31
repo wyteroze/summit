@@ -169,8 +169,8 @@ pub const api = bind.module("windowing", .{
     .kind = .{ .singleton = Windowing },
     .members = &.{
         Window.WindowHandle.sub_api,
-        bind.func("CreateWindow", Windowing.createWindow),
-        bind.readonly("MainWindow", struct {
+        bind.func("createWindow", Windowing.createWindow),
+        bind.readonly("mainWindow", struct {
             fn c(self: *Windowing) ?Window.WindowHandle {
                 return self.main_window;
             }

@@ -284,23 +284,26 @@ const bind = @import("../scripting/bind/bind.zig");
 pub const api = bind.module("input", .{
     .kind = .{ .singleton = Input },
     .members = &.{
-        bind.func("IsCursorLocked", getCursorLocked), bind.func("SetCursorLocked", setCursorLocked), bind.func("IsCursorVisible", getCursorVisible), bind.func("SetCursorVisible", setCursorVisible),
-        bind.func("GetKeyboard", struct {
+        bind.func("isCursorLocked", getCursorLocked),
+        bind.func("setCursorLocked", setCursorLocked),
+        bind.func("isCursorVisible", getCursorVisible),
+        bind.func("setCursorVisible", setCursorVisible),
+        bind.func("getKeyboard", struct {
             fn c(self: *Input, id: usize) ?KeyboardHandle {
                 return if (self.keyboards.contains(id)) .{ .input = self, .id = id } else null;
             }
         }.c),
-        bind.func("GetMouse", struct {
+        bind.func("getMouse", struct {
             fn c(self: *Input, id: usize) ?MouseHandle {
                 return if (self.mice.contains(id)) .{ .input = self, .id = id } else null;
             }
         }.c),
-        bind.readonly("Keyboards", struct {
+        bind.readonly("keyboards", struct {
             fn c(self: *Input) KeyboardHandle {
                 return .{ .input = self, .id = self.unikeyboard.id };
             }
         }.c),
-        bind.readonly("Mice", struct {
+        bind.readonly("mice", struct {
             fn c(self: *Input) MouseHandle {
                 return .{ .input = self, .id = self.unimouse.id };
             }
@@ -309,26 +312,26 @@ pub const api = bind.module("input", .{
             .name = "Keyboard",
             .alive = bind.func("isAlive", KeyboardHandle.isAlive),
             .methods = &.{
-                bind.func("IsKeyPressed", struct {
+                bind.func("isKeyPressed", struct {
                     fn c(self: KeyboardHandle, key: Platform.desc.Keycode) !bool {
                         return (try self.require()).isKeyPressed(key);
                     }
                 }.c),
             },
             .props = &.{
-                bind.readonly("Id", struct {
+                bind.readonly("id", struct {
                     fn c(self: KeyboardHandle) usize {
                         return self.id;
                     }
                 }.c),
             },
             .signals = &.{
-                bind.signal("KeyPressed", struct {
+                bind.signal("keyPressed", struct {
                     fn c(self: KeyboardHandle) !*devices.KeyboardDevice.KeyEvent {
                         return &(try self.require()).key_pressed;
                     }
                 }.c),
-                bind.signal("KeyReleased", struct {
+                bind.signal("keyReleased", struct {
                     fn c(self: KeyboardHandle) !*devices.KeyboardDevice.KeyEvent {
                         return &(try self.require()).key_released;
                     }
@@ -340,36 +343,36 @@ pub const api = bind.module("input", .{
             .name = "Mouse",
             .alive = bind.func("isAlive", MouseHandle.isAlive),
             .methods = &.{
-                bind.func("IsButtonDown", struct {
+                bind.func("isButtonDown", struct {
                     fn c(self: MouseHandle, button: Platform.desc.MouseButton) !bool {
                         return (try self.require()).isButtonDown(button);
                     }
                 }.c),
-                bind.func("GetMoveDelta", struct {
+                bind.func("getMoveDelta", struct {
                     fn c(self: MouseHandle) !core.math.Vec2 {
                         return (try self.require()).getMoveDelta();
                     }
                 }.c),
             },
             .props = &.{
-                bind.readonly("Id", struct {
+                bind.readonly("id", struct {
                     fn c(self: MouseHandle) usize {
                         return self.id;
                     }
                 }.c),
             },
             .signals = &.{
-                bind.signal("ButtonPressed", struct {
+                bind.signal("buttonPressed", struct {
                     fn c(self: MouseHandle) !*devices.MouseDevice.ButtonEvent {
                         return &(try self.require()).button_pressed;
                     }
                 }.c),
-                bind.signal("ButtonReleased", struct {
+                bind.signal("buttonReleased", struct {
                     fn c(self: MouseHandle) !*devices.MouseDevice.ButtonEvent {
                         return &(try self.require()).button_released;
                     }
                 }.c),
-                bind.signal("Scrolled", struct {
+                bind.signal("scrolled", struct {
                     fn c(self: MouseHandle) !*devices.MouseDevice.ScrollEvent {
                         return &(try self.require()).scrolled_evt;
                     }

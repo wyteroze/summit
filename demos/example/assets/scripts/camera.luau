@@ -4,7 +4,7 @@ local camera: Script = {}
 
 function camera.init(entity: Entity)
     print("Camera init")
-    -- entity:AddComponent("FlyCamera")
+    -- entity:addComponent("FlyCamera")
 end
 
 return camera

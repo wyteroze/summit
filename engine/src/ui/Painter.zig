@@ -111,16 +111,16 @@ pub const PainterHandle = struct {
 
     pub const sub_api = bind.handle(PainterHandle, .{
         .name = "Painter",
-        .alive = bind.func("IsAlive", PainterHandle.isAlive),
-        .signals = &.{bind.signal("OnPaint", PainterHandle.onPaint)},
+        .alive = bind.func("isAlive", PainterHandle.isAlive),
+        .signals = &.{bind.signal("onPaint", PainterHandle.onPaint)},
         .methods = &.{
-            bind.func("DrawLine", PainterHandle.drawLine),
-            bind.func("DrawRectangle", PainterHandle.drawRectangle),
-            bind.func("Clear", PainterHandle.clear),
-            bind.func("Invalidate", PainterHandle.invalidate),
+            bind.func("drawLine", PainterHandle.drawLine),
+            bind.func("drawRectangle", PainterHandle.drawRectangle),
+            bind.func("clear", PainterHandle.clear),
+            bind.func("invalidate", PainterHandle.invalidate),
         },
         .props = &.{
-            bind.prop("Clip", struct {
+            bind.prop("clip", struct {
                 fn get(self: PainterHandle) !bool {
                     return (self.get() orelse return error.PainterRemoved).clip;
                 }
@@ -129,7 +129,7 @@ pub const PainterHandle = struct {
                     (self.get() orelse return error.PainterRemoved).clip = v;
                 }
             }.set),
-            bind.prop("Antialiased", struct {
+            bind.prop("antialiased", struct {
                 fn get(self: PainterHandle) !bool {
                     return (self.get() orelse return error.PainterRemoved).antialiased;
                 }

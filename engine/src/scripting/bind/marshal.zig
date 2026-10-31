@@ -61,14 +61,14 @@ pub fn Marshal(comptime Reg: type) type {
                 .float, .comptime_float => l.pushNumber(@floatCast(v)),
                 .optional => if (v) |x| push(l, x) else l.pushNil(),
                 .@"enum" => switch (v) {
-                    inline else => |t| _ = l.pushStringZ(comptime names.pascal(@tagName(t))),
+                    inline else => |t| _ = l.pushStringZ(comptime names.camel(@tagName(t))),
                 },
                 .@"union" => return pushUnion(l, v, null),
                 .@"struct" => |s| {
                     l.createTable(0, s.field_names.len);
                     inline for (s.field_names) |nm| {
                         push(l, @field(v, nm));
-                        l.setField(-2, comptime names.pascal(nm));
+                        l.setField(-2, comptime names.camel(nm));
                     }
                 },
 
@@ -112,7 +112,7 @@ pub fn Marshal(comptime Reg: type) type {
             const map: std.StaticStringMap(T) = comptime blk: {
                 const info = @typeInfo(T).@"enum";
                 var kv: [info.field_names.len]struct { []const u8, T } = undefined;
-                for (info.field_names, 0..) |nm, i| kv[i] = .{ names.pascal(nm), @fromBackingInt(@intCast(info.field_values[i])) };
+                for (info.field_names, 0..) |nm, i| kv[i] = .{ names.camel(nm), @fromBackingInt(@intCast(info.field_values[i])) };
 
                 break :blk .initComptime(kv);
             };
@@ -137,7 +137,7 @@ pub fn Marshal(comptime Reg: type) type {
                 .string => {
                     const s = l.toString(idx) catch unreachable;
                     inline for (info.field_names, 0..) |nm, i| {
-                        if (info.field_types[i] == void and std.mem.eql(u8, s, comptime names.pascal(nm)))
+                        if (info.field_types[i] == void and std.mem.eql(u8, s, comptime names.camel(nm)))
                             return @unionInit(T, nm, {});
                     }
 
@@ -149,7 +149,7 @@ pub fn Marshal(comptime Reg: type) type {
 
                     inline for (info.field_names, 0..) |nm, i| {
                         if (info.field_types[i] != void) {
-                            const name = comptime names.pascal(nm);
+                            const name = comptime names.camel(nm);
                             if (l.getField(abs, name) != .nil) {
                                 if (result != null)
                                     l.raiseErrorStr("arg %d: %s table must have exactly one variant key", .{ idx, @typeName(T).ptr });
@@ -183,7 +183,7 @@ pub fn Marshal(comptime Reg: type) type {
 
             var out: T = .{};
             inline for (info.field_names, 0..) |nm, i| {
-                const key = comptime names.pascal(nm);
+                const key = comptime names.camel(nm);
                 const ty = l.getField(t, key);
                 defer l.pop(1);
 
@@ -197,7 +197,7 @@ pub fn Marshal(comptime Reg: type) type {
                 const key = l.toString(-2) catch unreachable;
                 var known = false;
                 inline for (info.field_names) |nm| {
-                    if (std.mem.eql(u8, key, comptime names.pascal(nm))) known = true;
+                    if (std.mem.eql(u8, key, comptime names.camel(nm))) known = true;
                 }
 
                 if (!known)
@@ -215,14 +215,14 @@ pub fn Marshal(comptime Reg: type) type {
             const info = @typeInfo(T).@"struct";
             inline for (info.field_names) |nm| {
                 push(l, @field(v, nm));
-                l.setField(-2, comptime names.pascal(nm));
+                l.setField(-2, comptime names.camel(nm));
             }
         }
 
         fn pushUnion(l: *zlua.Lua, v: anytype, comptime number: ?[]const u8) void {
             switch (v) {
                 inline else => |payload, tag| {
-                    const name = comptime names.pascal(@tagName(tag));
+                    const name = comptime names.camel(@tagName(tag));
                     if (number != null and comptime std.mem.eql(u8, @tagName(tag), number.?)) {
                         push(l, payload);
                     } else if (@TypeOf(payload) == void) {
