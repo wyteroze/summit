@@ -29,11 +29,11 @@ pub const SpeakerHandle = struct {
         return self.entity.world.getComponent(self.entity, id, Speaker);
     }
 
-    pub fn require(self: SpeakerHandle) !*Speaker { 
+    pub fn require(self: SpeakerHandle) !*Speaker {
         return self.get() orelse error.SpeakerRemoved;
     }
 
-    pub fn isAlive(self: SpeakerHandle) bool { 
+    pub fn isAlive(self: SpeakerHandle) bool {
         return self.get() != null;
     }
 
@@ -57,29 +57,45 @@ pub const SpeakerHandle = struct {
         .name = "Speaker",
         .alive = bind.func("isAlive", SpeakerHandle.isAlive),
         .methods = &.{
-            bind.func("Play", SpeakerHandle.play)
+            bind.func("Play", SpeakerHandle.play),
         },
         .props = &.{
             bind.prop("Volume", struct {
-                fn get(self: SpeakerHandle) !f32 { return (try self.require()).volume; }
+                fn get(self: SpeakerHandle) !f32 {
+                    return (try self.require()).volume;
+                }
             }.get, struct {
-                fn set(self: SpeakerHandle, volume: f32) !void { (try self.require()).volume = std.math.clamp(volume, min_volume, max_volume); }
+                fn set(self: SpeakerHandle, volume: f32) !void {
+                    (try self.require()).volume = std.math.clamp(volume, min_volume, max_volume);
+                }
             }.set),
             bind.prop("MinDistance", struct {
-                fn get(self: SpeakerHandle) !f32 { return (try self.require()).min_distance; }
+                fn get(self: SpeakerHandle) !f32 {
+                    return (try self.require()).min_distance;
+                }
             }.get, struct {
-                fn set(self: SpeakerHandle, distance: f32) !void { (try self.require()).min_distance = @max(distance, 0); }
+                fn set(self: SpeakerHandle, distance: f32) !void {
+                    (try self.require()).min_distance = @max(distance, 0);
+                }
             }.set),
             bind.prop("MaxDistance", struct {
-                fn get(self: SpeakerHandle) !f32 { return (try self.require()).max_distance; }
+                fn get(self: SpeakerHandle) !f32 {
+                    return (try self.require()).max_distance;
+                }
             }.get, struct {
-                fn set(self: SpeakerHandle, distance: f32) !void { (try self.require()).max_distance = @max(distance, 0); }
+                fn set(self: SpeakerHandle, distance: f32) !void {
+                    (try self.require()).max_distance = @max(distance, 0);
+                }
             }.set),
             bind.prop("Attenuation", struct {
-                fn get(self: SpeakerHandle) !Audio.types.Attenuation { return (try self.require()).attenuation; }
+                fn get(self: SpeakerHandle) !Audio.types.Attenuation {
+                    return (try self.require()).attenuation;
+                }
             }.get, struct {
-                fn set(self: SpeakerHandle, attenuation: Audio.types.Attenuation) !void { (try self.require()).attenuation = attenuation; }
+                fn set(self: SpeakerHandle, attenuation: Audio.types.Attenuation) !void {
+                    (try self.require()).attenuation = attenuation;
+                }
             }.set),
-        }
+        },
     });
 };

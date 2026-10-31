@@ -6,7 +6,7 @@ pub const static_libs = [_][]const u8{
     "slang-compiler",
     "core",
     "compiler-core",
-    "slang-cpp-parser"
+    "slang-cpp-parser",
 };
 
 pub fn build(b: *std.Build) !void {
@@ -24,9 +24,10 @@ pub fn build(b: *std.Build) !void {
     const build_path = b.path("build");
 
     // Building with debug info severely bloats .zig-cache (~1.5gb per build)
-    const cmake_build_type = "Release"; _ = optimize; // optimizeModeToCMakeBuildType(optimize);
+    const cmake_build_type = "Release";
+    _ = optimize; // optimizeModeToCMakeBuildType(optimize);
 
-    const cmake_configure = b.addSystemCommand(&.{ "cmake" });
+    const cmake_configure = b.addSystemCommand(&.{"cmake"});
     cmake_configure.addArg("-S");
     cmake_configure.addDirectoryArg2(src_path, .{ .make_absolute = true });
     cmake_configure.addArg("-B");
@@ -37,7 +38,7 @@ pub fn build(b: *std.Build) !void {
     const install_out = cmake_configure.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "install");
 
     cmake_configure.addArgs(&.{
-        b.fmt("-DCMAKE_BUILD_TYPE={s}", .{ cmake_build_type }),
+        b.fmt("-DCMAKE_BUILD_TYPE={s}", .{cmake_build_type}),
         "-DSLANG_LIB_TYPE=STATIC",
         "-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG -g0",
         boolFlag(b, "SLANG_ENABLE_TESTS", true),
@@ -54,19 +55,19 @@ pub fn build(b: *std.Build) !void {
         boolFlag(b, "SLANG_ENABLE_RELEASE_DEBUG_INFO", true),
         "-DSLANG_SLANG_LLVM_FLAVOR=DISABLE",
         "-DSLANG_EXCLUDE_DAWN=TRUE",
-        "-DSLANG_EXCLUDE_TINT=TRUE"
+        "-DSLANG_EXCLUDE_TINT=TRUE",
     });
 
-    const cmake_build = b.addSystemCommand(&.{ "cmake" });
+    const cmake_build = b.addSystemCommand(&.{"cmake"});
     cmake_build.addArg("--build");
     cmake_build.addDirectoryArg(build_path);
     cmake_build.addArgs(&.{ "--config", cmake_build_type });
     cmake_build.addArgs(&.{ "--target", "all" });
     cmake_build.addArgs(&.{ "--target", "slang-glsl-module" });
-    cmake_build.addArgs(&.{ "--parallel", b.fmt("{d}", .{ try std.Thread.getCpuCount() }) });
+    cmake_build.addArgs(&.{ "--parallel", b.fmt("{d}", .{try std.Thread.getCpuCount()}) });
     cmake_build.step.dependOn(&cmake_configure.step);
 
-    const cmake_install = b.addSystemCommand(&.{ "cmake" });
+    const cmake_install = b.addSystemCommand(&.{"cmake"});
     cmake_install.addArg("--install");
     cmake_install.addDirectoryArg(build_path);
     cmake_install.addArgs(&.{ "--config", cmake_build_type });
@@ -84,7 +85,7 @@ pub fn build(b: *std.Build) !void {
 
     b.addNamedLazyPath("include", include_path);
     b.addNamedLazyPath("lib", lib_path);
-    
+
     b.addNamedLazyPath("lib-build", b.path("build/Release/lib/"));
     b.addNamedLazyPath("lib-miniz", b.path("build/external/miniz/libminiz.a"));
     b.addNamedLazyPath("lib-cmark", b.path("build/external/cmark/src/libcmark-gfm.a"));
@@ -96,7 +97,7 @@ fn optimizeModeToCMakeBuildType(optimize: std.builtin.OptimizeMode) []const u8 {
         .Debug => "Debug",
         .ReleaseFast => "Release",
         .ReleaseSafe => "RelWithDebInfo",
-        .ReleaseSmall => "MinSizeRel"
+        .ReleaseSmall => "MinSizeRel",
     };
 }
 

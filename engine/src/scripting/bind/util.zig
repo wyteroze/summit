@@ -6,35 +6,47 @@ const names = @import("names.zig");
 const recipes = @import("recipes.zig");
 
 pub fn func(comptime name: [:0]const u8, comptime f: anytype) types.Member {
-    return .{ .name = name, .kind = .func, .impl = struct { pub const function = f; } };
+    return .{ .name = name, .kind = .func, .impl = struct {
+        pub const function = f;
+    } };
 }
 
 pub fn constant(comptime name: [:0]const u8, comptime v: anytype) types.Member {
-    return .{ .name = name, .kind = .constant, .impl = struct { pub const val = v; } };
+    return .{ .name = name, .kind = .constant, .impl = struct {
+        pub const val = v;
+    } };
 }
 
 pub fn prop(comptime name: [:0]const u8, comptime get: anytype, comptime set: anytype) types.Member {
-    return .{ .name = name, .kind = .prop, .impl = struct { pub const getter = get; pub const setter = set; } };
+    return .{ .name = name, .kind = .prop, .impl = struct {
+        pub const getter = get;
+        pub const setter = set;
+    } };
 }
 
 pub fn readonly(comptime name: [:0]const u8, comptime get: anytype) types.Member {
-    return .{ .name = name, .kind = .prop, .impl = struct { pub const getter = get; } };
+    return .{ .name = name, .kind = .prop, .impl = struct {
+        pub const getter = get;
+    } };
 }
 
 pub fn module(comptime name: [:0]const u8, comptime r: recipes.ModuleRecipe) types.Member {
-    return .{ .name = name, .kind = .module, .impl = struct { pub const recipe = r; } };
+    return .{ .name = name, .kind = .module, .impl = struct {
+        pub const recipe = r;
+    } };
 }
 
 pub fn globals(comptime r: recipes.GlobalsRecipe) types.Member {
-    return .{ .name = "", .kind = .globals, .impl = struct { pub const recipe = r; } };
+    return .{ .name = "", .kind = .globals, .impl = struct {
+        pub const recipe = r;
+    } };
 }
 
 pub fn handle(comptime T: type, comptime r: recipes.HandleRecipe) types.Member {
-    return .{
-        .name = r.name orelse names.shortTypeName(T),
-        .kind = .handle,
-        .impl = struct { pub const Type = T; pub const recipe = r; }
-    };
+    return .{ .name = r.name orelse names.shortTypeName(T), .kind = .handle, .impl = struct {
+        pub const Type = T;
+        pub const recipe = r;
+    } };
 }
 
 pub fn value(comptime T: type, comptime r: recipes.ValueRecipe) types.Member {
@@ -42,26 +54,27 @@ pub fn value(comptime T: type, comptime r: recipes.ValueRecipe) types.Member {
     return .{
         .name = r.name orelse names.shortTypeName(T),
         .kind = .value,
-        .impl = struct { pub const Type = T; pub const recipe = r; },
+        .impl = struct {
+            pub const Type = T;
+            pub const recipe = r;
+        },
     };
 }
 
 pub fn record(comptime T: type, comptime r: recipes.RecordRecipe) types.Member {
     comptime validateRecord(T);
-    return .{
-        .name = r.name orelse names.shortTypeName(T),
-        .kind = .record,
-        .impl = struct { pub const Type = T; pub const recipe = r; }
-    };
+    return .{ .name = r.name orelse names.shortTypeName(T), .kind = .record, .impl = struct {
+        pub const Type = T;
+        pub const recipe = r;
+    } };
 }
 
 pub fn variant(comptime T: type, comptime r: recipes.VariantRecipe) types.Member {
     comptime validateVariant(T, r);
-    return .{
-        .name = r.name orelse names.shortTypeName(T),
-        .kind = .variant,
-        .impl = struct { pub const Type = T; pub const recipe = r; }
-    };
+    return .{ .name = r.name orelse names.shortTypeName(T), .kind = .variant, .impl = struct {
+        pub const Type = T;
+        pub const recipe = r;
+    } };
 }
 
 pub fn signal(comptime name: [:0]const u8, comptime get: anytype) types.Member {
@@ -71,9 +84,11 @@ pub fn signal(comptime name: [:0]const u8, comptime get: anytype) types.Member {
     } };
 }
 
-// Sorry...
 pub fn inherit(comptime V: type, comptime r: recipes.HandleRecipe) type {
-    return struct { pub const via = V; pub const recipe = r; };
+    return struct {
+        pub const via = V;
+        pub const recipe = r;
+    };
 }
 
 fn validateValue(comptime T: type, comptime r: recipes.ValueRecipe) void {
@@ -85,7 +100,7 @@ fn validateValue(comptime T: type, comptime r: recipes.ValueRecipe) void {
 fn validateRecord(comptime T: type) void {
     const info = @typeInfo(T).@"struct";
     inline for (info.field_attrs, 0..) |f, i|
-        if (f.default_value_ptr == null) 
+        if (f.default_value_ptr == null)
             @compileError(std.fmt.comptimePrint("{s}.{s} needs a default value to be a record field", .{ @typeName(T), info.field_names[i] }));
 }
 
@@ -101,14 +116,14 @@ fn signalType(comptime get: anytype) type {
 }
 
 fn validateVariant(comptime T: type, comptime r: recipes.VariantRecipe) void {
-    if (@typeInfo(T) != .@"union") 
+    if (@typeInfo(T) != .@"union")
         @compileError(@typeName(T) ++ " must be a union to be bound as a variant");
 
     if (r.number) |v| {
         const nm = @tagName(v);
         if (!@hasField(T, nm))
             @compileError(@typeName(T) ++ " has no variant '" ++ nm ++ "' (listed in .number)");
-            
+
         switch (@typeInfo(@FieldType(T, nm))) {
             .int, .float => {},
             else => @compileError(@typeName(T) ++ "." ++ nm ++ " must have a numeric payload to be the .number shorthand"),
@@ -120,6 +135,8 @@ pub fn Via(comptime F: type, comptime T: type, comptime proj: fn (F) T) type {
     return struct {
         pub const From = F;
         pub const To = T;
-        pub fn get(f: F) T { return proj(f); }
+        pub fn get(f: F) T {
+            return proj(f);
+        }
     };
 }

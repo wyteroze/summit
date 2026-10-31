@@ -8,10 +8,7 @@ const Pushed = @import("../scripting/bind/wrap.zig").Pushed;
 
 pub const type_name = "lua.Value";
 
-pub const LuaValue = struct {
-    l: *zlua.Lua,
-    ref: i32
-};
+pub const LuaValue = struct { l: *zlua.Lua, ref: i32 };
 
 pub fn freeLuaValue(_: std.mem.Allocator, bytes: []u8) void {
     const v: *LuaValue = @ptrCast(@alignCast(bytes.ptr));
@@ -29,7 +26,7 @@ fn write(e: ecs.Entity, l: *zlua.Lua, codecs: []const ecs.Codec, name: []const u
     switch (mode) {
         .add => if (exists) return error.ComponentAlreadyExists,
         .set => if (!exists) return error.ComponentMissing,
-        .upsert => {}
+        .upsert => {},
     }
 
     var buf: [ecs.ComponentRegistry.max_component_size]u8 align(ecs.ComponentRegistry.max_alignment) = undefined;
@@ -72,13 +69,16 @@ pub fn getComponent(e: ecs.Entity, l: *zlua.Lua, codecs: []const ecs.Codec, name
     }
 
     const c = ecs.Codec.find(codecs, info.type_name) orelse return error.ComponentNotExposedToLua;
-    if (c.push_component) |pc| { pc(l, e, id, bytes); return .{ .n = 1 }; }
-    
+    if (c.push_component) |pc| {
+        pc(l, e, id, bytes);
+        return .{ .n = 1 };
+    }
+
     c.push(l, bytes);
     return .{ .n = 1 };
 }
 
-// "Proxy" object for `entity.Components`. 
+// "Proxy" object for `entity.Components`.
 pub const Components = struct {
     entity: ecs.Entity,
 
@@ -120,7 +120,7 @@ pub const ComponentRef = struct {
         _ = l.pushString(key);
         _ = l.getTable(-2);
         l.remove(-2);
-        
+
         return .{ .n = 1 };
     }
 
@@ -150,7 +150,7 @@ pub const ComponentRef = struct {
 
         return .{ .n = 1 };
     }
-    
+
     // TODO: While this works at face value, it's inherently funky
     // because it wraps the real value of the component. While tostring() works,
     // stuff like typeof, iterators, etc. don't. Either find a solution that eliminates

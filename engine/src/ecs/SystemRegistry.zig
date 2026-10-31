@@ -46,11 +46,11 @@ pub fn deinit(self: *SystemRegistry) void {
 pub fn register(
     self: *SystemRegistry,
     world: *World,
-    query: []const ecs.ComponentId, 
-    init_fn: ?SystemInitFn, 
-    update_fn: SystemUpdateFn, 
+    query: []const ecs.ComponentId,
+    init_fn: ?SystemInitFn,
+    update_fn: SystemUpdateFn,
     deinit_fn: ?SystemDeinitFn,
-    ctx: *anyopaque
+    ctx: *anyopaque,
 ) !SystemHandle {
     const id = self.next_id;
     self.next_id +%= 1;
@@ -60,7 +60,7 @@ pub fn register(
         .query = query,
         .init = init_fn,
         .update = update_fn,
-        .deinit = deinit_fn
+        .deinit = deinit_fn,
     });
 
     if (init_fn) |func| func(world, ctx);
@@ -74,10 +74,10 @@ pub fn unregister(self: *SystemRegistry, handle: SystemHandle) !void {
     } else return error.SystemNotRegistered;
 }
 
-pub fn runAll(self: *SystemRegistry, world: *World, dt: f32) void {    
+pub fn runAll(self: *SystemRegistry, world: *World, dt: f32) void {
     var iter = self.systems.valueIterator();
     while (iter.next()) |s| {
-        // TODO: Cache queries instead of doing them every frame        
+        // TODO: Cache queries instead of doing them every frame
         var q_iter = world.query(s.query).iterator();
         while (q_iter.next()) |e| s.update(e, dt, s.ctx);
     }

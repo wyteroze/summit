@@ -25,7 +25,7 @@ pub fn Wrap(comptime Mar: type) type {
                     var args: std.meta.ArgsTuple(F) = undefined;
                     comptime var next: i32 = 1;
                     comptime var has_self = false;
-                    
+
                     inline for (info.param_types, 0..) |P, i| {
                         if (comptime hostField(P.?)) |name| {
                             args[i] = @field(Host.fromState(l), name);
@@ -35,12 +35,18 @@ pub fn Wrap(comptime Mar: type) type {
                             const outer = Mar.parse(o.via.?.From, l, next);
                             args[i] = o.via.?.get(outer);
                             next += 1;
-                            
-                            if (!has_self) { has_self = true; next += o.skip_after_self; }
+
+                            if (!has_self) {
+                                has_self = true;
+                                next += o.skip_after_self;
+                            }
                         } else {
                             args[i] = Mar.parse(P.?, l, next);
                             next += 1;
-                            if (!has_self) { has_self = true; next += o.skip_after_self; }
+                            if (!has_self) {
+                                has_self = true;
+                                next += o.skip_after_self;
+                            }
                         }
                     }
 
@@ -55,15 +61,21 @@ pub fn Wrap(comptime Mar: type) type {
             switch (@typeInfo(R)) {
                 .void => return 0,
                 .error_union => |eu| {
-                    const v = r catch |e| return l.raiseErrorStr("%s", .{ @errorName(e).ptr });
+                    const v = r catch |e| return l.raiseErrorStr("%s", .{@errorName(e).ptr});
                     return pushResult(eu.payload, l, v);
                 },
                 .@"struct" => |s| if (s.is_tuple) {
                     inline for (s.field_names) |nm| Mar.push(l, @field(r, nm));
                     return s.field_names.len;
-                } else { Mar.push(l, r); return 1; },
+                } else {
+                    Mar.push(l, r);
+                    return 1;
+                },
 
-                else => { Mar.push(l, r); return 1; },
+                else => {
+                    Mar.push(l, r);
+                    return 1;
+                },
             }
         }
     };

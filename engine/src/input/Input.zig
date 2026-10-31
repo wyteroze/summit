@@ -10,11 +10,11 @@ const Ui = @import("../ui/Ui.zig");
 
 const max_usize = std.math.maxInt(usize);
 
-pub const KeyboardConnectionEvent = signal.Signal(.{ KeyboardHandle });
+pub const KeyboardConnectionEvent = signal.Signal(.{KeyboardHandle});
 pub const KeyboardEvent = signal.Signal(.{ KeyboardHandle, bool, Windowing.WindowHandle });
-pub const MouseConnectionEvent = signal.Signal(.{ MouseHandle });
+pub const MouseConnectionEvent = signal.Signal(.{MouseHandle});
 pub const MouseEvent = signal.Signal(.{ MouseHandle, bool, Windowing.WindowHandle });
-pub const GamepadConnectionEvent = signal.Signal(.{ GamepadHandle });
+pub const GamepadConnectionEvent = signal.Signal(.{GamepadHandle});
 pub const GamepadEvent = signal.Signal(.{ GamepadHandle, bool, Windowing.WindowHandle });
 
 pub const KeyboardHandle = devices.DeviceHandle(devices.KeyboardDevice, "keyboards");
@@ -54,7 +54,13 @@ mice: std.AutoHashMap(usize, *devices.MouseDevice),
 gamepads: std.AutoHashMap(usize, *devices.GamepadDevice),
 touch_devices: std.AutoHashMap(usize, *devices.TouchDevice),
 
-pub fn init(self: *Input, allocator: std.mem.Allocator, platform: *Platform, ui: *Ui, windowing: *Windowing,) !void {
+pub fn init(
+    self: *Input,
+    allocator: std.mem.Allocator,
+    platform: *Platform,
+    ui: *Ui,
+    windowing: *Windowing,
+) !void {
     var keyboards: std.AutoHashMap(usize, *devices.KeyboardDevice) = .init(allocator);
     var mice: std.AutoHashMap(usize, *devices.MouseDevice) = .init(allocator);
     var gamepads: std.AutoHashMap(usize, *devices.GamepadDevice) = .init(allocator);
@@ -81,7 +87,7 @@ pub fn init(self: *Input, allocator: std.mem.Allocator, platform: *Platform, ui:
 
     const platform_event_con = try platform.platform_event.connect(struct {
         fn c(slf: *Input, evt: Platform.desc.PlatformEvent) void {
-            slf.onPlatformEvent(evt) catch |e| std.debug.panic("Input.onPlatformEvent panic: {any}", .{ e });
+            slf.onPlatformEvent(evt) catch |e| std.debug.panic("Input.onPlatformEvent panic: {any}", .{e});
         }
     }.c, self);
 
@@ -115,11 +121,23 @@ pub fn deinit(self: *Input) void {
     var gp_iter = self.gamepads.valueIterator();
     var td_iter = self.touch_devices.valueIterator();
 
-    while (kb_iter.next()) |kb| { kb.*.deinit(); self.allocator.destroy(kb.*); }
-    while (ms_iter.next()) |ms| { ms.*.deinit(); self.allocator.destroy(ms.*); }
-    while (gp_iter.next()) |gp| { gp.*.deinit(); self.allocator.destroy(gp.*); }
-    while (td_iter.next()) |td| { td.*.deinit(); self.allocator.destroy(td.*); }
-    
+    while (kb_iter.next()) |kb| {
+        kb.*.deinit();
+        self.allocator.destroy(kb.*);
+    }
+    while (ms_iter.next()) |ms| {
+        ms.*.deinit();
+        self.allocator.destroy(ms.*);
+    }
+    while (gp_iter.next()) |gp| {
+        gp.*.deinit();
+        self.allocator.destroy(gp.*);
+    }
+    while (td_iter.next()) |td| {
+        td.*.deinit();
+        self.allocator.destroy(td.*);
+    }
+
     self.keyboards.deinit();
     self.mice.deinit();
     self.gamepads.deinit();
@@ -135,34 +153,37 @@ pub fn deinit(self: *Input) void {
 
 fn onPlatformEvent(self: *Input, event: Platform.desc.PlatformEvent) !void {
     switch (event) {
-        .keyboard_connected => |e| { 
+        .keyboard_connected => |e| {
             const kb = try self.allocator.create(devices.KeyboardDevice);
             errdefer self.allocator.destroy(kb);
 
             kb.* = .init(&self.dispatcher, self.allocator, e.id);
             try self.keyboards.put(@intCast(e.id), kb);
 
-            self.keyboard_connected.fire(.{ .{ .input = self, .id = e.id } });
+            self.keyboard_connected.fire(.{.{ .input = self, .id = e.id }});
         },
-        .keyboard_disconnected => |e| { 
+        .keyboard_disconnected => |e| {
             const h: KeyboardHandle = .{ .input = self, .id = e.id };
-            if (!h.isAlive()) { std.log.err("Attempt to disconnect kb id {d}, but it doesn't exist/isn't registered", .{ e.id }); return; }
-            
-            self.keyboard_disconnected.fire(.{ h });
+            if (!h.isAlive()) {
+                std.log.err("Attempt to disconnect kb id {d}, but it doesn't exist/isn't registered", .{e.id});
+                return;
+            }
+
+            self.keyboard_disconnected.fire(.{h});
 
             const kv = self.keyboards.fetchRemove(@intCast(e.id)).?;
             kv.value.deinit();
             self.allocator.destroy(kv.value);
         },
-        .keyboard_key_down => |e| { 
+        .keyboard_key_down => |e| {
             const win = self.windowing.getWindowFromId(e.window_id) orelse return;
-            try self.unikeyboard.keyPressed(e, win); 
-            try (self.getKeyboard(e.keyboard_id) orelse return).keyPressed(e, win); 
+            try self.unikeyboard.keyPressed(e, win);
+            try (self.getKeyboard(e.keyboard_id) orelse return).keyPressed(e, win);
         },
-        .keyboard_key_up => |e| { 
+        .keyboard_key_up => |e| {
             const win = self.windowing.getWindowFromId(e.window_id) orelse return;
-            self.unikeyboard.keyReleased(e, win); 
-            (self.getKeyboard(e.keyboard_id) orelse return).keyReleased(e, win); 
+            self.unikeyboard.keyReleased(e, win);
+            (self.getKeyboard(e.keyboard_id) orelse return).keyReleased(e, win);
         },
         .mouse_connected => |e| {
             const ms = try self.allocator.create(devices.MouseDevice);
@@ -171,13 +192,16 @@ fn onPlatformEvent(self: *Input, event: Platform.desc.PlatformEvent) !void {
             ms.* = .init(&self.dispatcher, self.allocator, e.id);
             try self.mice.put(@intCast(e.id), ms);
 
-            self.mouse_connected.fire(.{ .{ .input = self, .id = e.id } });
+            self.mouse_connected.fire(.{.{ .input = self, .id = e.id }});
         },
         .mouse_disconnected => |e| {
             const h: MouseHandle = .{ .input = self, .id = e.id };
-            if (!h.isAlive()) { std.log.err("Attempt to disconnect mouse id {d}, but it doesn't exist/isn't registered", .{ e.id }); return; }
-            
-            self.mouse_disconnected.fire(.{ h });
+            if (!h.isAlive()) {
+                std.log.err("Attempt to disconnect mouse id {d}, but it doesn't exist/isn't registered", .{e.id});
+                return;
+            }
+
+            self.mouse_disconnected.fire(.{h});
 
             const kv = self.mice.fetchRemove(@intCast(e.id)).?;
             kv.value.deinit();
@@ -188,7 +212,7 @@ fn onPlatformEvent(self: *Input, event: Platform.desc.PlatformEvent) !void {
             var ms = self.getMouse(e.mouse_id) orelse return;
 
             const consumed = self.ui.pointerPressed(ms.getPosition());
-            try self.unimouse.buttonDown(e, consumed, win); 
+            try self.unimouse.buttonDown(e, consumed, win);
             try ms.buttonDown(e, consumed, win);
         },
         .mouse_button_up => |e| {
@@ -196,12 +220,12 @@ fn onPlatformEvent(self: *Input, event: Platform.desc.PlatformEvent) !void {
             var ms = self.getMouse(e.mouse_id) orelse return;
 
             const consumed = self.ui.pointerReleased(ms.getPosition());
-            self.unimouse.buttonUp(e, consumed, win); 
+            self.unimouse.buttonUp(e, consumed, win);
             ms.buttonUp(e, consumed, win);
         },
         .mouse_scrolled => |e| {
             const win = self.windowing.getWindowFromId(e.window_id) orelse return;
-            self.unimouse.scrolled(e, win); 
+            self.unimouse.scrolled(e, win);
             (self.getMouse(e.mouse_id) orelse return).scrolled(e, win);
         },
         .mouse_moved => |e| {
@@ -209,10 +233,10 @@ fn onPlatformEvent(self: *Input, event: Platform.desc.PlatformEvent) !void {
             var ms = self.getMouse(e.mouse_id) orelse return;
             const consumed = self.ui.pointerMoved(ms.getPosition());
 
-            self.unimouse.moved(e, consumed, win); 
+            self.unimouse.moved(e, consumed, win);
             ms.moved(e, consumed, win);
         },
-        else => {}
+        else => {},
     }
 }
 
@@ -260,10 +284,7 @@ const bind = @import("../scripting/bind/bind.zig");
 pub const api = bind.module("input", .{
     .kind = .{ .singleton = Input },
     .members = &.{
-        bind.func("IsCursorLocked", getCursorLocked),
-        bind.func("SetCursorLocked", setCursorLocked),
-        bind.func("IsCursorVisible", getCursorVisible),
-        bind.func("SetCursorVisible", setCursorVisible),
+        bind.func("IsCursorLocked", getCursorLocked), bind.func("SetCursorLocked", setCursorLocked), bind.func("IsCursorVisible", getCursorVisible), bind.func("SetCursorVisible", setCursorVisible),
         bind.func("GetKeyboard", struct {
             fn c(self: *Input, id: usize) ?KeyboardHandle {
                 return if (self.keyboards.contains(id)) .{ .input = self, .id = id } else null;
@@ -284,7 +305,6 @@ pub const api = bind.module("input", .{
                 return .{ .input = self, .id = self.unimouse.id };
             }
         }.c),
-
         bind.handle(KeyboardHandle, .{
             .name = "Keyboard",
             .alive = bind.func("isAlive", KeyboardHandle.isAlive),
@@ -293,11 +313,13 @@ pub const api = bind.module("input", .{
                     fn c(self: KeyboardHandle, key: Platform.desc.Keycode) !bool {
                         return (try self.require()).isKeyPressed(key);
                     }
-                }.c)
+                }.c),
             },
             .props = &.{
                 bind.readonly("Id", struct {
-                    fn c(self: KeyboardHandle) usize { return self.id; }
+                    fn c(self: KeyboardHandle) usize {
+                        return self.id;
+                    }
                 }.c),
             },
             .signals = &.{
@@ -331,7 +353,9 @@ pub const api = bind.module("input", .{
             },
             .props = &.{
                 bind.readonly("Id", struct {
-                    fn c(self: MouseHandle) usize { return self.id; }
+                    fn c(self: MouseHandle) usize {
+                        return self.id;
+                    }
                 }.c),
             },
             .signals = &.{
@@ -352,6 +376,6 @@ pub const api = bind.module("input", .{
                 }.c),
             },
             .ops = .{ .eq = .{ .member = bind.func("eq", MouseHandle.eql) }, .tostring = .auto },
-        })
-    }
+        }),
+    },
 });

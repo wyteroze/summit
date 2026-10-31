@@ -4,7 +4,7 @@ const math = @import("../core/math/math.zig");
 
 pub const AudioListener = struct {
     position: math.Vec3 = .zero,
-    right: math.Vec3 = .new(1, 0, 0)
+    right: math.Vec3 = .new(1, 0, 0),
 };
 
 pub const Attenuation = enum {

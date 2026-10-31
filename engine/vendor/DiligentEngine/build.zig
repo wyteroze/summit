@@ -11,7 +11,7 @@ pub const Backend = enum {
             .gl => "SUMMIT_OPENGL_BACKEND",
             .vulkan => "SUMMIT_VULKAN_BACKEND",
             .d3d11 => "SUMMIT_D3D11_BACKEND",
-            .d3d12 => "SUMMIT_D3D12_BACKEND"
+            .d3d12 => "SUMMIT_D3D12_BACKEND",
         };
     }
 };
@@ -21,19 +21,27 @@ pub fn targetToCFlag(target: std.Build.ResolvedTarget) []const u8 {
         .wasi => "PLATFORM_WEB",
         .windows => "PLATFORM_WIN32",
         .macos, .maccatalyst => "PLATFORM_MACOS",
-        .ios => "PLATFORM_IOS", 
-        .tvos => "PLATFORM_TVOS", 
+        .ios => "PLATFORM_IOS",
+        .tvos => "PLATFORM_TVOS",
         .visionos => "PLATFORM_VISIONOS",
         .linux => "PLATFORM_LINUX",
 
-        else => @panic("This platform is not supported by any existing backends.")
+        else => @panic("This platform is not supported by any existing backends."),
     };
 }
 
 pub const static_libs = [_][]const u8{
-    "DiligentCore", "glslang", "SPIRV", "SPIRV-Tools",
-    "SPIRV-Tools-opt", "spirv-cross-core", "volk", "xxhash",
-    "GenericCodeGen", "MachineIndependent", "OSDependent"
+    "DiligentCore",
+    "glslang",
+    "SPIRV",
+    "SPIRV-Tools",
+    "SPIRV-Tools-opt",
+    "spirv-cross-core",
+    "volk",
+    "xxhash",
+    "GenericCodeGen",
+    "MachineIndependent",
+    "OSDependent",
 };
 
 pub fn build(b: *std.Build) !void {
@@ -47,7 +55,7 @@ pub fn build(b: *std.Build) !void {
 
     const step = b.step("diligent", "Build DiligentEngine using CMake");
 
-    if (skip_cmake) {        
+    if (skip_cmake) {
         b.addNamedLazyPath("include", b.path("stub-include"));
 
         b.addNamedLazyPath("lib-core", b.path("stub-lib"));
@@ -57,12 +65,13 @@ pub fn build(b: *std.Build) !void {
     }
 
     const src_path = b.path("src");
-    const build_path =  b.path("build");
+    const build_path = b.path("build");
 
     // Building with debug info severely bloats .zig-cache (~1.5gb per build)
-    const cmake_build_type = "Release"; _ = optimize; // optimizeModeToCMakeBuildType(optimize);
+    const cmake_build_type = "Release";
+    _ = optimize; // optimizeModeToCMakeBuildType(optimize);
 
-    const cmake_configure = b.addSystemCommand(&.{ "cmake" });
+    const cmake_configure = b.addSystemCommand(&.{"cmake"});
     cmake_configure.addArg("-S");
     cmake_configure.addDirectoryArg2(src_path, .{ .make_absolute = true });
     cmake_configure.addArg("-B");
@@ -73,24 +82,24 @@ pub fn build(b: *std.Build) !void {
 
     cmake_configure.addArgs(&.{
         "-DDILIGENT_BUILD_TOOLS=OFF",
-        b.fmt("-DCMAKE_BUILD_TYPE={s}", .{ cmake_build_type }),
+        b.fmt("-DCMAKE_BUILD_TYPE={s}", .{cmake_build_type}),
         b.fmt("-DCMAKE_CXX_FLAGS=-D{s} -g0 -D{s}=1", .{ backend.toCFlag(), targetToCFlag(target) }),
         boolFlag(b, "DILIGENT_BUILD_SAMPLES", samples),
         boolFlag(b, "DILIGENT_BUILD_TESTS", tests),
         boolFlag(b, "DILIGENT_NO_OPENGL", false),
         boolFlag(b, "DILIGENT_NO_DIRECT3D11", backend != .d3d11),
         boolFlag(b, "DILIGENT_NO_DIRECT3D12", backend != .d3d12),
-        boolFlag(b, "DILIGENT_NO_VULKAN", backend != .vulkan)
+        boolFlag(b, "DILIGENT_NO_VULKAN", backend != .vulkan),
     });
 
-    const cmake_build = b.addSystemCommand(&.{ "cmake" });
+    const cmake_build = b.addSystemCommand(&.{"cmake"});
     cmake_build.addArg("--build");
     cmake_build.addDirectoryArg(build_path);
     cmake_build.addArgs(&.{ "--config", cmake_build_type });
-    cmake_build.addArgs(&.{ "--parallel", b.fmt("{d}", .{ try std.Thread.getCpuCount() }) });
+    cmake_build.addArgs(&.{ "--parallel", b.fmt("{d}", .{try std.Thread.getCpuCount()}) });
     cmake_build.step.dependOn(&cmake_configure.step);
-    
-    const cmake_install = b.addSystemCommand(&.{ "cmake" });
+
+    const cmake_install = b.addSystemCommand(&.{"cmake"});
     cmake_install.addArg("--install");
     cmake_install.addDirectoryArg(build_path);
     cmake_install.step.dependOn(&cmake_build.step);
@@ -111,7 +120,7 @@ fn optimizeModeToCMakeBuildType(optimize: std.builtin.OptimizeMode) []const u8 {
         .Debug => "Debug",
         .ReleaseFast => "Release",
         .ReleaseSafe => "RelWithDebInfo",
-        .ReleaseSmall => "MinSizeRel"
+        .ReleaseSmall => "MinSizeRel",
     };
 }
 

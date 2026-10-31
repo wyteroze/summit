@@ -107,7 +107,7 @@ pub const Mat4 = extern struct {
             .{ f / aspect, 0, 0, 0 },
             .{ 0, f, 0, 0 },
             .{ 0, 0, 0, near },
-            .{ 0, 0, 1, 0 }
+            .{ 0, 0, 1, 0 },
         } };
     }
 
@@ -136,7 +136,7 @@ pub const Mat4 = extern struct {
             .{ s.x, s.y, s.z, -s.dot(eye) },
             .{ u.x, u.y, u.z, -u.dot(eye) },
             .{ f.x, f.y, f.z, -f.dot(eye) },
-            .{ 0, 0, 0, 1 }
+            .{ 0, 0, 0, 1 },
         } };
     }
 

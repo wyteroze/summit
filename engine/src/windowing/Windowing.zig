@@ -33,7 +33,7 @@ pub fn init(self: *Windowing, allocator: std.mem.Allocator, platform: *Platform,
         .evt_connection = undefined,
         .platform = platform,
         .renderer = renderer,
-        .ui = ui
+        .ui = ui,
     };
 
     self.evt_connection = try platform.platform_event.connect(onPlatformEvent, self);
@@ -72,10 +72,11 @@ pub fn createWindow(self: *Windowing, options: ?CreateWindowOptions) !Window.Win
         return error.ParentRequiredForModalWindow;
     }
 
-    const surface = try self.platform.createSurface(.{ 
-        .title = opts.title, 
+    const surface = try self.platform.createSurface(.{
+        .title = opts.title,
         .parent = if (opts.parent) |p| (try p.get()).surface else null,
-        .width = @trunc(opts.size.x), .height = @trunc(opts.size.y),
+        .width = @trunc(opts.size.x),
+        .height = @trunc(opts.size.y),
         .minimized = opts.state == .minimized,
         .maximized = opts.state == .maximized,
         .fullscreen = opts.state == .fullscreen,
@@ -101,14 +102,14 @@ pub fn createWindow(self: *Windowing, options: ?CreateWindowOptions) !Window.Win
     try self.ui.world.set(entity, self.ui.component_ids.position, math.Vec2, .new(0, 0));
     try self.ui.world.set(entity, self.ui.component_ids.size, Ui.types.SizeMode, .fixed(@floatFromInt(logical[0]), @floatFromInt(logical[1])));
     try self.windows.put(surface.id, .init(self.allocator, &self.dispatcher, self, surface, entity));
-    
+
     return .{ .windowing = self, .id = surface.id };
 }
 
 pub fn destroyWindow(self: *Windowing, id: u64) !void {
     const win = self.windows.fetchRemove(id) orelse return error.InvalidWindowId;
     self.renderer.destroyWindow(id) catch |e| {
-        std.log.err("Failed to destroy renderer window: {s}", .{ @errorName(e) });
+        std.log.err("Failed to destroy renderer window: {s}", .{@errorName(e)});
         return;
     };
     self.platform.destroySurface(win.value.surface);
@@ -159,7 +160,7 @@ fn onPlatformEvent(self: *Windowing, event: Platform.desc.PlatformEvent) void {
             win.restored.fire(.{});
         },
 
-        else => {}
+        else => {},
     }
 }
 
@@ -170,7 +171,9 @@ pub const api = bind.module("windowing", .{
         Window.WindowHandle.sub_api,
         bind.func("CreateWindow", Windowing.createWindow),
         bind.readonly("MainWindow", struct {
-            fn c(self: *Windowing) ?Window.WindowHandle { return self.main_window; }
-        }.c)
+            fn c(self: *Windowing) ?Window.WindowHandle {
+                return self.main_window;
+            }
+        }.c),
     },
 });

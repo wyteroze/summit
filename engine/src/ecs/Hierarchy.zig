@@ -15,12 +15,7 @@ children: std.ArrayList(std.ArrayList(Entity)),
 changed: std.ArrayList(Entity),
 
 pub fn init(allocator: std.mem.Allocator) Hierarchy {
-    return .{
-        .allocator = allocator,
-        .parents = .empty,
-        .children = .empty,
-        .changed = .empty
-    };
+    return .{ .allocator = allocator, .parents = .empty, .children = .empty, .changed = .empty };
 }
 
 pub fn deinit(self: *Hierarchy) void {

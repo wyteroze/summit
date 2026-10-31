@@ -33,7 +33,7 @@ fn readBootInfo(io: std.Io, exe_path: []const u8) !?Boot {
     if (file_size < footer_size) return null;
 
     var buf: [footer_size]u8 = undefined;
-    _ = try file.readPositionalAll(io, &buf, file_size-footer_size);
+    _ = try file.readPositionalAll(io, &buf, file_size - footer_size);
 
     const magic = std.mem.readInt(u32, buf[264..268], .little);
     if (magic != boot_magic) return null;

@@ -1,6 +1,6 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 //! A `Ui` component used for drawing shapes on-screen.
-//! 
+//!
 //! Drawing in a `Painter` is different from using regular elements
 //! because it allows you to draw things that don't make sense as individual `Ui` elements, like bezier curves.
 //!
@@ -16,14 +16,14 @@ const PainterMesh = render.types.PainterMesh;
 const math = core.math;
 
 /// The type of the `Painter.on_paint` event.
-pub const OnPaintEvent = core.signal.Signal(.{ });
+pub const OnPaintEvent = core.signal.Signal(.{});
 
 pub const PainterState = struct {
     entity: ecs.Entity,
     /// The commands that this `Painter` has accumulated.
     /// These control what the `Painter` actually draws when it is rendered.
     commands: std.ArrayList(types.PainterCommand) = .empty,
-    /// Holds the mesh for this Painter. During tessellation, items like lines, 
+    /// Holds the mesh for this Painter. During tessellation, items like lines,
     /// rectangles, and curves get turned into vertices that the GPU can actually render.
     mesh: render.types.PainterMesh = .{},
     /// Fired when `invalidate` is called manually, or when this `Painter`'s size has changed.
@@ -33,7 +33,7 @@ pub const PainterState = struct {
     drawn_size: core.math.Vec2 = .zero,
     /// Whether this `Painter` has been updated since the last time it was rendered.
     dirty: bool = true,
-    /// Whether this `Painter`'s commands need to be rebuilt, which means firing the `on_paint` event. 
+    /// Whether this `Painter`'s commands need to be rebuilt, which means firing the `on_paint` event.
     /// This is set to true when the size has changed, or `invalidate` was called.
     /// This exists instead of calling `on_paint` directly to avoid calling it unnecessarily.
     needs_paint: bool = true,
@@ -68,7 +68,9 @@ pub const PainterHandle = struct {
         return self.entity.getComponent(self.ui.component_ids.painter, Painter);
     }
 
-    pub fn isAlive(self: PainterHandle) bool { return self.get() != null; }
+    pub fn isAlive(self: PainterHandle) bool {
+        return self.get() != null;
+    }
 
     fn state(self: PainterHandle) !*PainterState {
         if (self.get() == null) return error.PainterRemoved;
@@ -110,7 +112,7 @@ pub const PainterHandle = struct {
     pub const sub_api = bind.handle(PainterHandle, .{
         .name = "Painter",
         .alive = bind.func("IsAlive", PainterHandle.isAlive),
-        .signals = &.{ bind.signal("OnPaint", PainterHandle.onPaint) },
+        .signals = &.{bind.signal("OnPaint", PainterHandle.onPaint)},
         .methods = &.{
             bind.func("DrawLine", PainterHandle.drawLine),
             bind.func("DrawRectangle", PainterHandle.drawRectangle),
@@ -119,14 +121,22 @@ pub const PainterHandle = struct {
         },
         .props = &.{
             bind.prop("Clip", struct {
-                fn get(self: PainterHandle) !bool { return (self.get() orelse return error.PainterRemoved).clip; }
+                fn get(self: PainterHandle) !bool {
+                    return (self.get() orelse return error.PainterRemoved).clip;
+                }
             }.get, struct {
-                fn set(self: PainterHandle, v: bool) !void { (self.get() orelse return error.PainterRemoved).clip = v; }
+                fn set(self: PainterHandle, v: bool) !void {
+                    (self.get() orelse return error.PainterRemoved).clip = v;
+                }
             }.set),
             bind.prop("Antialiased", struct {
-                fn get(self: PainterHandle) !bool { return (self.get() orelse return error.PainterRemoved).antialiased; }
+                fn get(self: PainterHandle) !bool {
+                    return (self.get() orelse return error.PainterRemoved).antialiased;
+                }
             }.get, struct {
-                fn set(self: PainterHandle, v: bool) !void { (self.get() orelse return error.PainterRemoved).antialiased = v; }
+                fn set(self: PainterHandle, v: bool) !void {
+                    (self.get() orelse return error.PainterRemoved).antialiased = v;
+                }
             }.set),
         },
     });

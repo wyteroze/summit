@@ -8,8 +8,8 @@ const math = @import("../core/math/math.zig");
 const text = @import("text.zig");
 
 // TODO: Put these in better places.
-pub const Scene = struct { 
-    environment: Environment = .{}
+pub const Scene = struct {
+    environment: Environment = .{},
 };
 pub const Environment = struct {
     ambient: core.Color = .fromRgbFloat(0.1, 0.1, 0.1, 1.0),
@@ -43,10 +43,10 @@ pub const GridFlow = enum {
         self: @This(),
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
-        try writer.print("GridFlow.{s}", .{ switch (self) {
+        try writer.print("GridFlow.{s}", .{switch (self) {
             .column => "Column",
-            .row => "Row"
-        } });
+            .row => "Row",
+        }});
     }
 };
 
@@ -59,7 +59,7 @@ pub const GridAxis = union(enum) {
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
         switch (self) {
-            .fixed => |c| try writer.print("GridAxis.Fixed({d})", .{ c }),
+            .fixed => |c| try writer.print("GridAxis.Fixed({d})", .{c}),
             .auto => try writer.print("GridAxis.Auto", .{}),
         }
     }
@@ -81,65 +81,65 @@ pub const GridLayout = struct {
     ) std.Io.Writer.Error!void {
         try writer.print(
             "GridLayout{{ Padding = {f}, Columns = {f}, Rows = {f}, RowGap = {d}, ColumnGap = {d}, Flow = {f}, AlignItems = {f}, Justify = {f} }}",
-            .{ self.padding, self.columns, self.rows, self.row_gap, self.column_gap, self.flow, self.align_items, self.justify }
+            .{ self.padding, self.columns, self.rows, self.row_gap, self.column_gap, self.flow, self.align_items, self.justify },
         );
     }
 };
 
-pub const LayoutDirection = enum { 
-    horizontal, 
+pub const LayoutDirection = enum {
+    horizontal,
     vertical,
 
     pub fn format(
         self: @This(),
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
-        try writer.print("LayoutDirection.{s}", .{ switch (self) {
+        try writer.print("LayoutDirection.{s}", .{switch (self) {
             .horizontal => "Horizontal",
-            .vertical => "Vertical"
-        } });
+            .vertical => "Vertical",
+        }});
     }
 };
 
-pub const Align = enum { 
-    start, 
-    center, 
+pub const Align = enum {
+    start,
+    center,
     end,
 
     pub fn format(
         self: @This(),
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
-        try writer.print("Align.{s}", .{ switch (self) {
+        try writer.print("Align.{s}", .{switch (self) {
             .start => "Start",
             .center => "Center",
-            .end => "End"
-        } });
+            .end => "End",
+        }});
     }
 };
 
-pub const Justify = enum { 
-    start, 
-    center, 
-    end, 
+pub const Justify = enum {
+    start,
+    center,
+    end,
     space_between,
 
     pub fn format(
         self: @This(),
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
-        try writer.print("Justify.{s}", .{ switch (self) {
+        try writer.print("Justify.{s}", .{switch (self) {
             .start => "Start",
             .center => "Center",
             .end => "End",
-            .space_between => "SpaceBetween"
-        } });
+            .space_between => "SpaceBetween",
+        }});
     }
 };
 
-pub const SizeAxis = union(enum) { 
-    fixed: f32, 
-    hug, 
+pub const SizeAxis = union(enum) {
+    fixed: f32,
+    hug,
     fill,
 
     pub fn format(
@@ -147,9 +147,9 @@ pub const SizeAxis = union(enum) {
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
         switch (self) {
-            .fixed => |f| try writer.print("SizeAxis.Fixed({d})", .{ f }),
+            .fixed => |f| try writer.print("SizeAxis.Fixed({d})", .{f}),
             .hug => try writer.print("SizeAxis.Hug", .{}),
-            .fill => try writer.print("SizeAxis.Fill", .{})
+            .fill => try writer.print("SizeAxis.Fill", .{}),
         }
     }
 };
@@ -178,8 +178,8 @@ pub const Padding = struct {
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
         try writer.print(
-            "Padding{{ Top = {d}, Bottom = {d}, Left  = {d}, Right = {d} }}", 
-            .{ self.top, self.bottom, self.left, self.right }
+            "Padding{{ Top = {d}, Bottom = {d}, Left  = {d}, Right = {d} }}",
+            .{ self.top, self.bottom, self.left, self.right },
         );
     }
 };
@@ -195,8 +195,8 @@ pub const CornerRadii = struct {
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
         try writer.print(
-            "CornerRadii{{ TopLeft = {d}, TopRight = {d}, BottomLeft  = {d}, BottomRight = {d} }}", 
-            .{ self.top_left, self.top_right, self.bottom_left, self.bottom_right }
+            "CornerRadii{{ TopLeft = {d}, TopRight = {d}, BottomLeft  = {d}, BottomRight = {d} }}",
+            .{ self.top_left, self.top_right, self.bottom_left, self.bottom_right },
         );
     }
 };
@@ -213,8 +213,8 @@ pub const GenericLayout = struct {
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
         try writer.print(
-            "GenericLayout{{ Direction = {f}, Gap = {d}, Padding = {f}, AlignItems = {f}, Justify = {f} }}", 
-            .{ self.direction, self.gap, self.padding, self.align_items, self.justify }
+            "GenericLayout{{ Direction = {f}, Gap = {d}, Padding = {f}, AlignItems = {f}, Justify = {f} }}",
+            .{ self.direction, self.gap, self.padding, self.align_items, self.justify },
         );
     }
 };
@@ -228,8 +228,8 @@ pub const Layout = union(enum) {
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
         switch (self) {
-            .generic => |l| try writer.print("Layout.Generic({f})", .{ l }),
-            .grid => |l| try writer.print("Layout.Grid({f})", .{ l })
+            .generic => |l| try writer.print("Layout.Generic({f})", .{l}),
+            .grid => |l| try writer.print("Layout.Grid({f})", .{l}),
         }
     }
 };
@@ -246,10 +246,7 @@ pub const SizeMode = struct {
         self: @This(),
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
-        try writer.print(
-            "SizeMode{{ Width = {f}, Height = {f} }}", 
-            .{ self.width, self.height }
-        );  
+        try writer.print("SizeMode{{ Width = {f}, Height = {f} }}", .{ self.width, self.height });
     }
 };
 
@@ -265,8 +262,8 @@ pub const Borders = struct {
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
         try writer.print(
-            "Borders{{ Top = {d}, Bottom = {d}, Left = {d}, Right = {d} }}", 
-            .{ self.top, self.bottom, self.left, self.right }
+            "Borders{{ Top = {d}, Bottom = {d}, Left = {d}, Right = {d} }}",
+            .{ self.top, self.bottom, self.left, self.right },
         );
     }
 };

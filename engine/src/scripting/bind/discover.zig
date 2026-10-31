@@ -5,14 +5,16 @@ const types = @import("types.zig");
 
 const skip = .{ "std", "builtin", "toml", "zlua", "scripting", "Summit" };
 
-pub fn discover(comptime Root: type) []const types.Member { comptime {
-    @setEvalBranchQuota(1_000_000);
-    var found: []const types.Member = &.{};
-    var seen: []const type = &.{};
+pub fn discover(comptime Root: type) []const types.Member {
+    comptime {
+        @setEvalBranchQuota(1_000_000);
+        var found: []const types.Member = &.{};
+        var seen: []const type = &.{};
 
-    walk(Root, &found, &seen);
-    return found;
-} }
+        walk(Root, &found, &seen);
+        return found;
+    }
+}
 
 fn walk(comptime T: type, comptime found: *[]const types.Member, comptime seen: *[]const type) void {
     for (seen.*) |s| if (s == T) return;
@@ -51,6 +53,6 @@ fn collect(comptime v: anytype, comptime found: *[]const types.Member) void {
         .array => inline for (v) |x| collect(x, found),
         .pointer => inline for (v.*) |x| collect(x, found),
 
-        else => @compileError(std.fmt.comptimePrint("`api` must be a Member or a tuple/array of them, got {s} instead.", .{ @typeName(V) })),
+        else => @compileError(std.fmt.comptimePrint("`api` must be a Member or a tuple/array of them, got {s} instead.", .{@typeName(V)})),
     }
 }

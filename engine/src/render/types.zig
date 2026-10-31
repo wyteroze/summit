@@ -14,7 +14,7 @@ pub const Material = struct {
 pub const RenderObject = struct {
     model: math.Mat4,
     mesh: assets.types.GpuMesh,
-    material: Material
+    material: Material,
 };
 
 pub const PainterVertex = extern struct {
@@ -49,7 +49,7 @@ pub const PainterObject = struct {
     vertices: []const PainterVertex,
     indices: []const u32,
     clip: bool,
-    antialiased: bool
+    antialiased: bool,
 };
 
 pub const UiObject = struct {
@@ -69,7 +69,7 @@ pub const UiObject = struct {
     // one can't be null while the other isn't.
     sampler: ?gpu.types.SamplerHandle = null,
     texture: ?gpu.types.ImageHandle = null,
-    is_text: bool = false
+    is_text: bool = false,
 };
 
 pub const RenderScene = struct {
@@ -125,6 +125,6 @@ pub const Light = struct {
     intensity: f32,
     kind: union(LightKind) {
         point: PointLightParams,
-        directional: void
-    }
+        directional: void,
+    },
 };

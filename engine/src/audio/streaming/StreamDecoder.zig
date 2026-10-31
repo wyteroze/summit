@@ -18,7 +18,7 @@ end_of_stream: std.atomic.Value(bool) = .init(false),
 
 pub fn init(allocator: std.mem.Allocator, audio: Assets.types.AudioStream, loop: bool) !*StreamDecoder {
     if (audio.channels > 8) return error.TooManyChannels;
-    
+
     const src = audio.source.streamed;
     const self = try allocator.create(StreamDecoder);
     errdefer allocator.destroy(self);
@@ -26,11 +26,11 @@ pub fn init(allocator: std.mem.Allocator, audio: Assets.types.AudioStream, loop:
     self.* = .{
         .decoder = switch (src.format) {
             .mp3 => .{ .mp3 = undefined },
-            .wav => .{ .wav = undefined }
+            .wav => .{ .wav = undefined },
         },
         .channels = audio.channels,
         .loop = .init(loop),
-        .ring = try .init(allocator, ring_samples)
+        .ring = try .init(allocator, ring_samples),
     };
     errdefer self.ring.deinit(allocator);
 
@@ -64,14 +64,13 @@ pub fn fill(self: *StreamDecoder, max_frames: usize) void {
         if (want == 0) return;
 
         const got = self.readFrames(want);
-        if (got > 0) self.ring.write(self.temp_storage[0..got * self.channels]);
+        if (got > 0) self.ring.write(self.temp_storage[0 .. got * self.channels]);
         budget -= got;
         self.empty_reads = if (got == 0) self.empty_reads +| 1 else 0;
 
         if (got < want) {
             // file is probably broken
-            if (self.loop.load(.acquire) and self.empty_reads < 2) self.rewind()
-                else self.end_of_stream.store(true, .release);
+            if (self.loop.load(.acquire) and self.empty_reads < 2) self.rewind() else self.end_of_stream.store(true, .release);
         }
     }
 }

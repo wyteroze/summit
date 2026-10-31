@@ -17,9 +17,10 @@ pub fn build(b: *std.Build) !void {
     const build_path = b.path("build");
 
     // Building with debug info severely bloats .zig-cache (~1.5gb per build)
-    const cmake_build_type = "Release"; _ = optimize; // optimizeModeToCMakeBuildType(optimize);
+    const cmake_build_type = "Release";
+    _ = optimize; // optimizeModeToCMakeBuildType(optimize);
 
-    const cmake_configure = b.addSystemCommand(&.{ "cmake" });
+    const cmake_configure = b.addSystemCommand(&.{"cmake"});
     cmake_configure.addArg("-S");
     cmake_configure.addDirectoryArg2(src_path, .{ .make_absolute = true });
     cmake_configure.addArg("-B");
@@ -29,7 +30,7 @@ pub fn build(b: *std.Build) !void {
     const install_out = cmake_configure.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "install");
 
     cmake_configure.addArgs(&.{
-        b.fmt("-DCMAKE_BUILD_TYPE={s}", .{ cmake_build_type }),
+        b.fmt("-DCMAKE_BUILD_TYPE={s}", .{cmake_build_type}),
         boolFlag(b, "BUILD_SHARED_LIBS", true),
         boolFlag(b, "FT_DISABLE_ZLIB", false),
         boolFlag(b, "FT_DISABLE_BZIP2", false),
@@ -39,14 +40,14 @@ pub fn build(b: *std.Build) !void {
         boolFlag(b, "FT_DISABLE_HVF", false),
     });
 
-    const cmake_build = b.addSystemCommand(&.{ "cmake" });
+    const cmake_build = b.addSystemCommand(&.{"cmake"});
     cmake_build.addArg("--build");
     cmake_build.addDirectoryArg(build_path);
     cmake_build.addArgs(&.{ "--config", cmake_build_type });
-    cmake_build.addArgs(&.{ "--parallel", b.fmt("{d}", .{ try std.Thread.getCpuCount() }) });
+    cmake_build.addArgs(&.{ "--parallel", b.fmt("{d}", .{try std.Thread.getCpuCount()}) });
     cmake_build.step.dependOn(&cmake_configure.step);
 
-    const cmake_install = b.addSystemCommand(&.{ "cmake" });
+    const cmake_install = b.addSystemCommand(&.{"cmake"});
     cmake_install.addArg("--install");
     cmake_install.addDirectoryArg(build_path);
     cmake_install.step.dependOn(&cmake_build.step);
@@ -69,7 +70,7 @@ fn optimizeModeToCMakeBuildType(optimize: std.builtin.OptimizeMode) []const u8 {
         .Debug => "Debug",
         .ReleaseFast => "Release",
         .ReleaseSafe => "RelWithDebInfo",
-        .ReleaseSmall => "MinSizeRel"
+        .ReleaseSmall => "MinSizeRel",
     };
 }
 

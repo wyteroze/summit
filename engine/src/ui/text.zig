@@ -49,7 +49,7 @@ pub const LineIterator = struct {
         while (i < self.txt.len) {
             const ch = self.txt[i];
             if (ch == '\n') {
-                self.pos = i+1;
+                self.pos = i + 1;
                 return .{ .text = self.txt[start..i], .width = width };
             }
 
@@ -64,9 +64,9 @@ pub const LineIterator = struct {
             }
 
             if (self.max_width) |mw| {
-                if (width+adv > mw + 0.001 and i > start) {
+                if (width + adv > mw + 0.001 and i > start) {
                     if (last_space) |s| {
-                        self.pos = s+1;
+                        self.pos = s + 1;
                         return .{ .text = self.txt[start..s], .width = width_before_space };
                     }
 
@@ -79,7 +79,7 @@ pub const LineIterator = struct {
             i += 1;
         }
 
-        self.pos = self.txt.len+1;
+        self.pos = self.txt.len + 1;
         return .{ .text = self.txt[start..], .width = width };
     }
 };
@@ -91,7 +91,7 @@ pub fn lineHeight(atlas: *const FontAtlas, size: f32) f32 {
 
 pub fn ascent(atlas: *const FontAtlas, size: f32) f32 {
     const scale = atlas.calculateScale(size);
-    return (atlas.ascent + atlas.line_gap/2) * scale;
+    return (atlas.ascent + atlas.line_gap / 2) * scale;
 }
 
 pub fn measureText(atlas: *const FontAtlas, txt: []const u8, size: f32, max_width: ?f32) math.Vec2 {
@@ -102,10 +102,7 @@ pub fn measureText(atlas: *const FontAtlas, txt: []const u8, size: f32, max_widt
     var lines: f32 = 0;
 
     while (iter.next()) |l| : (lines += 1) widest = @max(widest, l.width);
-    return .new(
-        widest,
-        lines * lineHeight(atlas, size)
-    );
+    return .new(widest, lines * lineHeight(atlas, size));
 }
 
 /// Caller owns the returned slice and the data in it.
@@ -114,7 +111,7 @@ pub fn layoutGlyphs(
     atlas: *const FontAtlas,
     t: types.Text,
     origin: math.Vec2,
-    size: math.Vec2
+    size: math.Vec2,
 ) ![]GlyphQuad {
     const scale = atlas.calculateScale(t.size);
     const line_h = lineHeight(atlas, t.size);

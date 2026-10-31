@@ -29,14 +29,13 @@ pub fn init(allocator: std.mem.Allocator, dispatcher: *signal.Dispatcher, window
         .windowing = windowing,
         .surface = surface,
         .entity = entity,
-        
         .closed = .init(allocator, dispatcher),
         .resized = .init(allocator, dispatcher),
         .fullscreened = .init(allocator, dispatcher),
         .fullscreen_exited = .init(allocator, dispatcher),
         .maximized = .init(allocator, dispatcher),
         .minimized = .init(allocator, dispatcher),
-        .restored = .init(allocator, dispatcher)
+        .restored = .init(allocator, dispatcher),
     };
 }
 
@@ -50,7 +49,7 @@ pub fn deinit(self: *Window) void {
     self.restored.deinit();
 
     self.windowing.destroyWindow(self.surface.id) catch |e| {
-        std.log.err("Failed to destroy window: {s}", .{ @errorName(e) });
+        std.log.err("Failed to destroy window: {s}", .{@errorName(e)});
     };
 }
 
@@ -63,11 +62,10 @@ pub fn updateSize(self: *Window) void {
     const logical = platform.getSurfaceLogicalSize(self.surface) catch return;
     const scale = platform.getSurfaceScale(self.surface) catch return;
 
-    renderer.resizeWindow(self.surface.id, pixel, scale) catch |e| std.log.err("Failed to resized window: {s}", .{ @errorName(e) });
+    renderer.resizeWindow(self.surface.id, pixel, scale) catch |e| std.log.err("Failed to resized window: {s}", .{@errorName(e)});
 
     if (ui.world.getComponent(self.entity, ui.component_ids.window, Ui.types.Window)) |w| w.scale = scale;
-    ui.world.set(self.entity, ui.component_ids.size, Ui.types.SizeMode,
-        .fixed(@floatFromInt(logical[0]), @floatFromInt(logical[1]))) catch {};
+    ui.world.set(self.entity, ui.component_ids.size, Ui.types.SizeMode, .fixed(@floatFromInt(logical[0]), @floatFromInt(logical[1]))) catch {};
 }
 
 pub fn getId(self: *Window) usize {
@@ -183,36 +181,63 @@ pub const WindowHandle = struct {
             bind.func("Minimize", WindowHandle.minimize),
             bind.func("Restore", WindowHandle.restore),
             bind.func("Destroy", WindowHandle.destroy),
-            bind.func("Focus", WindowHandle.focus)
+            bind.func("Focus", WindowHandle.focus),
         },
         .props = &.{
-            bind.signal("Closed", struct { 
-                fn c(self: WindowHandle) !*WindowEvent { return &(try self.get()).closed; } }
-            .c),
-            bind.signal("Resized", struct { 
-                fn c(self: WindowHandle) !*WindowEvent { return &(try self.get()).resized; } }
-            .c),
-            bind.signal("Fullscreened", struct { 
-                fn c(self: WindowHandle) !*WindowEvent { return &(try self.get()).fullscreened; } }
-            .c),
-            bind.signal("FullscreenExited", struct { 
-                fn c(self: WindowHandle) !*WindowEvent { return &(try self.get()).fullscreen_exited; } }
-            .c),
-            bind.signal("Maximized", struct { 
-                fn c(self: WindowHandle) !*WindowEvent { return &(try self.get()).maximized; } }
-            .c),
-            bind.signal("Minimized", struct { 
-                fn c(self: WindowHandle) !*WindowEvent { return &(try self.get()).minimized; } }
-            .c),
-            bind.signal("Restored", struct { 
-                fn c(self: WindowHandle) !*WindowEvent { return &(try self.get()).restored; } }
-            .c),
+            bind.signal("Closed", struct {
+                fn c(self: WindowHandle) !*WindowEvent {
+                    return &(try self.get()).closed;
+                }
+            }
+                .c),
+            bind.signal("Resized", struct {
+                fn c(self: WindowHandle) !*WindowEvent {
+                    return &(try self.get()).resized;
+                }
+            }
+                .c),
+            bind.signal("Fullscreened", struct {
+                fn c(self: WindowHandle) !*WindowEvent {
+                    return &(try self.get()).fullscreened;
+                }
+            }
+                .c),
+            bind.signal("FullscreenExited", struct {
+                fn c(self: WindowHandle) !*WindowEvent {
+                    return &(try self.get()).fullscreen_exited;
+                }
+            }
+                .c),
+            bind.signal("Maximized", struct {
+                fn c(self: WindowHandle) !*WindowEvent {
+                    return &(try self.get()).maximized;
+                }
+            }
+                .c),
+            bind.signal("Minimized", struct {
+                fn c(self: WindowHandle) !*WindowEvent {
+                    return &(try self.get()).minimized;
+                }
+            }
+                .c),
+            bind.signal("Restored", struct {
+                fn c(self: WindowHandle) !*WindowEvent {
+                    return &(try self.get()).restored;
+                }
+            }
+                .c),
             bind.readonly("Element", WindowHandle.getElement),
             bind.readonly("Focused", WindowHandle.isFocused),
             bind.prop("Size", WindowHandle.getSize, WindowHandle.setSize),
             // TODO: Make window positioning ergonomic and make the api nice to use
             //bind.prop("Position", WindowHandle.getPosition, WindowHandle.setPosition),
         },
-        .ops = .{ .eq = .{ .member = bind.func("eq", struct { fn eq(self: WindowHandle, other: WindowHandle) bool { return self.id == other.id; } }.eq) } }
+        .ops = .{
+            .eq = .{ .member = bind.func("eq", struct {
+                fn eq(self: WindowHandle, other: WindowHandle) bool {
+                    return self.id == other.id;
+                }
+            }.eq) },
+        },
     });
 };

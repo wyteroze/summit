@@ -16,11 +16,11 @@ pub fn importMesh(allocator: std.mem.Allocator, location: ImportLocation) !types
         },
         .bytes => |b| blk: {
             break :blk assimp.aiImportFileFromMemory(b.ptr, @intCast(b.len), flags, null);
-        }
+        },
     };
 
     if (scene == null) {
-        std.log.err("{s:0}", .{ assimp.aiGetErrorString() });
+        std.log.err("{s:0}", .{assimp.aiGetErrorString()});
         return error.ImportFailed;
     }
     defer assimp.aiReleaseImport(scene);

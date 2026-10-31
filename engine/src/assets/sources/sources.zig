@@ -3,5 +3,5 @@
 // These are registered at runtime.
 pub const sources = .{
     @import("FileSource.zig"),
-    @import("AssetsSource.zig")
+    @import("AssetsSource.zig"),
 };

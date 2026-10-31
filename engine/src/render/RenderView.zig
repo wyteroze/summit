@@ -4,7 +4,6 @@ const std = @import("std");
 const types = @import("types.zig");
 const gpu = @import("../gpu/gpu.zig");
 const Renderer = @import("Renderer.zig");
-// random kid:
 const ecs = @import("../ecs/ecs.zig");
 
 const tile_size = Renderer.tile_size;
@@ -43,21 +42,21 @@ pub fn init(renderer: *Renderer, size: [2]u32, id: u64, camera: ecs.Entity) !Ren
             .name = "Depth buffer",
             .width = size[0],
             .height = size[1],
-            .format = .d32
+            .format = .d32,
         }),
         .light_grid = try gpu_device.createBuffer(.{
             .name = "Light grid",
             .type = .storage,
             .usage = .default,
             .size = num_tiles * @sizeOf([2]u32),
-            .stride = @sizeOf([2]u32)
+            .stride = @sizeOf([2]u32),
         }),
         .light_index_list = try gpu_device.createBuffer(.{
             .name = "Light index list",
             .type = .storage,
             .usage = .default,
             .size = num_tiles * max_lights_per_tile * @sizeOf(u32),
-            .stride = @sizeOf(u32)
+            .stride = @sizeOf(u32),
         }),
     };
 }
@@ -93,26 +92,26 @@ pub fn resize(self: *RenderView, size: [2]u32) !void {
         .is_render_target = true,
         .width = size[0],
         .height = size[1],
-        .format = .bgra8
+        .format = .bgra8,
     });
     self.depth = try gpu_device.createImage(.{
         .name = "Depth buffer",
         .width = size[0],
         .height = size[1],
-        .format = .d32
+        .format = .d32,
     });
     self.light_grid = try gpu_device.createBuffer(.{
         .name = "Light grid",
         .type = .storage,
         .usage = .default,
         .size = num_tiles * @sizeOf([2]u32),
-        .stride = @sizeOf([2]u32)
+        .stride = @sizeOf([2]u32),
     });
     self.light_index_list = try gpu_device.createBuffer(.{
         .name = "Light index list",
         .type = .storage,
         .usage = .default,
         .size = num_tiles * max_lights_per_tile * @sizeOf(u32),
-        .stride = @sizeOf(u32)
+        .stride = @sizeOf(u32),
     });
 }

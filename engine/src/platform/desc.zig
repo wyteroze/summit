@@ -41,6 +41,7 @@ pub const KeyboardConnectionEvent = struct {
     id: u32,
 };
 
+// zig fmt: off
 pub const Keycode = enum {
     Return, Escape, Backspace, Tab, Space,
     Exclaim, DoubleApostrophe, Hash, Dollar, Percent, Ampersand, Apostrophe,
@@ -90,74 +91,49 @@ pub const Keycode = enum {
         self: *const @This(),
         writer: *std.Io.Writer,
     ) !void {
-        try writer.print("Keycode '{s:0}'", .{ @tagName(self) });
+        try writer.print("Keycode '{s:0}'", .{@tagName(self)});
     }
 };
+// zig fmt: on
 
 // Mouse input
-pub const MouseButtonEvent = struct {
-    window_id: u32,
-    mouse_id: u32,
-    button: MouseButton
-};
+pub const MouseButtonEvent = struct { window_id: u32, mouse_id: u32, button: MouseButton };
 
-pub const MouseMoveEvent = struct {
-    window_id: u32,
-    mouse_id: u32,
-    position: [2]f32,
-    delta: [2]f32
-};
+pub const MouseMoveEvent = struct { window_id: u32, mouse_id: u32, position: [2]f32, delta: [2]f32 };
 
-pub const MouseScrollEvent = struct {
-    window_id: u32,
-    mouse_id: u32,
-    delta: [2]f32
-};
+pub const MouseScrollEvent = struct { window_id: u32, mouse_id: u32, delta: [2]f32 };
 
 pub const MouseConnectionEvent = struct {
     id: u32,
 };
 
-pub const MouseButton = enum {
-    Left,
-    Middle,
-    Right,
-    SideButtonBack,
-    SideButtonForward
-};
+pub const MouseButton = enum { Left, Middle, Right, SideButtonBack, SideButtonForward };
 
 // Gamepad input
-pub const GamepadButtonEvent = struct {
-    gamepad_id: u32,
-    button: GamepadButton
-};
+pub const GamepadButtonEvent = struct { gamepad_id: u32, button: GamepadButton };
 
-pub const GamepadAxisEvent = struct {
-    gamepad_id: u32,
-    axis: GamepadAxis,
-    value: i16
-};
+pub const GamepadAxisEvent = struct { gamepad_id: u32, axis: GamepadAxis, value: i16 };
 
+// zig fmt: off
 pub const GamepadButton = enum {
     North, South, East, West,
     DPadUp, DPadDown, DPadLeft, DPadRight,
     LeftStickClick, RightStickClick,
     TouchpadClick,
-    LeftShoulder, RightShoulder,
-    Start, Guide, Select,
+    LeftShoulder,
+    RightShoulder,
+    Start,
+    Guide,
+    Select,
     Utility,
-    TopLeftPaddle, TopRightPaddle,
-    BottomLeftPaddle, BottomRightPaddle,
+    TopLeftPaddle,
+    TopRightPaddle,
+    BottomLeftPaddle,
+    BottomRightPaddle,
 };
+// zig fmt: on
 
-pub const GamepadAxis = enum {
-    LeftTrigger,
-    RightTrigger,
-    LeftStickX,
-    LeftStickY,
-    RightStickX,
-    RightStickY
-};
+pub const GamepadAxis = enum { LeftTrigger, RightTrigger, LeftStickX, LeftStickY, RightStickX, RightStickY };
 
 pub const GamepadConnectionEvent = struct {
     id: u32,

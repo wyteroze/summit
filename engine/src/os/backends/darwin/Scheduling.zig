@@ -25,12 +25,11 @@ pub fn getTopology(self: Scheduling, allocator: std.mem.Allocator) !Os.Schedulin
         break :blk 0;
     };
 
-    const total = if (perf_count + eff_count > 0) perf_count + eff_count
-        else std.Thread.getCpuCount() catch blk: {
-            std.log.warn("failed to query std.Thread.getCpuCount(), defaulting to 1 (single-core)", .{});
-            break :blk 1;
-        };
-    
+    const total = if (perf_count + eff_count > 0) perf_count + eff_count else std.Thread.getCpuCount() catch blk: {
+        std.log.warn("failed to query std.Thread.getCpuCount(), defaulting to 1 (single-core)", .{});
+        break :blk 1;
+    };
+
     const cores = try allocator.alloc(Os.Scheduling.Core, total);
     const perf_indices = try allocator.alloc(usize, perf_count);
     const eff_indices = try allocator.alloc(usize, eff_count);
@@ -67,7 +66,7 @@ pub fn setThreadPriority(self: Scheduling, priority: Os.Scheduling.ThreadPriorit
         .high => c.QOS_CLASS_USER_INITIATED,
         .normal => c.QOS_CLASS_DEFAULT,
         .low => c.QOS_CLASS_UTILITY,
-        .lowest => c.QOS_CLASS_BACKGROUND
+        .lowest => c.QOS_CLASS_BACKGROUND,
     };
 
     _ = c.pthread_set_qos_class_self_np(qos, 0);

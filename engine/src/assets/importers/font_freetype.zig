@@ -7,7 +7,7 @@ const text = @import("../../render/text/text.zig");
 const freetype = @import("freetype");
 
 pub const ImportOptions = struct {
-    char_range: []const u32 = &default_char_range
+    char_range: []const u32 = &default_char_range,
 };
 
 // Ascii 32-126
@@ -36,7 +36,7 @@ pub fn importFont(allocator: std.mem.Allocator, location: ImportLocation, option
         },
         .bytes => |b| {
             if (freetype.FT_New_Memory_Face(lib, b.ptr, @intCast(b.len), 0, &face) != 0) return error.ImportFailed;
-        }
+        },
     }
     defer _ = freetype.FT_Done_Face(face);
 
@@ -83,7 +83,7 @@ pub fn importFont(allocator: std.mem.Allocator, location: ImportLocation, option
             .size = .{ @intCast(width), @intCast(rows) },
             .bearing = .{ slot.*.bitmap_left, slot.*.bitmap_top },
             .advance = @as(f32, @floatFromInt(slot.*.advance.x)) / 64.0,
-            .pixels = pixels
+            .pixels = pixels,
         };
         glyph_count += 1;
     }

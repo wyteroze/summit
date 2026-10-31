@@ -8,7 +8,7 @@ const text = @import("../render/text/text.zig");
 pub const Vertex = extern struct {
     position: [3]f32,
     normal: [3]f32,
-    uv: [2]f32
+    uv: [2]f32,
 };
 
 pub const Mesh = struct {
@@ -22,7 +22,7 @@ pub const Mesh = struct {
 };
 
 pub const Image = struct {
-    width: usize, 
+    width: usize,
     height: usize,
     format: gpu.types.PixelFormat,
     data: []u8,
@@ -50,7 +50,7 @@ pub const Glyph = struct {
     size: [2]u32,
     bearing: [2]i32,
     advance: f32,
-    pixels: []u8
+    pixels: []u8,
 };
 
 pub const Font = struct {

@@ -65,13 +65,19 @@ pub fn mixInto(self: *Voice, out: []f32, frames: usize, listener: Audio.types.Au
     }
 
     const frame_count = stream.frameCount();
-    if (frame_count == 0) { self.finished = true; return status; }
+    if (frame_count == 0) {
+        self.finished = true;
+        return status;
+    }
     const inv: f32 = 1.0 / @as(f32, @floatFromInt(frames));
     const gain_step = (target_gain - self.gain) * inv;
     const pan_step = (target_pan - self.pan) * inv;
     const step: f64 = @as(f64, @max(params.pitch, 0.001)) * @as(f64, @floatFromInt(stream.sample_rate)) / @as(f64, Audio.sample_rate);
     const total: f64 = @floatFromInt(frame_count);
-    if (total == 0) { self.finished = true; return status; }
+    if (total == 0) {
+        self.finished = true;
+        return status;
+    }
     const ch = stream.channels;
 
     frames: for (0..frames) |i| {
@@ -114,8 +120,8 @@ pub fn mixInto(self: *Voice, out: []f32, frames: usize, listener: Audio.types.Au
         var o_l: f32 = undefined;
         var o_r: f32 = undefined;
         if (spatial) {
-            const m = (l+r) / 2;
-            const a = (self.pan+1) * (std.math.pi / 4.0);
+            const m = (l + r) / 2;
+            const a = (self.pan + 1) * (std.math.pi / 4.0);
             o_l = m * @cos(a) * self.gain;
             o_r = m * @sin(a) * self.gain;
         } else {
@@ -123,8 +129,8 @@ pub fn mixInto(self: *Voice, out: []f32, frames: usize, listener: Audio.types.Au
             o_r = r * self.gain;
         }
 
-        out[i*2] += o_l;
-        out[i*2+1] += o_r;
+        out[i * 2] += o_l;
+        out[i * 2 + 1] += o_r;
 
         self.gain += gain_step;
         self.pan += pan_step;
@@ -186,7 +192,7 @@ fn streamFrame(self: *Voice, ch: usize, total: u64, loops: bool, status: *Status
                 self.f0 = self.f1;
                 self.f1 = f;
                 self.base += 1;
-                
+
                 if (loops and self.base % total == 0) status.looped = true;
             },
             .underrun => return .underrun,

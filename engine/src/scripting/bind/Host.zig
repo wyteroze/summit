@@ -12,10 +12,10 @@ const Windowing = @import("../../windowing/Windowing.zig");
 
 var key: u8 = 0;
 const Host = @This();
-world: *ecs.World, 
-assets: *Assets, 
-input: *Input, 
-ui: *Ui, 
+world: *ecs.World,
+assets: *Assets,
+input: *Input,
+ui: *Ui,
 audio: *Audio,
 windowing: *Windowing,
 codecs: []const Codec = &.{},
@@ -28,6 +28,6 @@ pub fn attach(self: *Host, l: *zlua.Lua) void {
 pub fn fromState(l: *zlua.Lua) *Host {
     _ = l.getPtrRaw(zlua.registry_index, &key);
     defer l.pop(1);
-    
+
     return l.toUserdata(Host, -1) catch unreachable;
 }

@@ -13,7 +13,7 @@ pub const TargetKind = enum {
         return switch (self) {
             .hlsl => c.SUMMIT_SLANG_TARGET_HLSL,
             .glsl => c.SUMMIT_SLANG_TARGET_GLSL,
-            .spirv => c.SUMMIT_SLANG_TARGET_SPIRV
+            .spirv => c.SUMMIT_SLANG_TARGET_SPIRV,
         };
     }
 
@@ -21,7 +21,7 @@ pub const TargetKind = enum {
         return switch (backend) {
             .direct3d11, .direct3d12 => .hlsl,
             .opengl => .glsl,
-            .vulkan => .spirv
+            .vulkan => .spirv,
         };
     }
 };
@@ -35,7 +35,7 @@ pub const StageKind = enum {
         return switch (self) {
             .vertex => c.SUMMIT_SLANG_STAGE_VERTEX,
             .fragment => c.SUMMIT_SLANG_STAGE_FRAGMENT,
-            .compute => c.SUMMIT_SLANG_STAGE_COMPUTE
+            .compute => c.SUMMIT_SLANG_STAGE_COMPUTE,
         };
     }
 };
@@ -71,15 +71,7 @@ pub const Compiler = struct {
     }
 
     pub fn compileStage(self: Compiler, module_name: [:0]const u8, source: [:0]const u8, entrypoint: [:0]const u8, stage: StageKind, target: TargetKind) !CompileResult {
-        const result = c.slang_compile_stage(
-            self.handle,
-            self.vfs,
-            module_name.ptr,
-            source.ptr,
-            entrypoint.ptr,
-            stage.toC(),
-            target.toC()
-        );
+        const result = c.slang_compile_stage(self.handle, self.vfs, module_name.ptr, source.ptr, entrypoint.ptr, stage.toC(), target.toC());
 
         if (result.error_message) |msg| {
             std.log.err("Slang compile error ({s}::{s}): {s}", .{ module_name, entrypoint, msg });
@@ -87,10 +79,7 @@ pub const Compiler = struct {
         }
 
         const code_ptr: [*]const u8 = @ptrCast(result.code_data.?);
-        return .{
-            .code = code_ptr[0..result.code_size],
-            .raw = result
-        };
+        return .{ .code = code_ptr[0..result.code_size], .raw = result };
     }
 };
 
@@ -101,7 +90,7 @@ fn vfsLookup(userdata: ?*anyopaque, path: [*c]const u8, out_size: [*c]usize) cal
     const path_slice = std.mem.span(path);
     const stem = std.Io.Dir.path.stem(path_slice);
 
-    if (lookup_fn(stem))|src| {
+    if (lookup_fn(stem)) |src| {
         out_size.* = src.len;
         return src.ptr;
     }

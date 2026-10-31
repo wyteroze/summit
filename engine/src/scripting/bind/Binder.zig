@@ -21,7 +21,11 @@ const InstanceEntry = union(enum) {
 };
 
 fn entryName(comptime e: InstanceEntry) []const u8 {
-    return switch (e) { .field => |f| f.lua, .prop => |p| p.m.name, .method => |m| m.m.name };
+    return switch (e) {
+        .field => |f| f.lua,
+        .prop => |p| p.m.name,
+        .method => |m| m.m.name,
+    };
 }
 
 fn hasName(comptime list: []const InstanceEntry, comptime name: []const u8) bool {
@@ -29,26 +33,44 @@ fn hasName(comptime list: []const InstanceEntry, comptime name: []const u8) bool
     return false;
 }
 
-fn isGetter(comptime m: types.Member) bool { return m.kind == .prop or m.kind == .signal; }
+fn isGetter(comptime m: types.Member) bool {
+    return m.kind == .prop or m.kind == .signal;
+}
 
-fn instanceEntries(comptime r: anytype) []const InstanceEntry { comptime {
-    var out: []const InstanceEntry = &.{};
-    const T = @TypeOf(r);
+fn instanceEntries(comptime r: anytype) []const InstanceEntry {
+    comptime {
+        var out: []const InstanceEntry = &.{};
+        const T = @TypeOf(r);
 
-    if (@hasField(T, "fields")) { for (r.fields) |f| out = out ++ .{ InstanceEntry{ .field = .{ .zig = f, .lua = names.pascal(f) } } }; }
-    if (@hasField(T, "props")) { for (r.props) |p| out = out ++ .{ InstanceEntry{ .prop = .{ .m = p } } }; }
-    if (@hasField(T, "methods")) { for (r.methods) |m| out = out ++ .{ InstanceEntry{ .method = .{ .m = m } } }; }
-    if (@hasField(T, "signals")) { for (r.signals) |s| out = out ++ .{ InstanceEntry{ .prop = .{ .m = s } } }; }
+        if (@hasField(T, "fields")) {
+            for (r.fields) |f| out = out ++ .{InstanceEntry{ .field = .{ .zig = f, .lua = names.pascal(f) } }};
+        }
+        if (@hasField(T, "props")) {
+            for (r.props) |p| out = out ++ .{InstanceEntry{ .prop = .{ .m = p } }};
+        }
+        if (@hasField(T, "methods")) {
+            for (r.methods) |m| out = out ++ .{InstanceEntry{ .method = .{ .m = m } }};
+        }
+        if (@hasField(T, "signals")) {
+            for (r.signals) |s| out = out ++ .{InstanceEntry{ .prop = .{ .m = s } }};
+        }
 
-    if (@hasField(T, "inherit")) if (r.inherit) |inh| {
-        const ir = inh.recipe;
-        for (ir.props) |p| if (!hasName(out, p.name)) { out = out ++ .{ InstanceEntry{ .prop = .{ .m = p, .via = inh.via } } }; };
-        for (ir.methods) |m| if (!hasName(out, m.name)) { out = out ++ .{ InstanceEntry{ .method = .{ .m = m, .via = inh.via } } }; };
-        for (ir.signals) |s| if (!hasName(out, s.name)) { out = out ++ .{ InstanceEntry{ .prop = .{ .m = s, .via = inh.via } } }; };
-    };
+        if (@hasField(T, "inherit")) if (r.inherit) |inh| {
+            const ir = inh.recipe;
+            for (ir.props) |p| if (!hasName(out, p.name)) {
+                out = out ++ .{InstanceEntry{ .prop = .{ .m = p, .via = inh.via } }};
+            };
+            for (ir.methods) |m| if (!hasName(out, m.name)) {
+                out = out ++ .{InstanceEntry{ .method = .{ .m = m, .via = inh.via } }};
+            };
+            for (ir.signals) |s| if (!hasName(out, s.name)) {
+                out = out ++ .{InstanceEntry{ .prop = .{ .m = s, .via = inh.via } }};
+            };
+        };
 
-    return out;
-} }
+        return out;
+    }
+}
 
 pub fn Binder(comptime api: anytype) type {
     const R = registry.Registry(api);
@@ -63,8 +85,8 @@ pub fn Binder(comptime api: anytype) type {
         const codecs: []const Codec = blk: {
             var out: []const Codec = &.{};
             for (R.entries) |e| switch (e.member.kind) {
-                .value, .handle, .record => out = out ++ .{ codecFor(e) },
-                else => {}
+                .value, .handle, .record => out = out ++ .{codecFor(e)},
+                else => {},
             };
 
             break :blk out;
@@ -85,13 +107,13 @@ pub fn Binder(comptime api: anytype) type {
             inline for (R.entries) |e| switch (e.member.kind) {
                 .value => installValueMeta(l, e.T, e.member.impl.recipe),
                 .handle => installHandleMeta(l, e.T, e.member.impl.recipe),
-                else => {}
+                else => {},
             };
 
             // globals
             inline for (api) |entry| if (entry.kind == .globals) {
                 l.pushGlobalTable();
-                std.log.debug("---- Registered {d} globals:", .{ entry.impl.recipe.members.len });
+                std.log.debug("---- Registered {d} globals:", .{entry.impl.recipe.members.len});
                 fillTable(l, entry.impl.recipe.members, false);
                 std.log.debug("---- Globals done", .{});
 
@@ -102,7 +124,7 @@ pub fn Binder(comptime api: anytype) type {
             l.newTable();
             inline for (api) |entry| if (entry.kind == .module) {
                 l.newTable();
-                std.log.debug("---- Registered module '{s}' with entries:", .{ entry.name });
+                std.log.debug("---- Registered module '{s}' with entries:", .{entry.name});
                 fillTable(l, entry.impl.recipe.members, true);
                 installModuleProps(l, entry.impl.recipe.members);
                 std.log.debug("---- Module entries done", .{});
@@ -126,7 +148,7 @@ pub fn Binder(comptime api: anytype) type {
                 .type_name = @typeName(T),
                 .size = @sizeOf(T),
                 .read = struct {
-                   fn f(l: *zlua.Lua, idx: i32, out: []u8) void {
+                    fn f(l: *zlua.Lua, idx: i32, out: []u8) void {
                         var v = M.parse(T, l, idx);
                         if (comptime @hasDecl(T, "own"))
                             v.own(Host.fromState(l)) catch l.raiseErrorStr("out of memory", .{});
@@ -166,9 +188,18 @@ pub fn Binder(comptime api: anytype) type {
                 fn c(l: *zlua.Lua) i32 {
                     l.newTable();
                     inline for (mod.impl.recipe.members) |m| switch (m.kind) {
-                        .func => { l.pushFunction(W.cFn(m.impl.function, .{}), m.name); l.setField(-2, m.name); },
-                        .constant => { M.push(l, m.impl.val); l.setField(-2, m.name); },
-                        .value => { pushTypeTable(l, m); l.setField(-2, m.name); },
+                        .func => {
+                            l.pushFunction(W.cFn(m.impl.function, .{}), m.name);
+                            l.setField(-2, m.name);
+                        },
+                        .constant => {
+                            M.push(l, m.impl.val);
+                            l.setField(-2, m.name);
+                        },
+                        .value => {
+                            pushTypeTable(l, m);
+                            l.setField(-2, m.name);
+                        },
                         else => {},
                     };
                     l.setReadonly(-1, true);
@@ -183,9 +214,18 @@ pub fn Binder(comptime api: anytype) type {
             // Table to fill should be at top of stack
             inline for (members) |m| {
                 switch (m.kind) {
-                    .func => { l.pushFunction(W.cFn(m.impl.function, .{}), m.name); l.setField(-2, m.name); },
-                    .constant => { M.push(l, m.impl.val); l.setField(-2, m.name); },
-                    .value => { pushTypeTable(l, m); l.setField(-2, m.name); },
+                    .func => {
+                        l.pushFunction(W.cFn(m.impl.function, .{}), m.name);
+                        l.setField(-2, m.name);
+                    },
+                    .constant => {
+                        M.push(l, m.impl.val);
+                        l.setField(-2, m.name);
+                    },
+                    .value => {
+                        pushTypeTable(l, m);
+                        l.setField(-2, m.name);
+                    },
                     .handle, .object => if (m.impl.recipe.statics.len > 0) {
                         pushTypeTable(l, m);
                         l.setField(-2, m.name);
@@ -194,7 +234,7 @@ pub fn Binder(comptime api: anytype) type {
                         @compileError("props are not allowed here: " ++ m.name),
 
                     .record, .variant => {},
-                    else => @compileError(std.fmt.comptimePrint("Type not allowed here: {s}", .{ m.name })),
+                    else => @compileError(std.fmt.comptimePrint("Type not allowed here: {s}", .{m.name})),
                 }
 
                 std.log.debug("{s} '{s}'", .{ @tagName(m.kind), m.name });
@@ -204,12 +244,12 @@ pub fn Binder(comptime api: anytype) type {
 
         fn require(l: *zlua.Lua) i32 {
             const name = l.checkString(1);
-            
+
             const loaded = zlua.Lua.upvalueIndex(1);
             if (l.getField(loaded, name) == .nil) {
                 l.raiseErrorStr("module '%s' not found", .{name.ptr});
             }
-            
+
             return 1;
         }
 
@@ -230,23 +270,35 @@ pub fn Binder(comptime api: anytype) type {
             const Map: std.StaticStringMap(u16) = comptime blk: {
                 var kv: [E.len]struct { []const u8, u16 } = undefined;
                 for (E, 0..) |e, i| kv[i] = .{ entryName(e), i };
-                
+
                 break :blk .initComptime(kv);
             };
 
             return zlua.wrap(struct {
                 fn f(l: *zlua.Lua) i32 {
                     const self = M.parse(T, l, 1);
-                    if (l.typeOf(2) != .string) { l.pushNil(); return 1; }
+                    if (l.typeOf(2) != .string) {
+                        l.pushNil();
+                        return 1;
+                    }
 
                     const key = l.toString(2) catch unreachable;
-                    const i = Map.get(key) orelse { l.pushNil(); return 1; };
+                    const i = Map.get(key) orelse {
+                        l.pushNil();
+                        return 1;
+                    };
 
                     switch (i) {
                         inline 0...E.len - 1 => |k| switch (E[k]) {
-                            .field => |fd| { M.push(l, @field(self, fd.zig)); return 1; },
+                            .field => |fd| {
+                                M.push(l, @field(self, fd.zig));
+                                return 1;
+                            },
                             .prop => |p| return W.Gen(p.m.impl.getter, .{ .via = p.via }).call(l),
-                            .method => |m| { l.pushFunction(W.cFn(m.m.impl.function, .{ .via = m.via }), m.m.name); return 1; },
+                            .method => |m| {
+                                l.pushFunction(W.cFn(m.m.impl.function, .{ .via = m.via }), m.m.name);
+                                return 1;
+                            },
                         },
 
                         else => unreachable,
@@ -263,7 +315,7 @@ pub fn Binder(comptime api: anytype) type {
                     if (l.typeOf(2) != .string) l.raiseErrorStr("member name must be a string", .{});
 
                     const key = l.toString(2) catch unreachable;
-                    const i = Map.get(key) orelse l.raiseErrorStr("'%s' is not a valid member", .{ key.ptr });
+                    const i = Map.get(key) orelse l.raiseErrorStr("'%s' is not a valid member", .{key.ptr});
 
                     switch (i) {
                         inline 0...E.len - 1 => |k| switch (E[k]) {
@@ -277,13 +329,13 @@ pub fn Binder(comptime api: anytype) type {
                             },
                             .prop => |p| {
                                 if (!@hasDecl(p.m.impl, "setter"))
-                                    l.raiseErrorStr("'%s' is read-only", .{ key.ptr });
+                                    l.raiseErrorStr("'%s' is read-only", .{key.ptr});
 
                                 l.remove(2);
                                 return W.Gen(p.m.impl.setter, .{ .via = p.via }).call(l);
                             },
-                            
-                            .method => l.raiseErrorStr("'%s' is a method and cannot be assigned to", .{ key.ptr }),
+
+                            .method => l.raiseErrorStr("'%s' is a method and cannot be assigned to", .{key.ptr}),
                         },
                         else => unreachable,
                     }
@@ -303,7 +355,9 @@ pub fn Binder(comptime api: anytype) type {
         fn modulePropIndexFn(comptime members: []const types.Member) zlua.CFn {
             const props = comptime blk: {
                 var out: []const types.Member = &.{};
-                for (members) |m| if (isGetter(m)) { out = out ++ .{ m }; };
+                for (members) |m| if (isGetter(m)) {
+                    out = out ++ .{m};
+                };
                 break :blk out;
             };
 
@@ -316,10 +370,16 @@ pub fn Binder(comptime api: anytype) type {
 
             return zlua.wrap(struct {
                 fn f(l: *zlua.Lua) i32 {
-                    if (l.typeOf(2) != .string) { l.pushNil(); return 1; }
+                    if (l.typeOf(2) != .string) {
+                        l.pushNil();
+                        return 1;
+                    }
 
                     const key = l.toString(2) catch unreachable;
-                    const i = Map.get(key) orelse { l.pushNil(); return 1; };
+                    const i = Map.get(key) orelse {
+                        l.pushNil();
+                        return 1;
+                    };
 
                     l.setTop(0);
 
@@ -334,7 +394,9 @@ pub fn Binder(comptime api: anytype) type {
         /// Expects the module table at the top of the stack.
         fn installModuleProps(l: *zlua.Lua, comptime members: []const types.Member) void {
             comptime var count = 0;
-            inline for (members) |m| if (comptime isGetter(m)) { count += 1; };
+            inline for (members) |m| if (comptime isGetter(m)) {
+                count += 1;
+            };
             if (count == 0) return;
 
             l.newTable();
@@ -349,7 +411,11 @@ pub fn Binder(comptime api: anytype) type {
                 .member => |m| return W.cFn(m.impl.function, .{}),
                 .auto => {
                     if (comptime std.mem.eql(u8, name, "eq"))
-                        return W.cFn(struct { fn f(a: T, b: T) bool { return std.meta.eql(a, b); } }.f, .{});
+                        return W.cFn(struct {
+                            fn f(a: T, b: T) bool {
+                                return std.meta.eql(a, b);
+                            }
+                        }.f, .{});
                     if (comptime std.mem.eql(u8, name, "tostring")) return zlua.wrap(autoToString(T));
 
                     @compileError("ops." ++ name ++ " = .auto is only valid for eq and tostring");
@@ -362,13 +428,13 @@ pub fn Binder(comptime api: anytype) type {
                 fn f(l: *zlua.Lua) i32 {
                     const self = M.parse(T, l, 1);
                     const allocator = l.allocator();
-                    
+
                     const s = (if (@hasDecl(T, "format"))
-                        allocator.print("{f}", .{ self })
+                        allocator.print("{f}", .{self})
                     else
-                        allocator.print("{s}", .{ l.typeNameIndex(1) })) catch @panic("Out of memory");
+                        allocator.print("{s}", .{l.typeNameIndex(1)})) catch @panic("Out of memory");
                     defer allocator.free(s);
-                    
+
                     _ = l.pushString(s);
                     return 1;
                 }
@@ -380,7 +446,7 @@ pub fn Binder(comptime api: anytype) type {
             defer std.debug.assert(l.getTop() == base);
             const E = comptime instanceEntries(r);
             l.newTable();
-            
+
             const name = r.name orelse names.shortTypeName(T);
             _ = l.pushStringZ(name);
             l.setField(-2, "__type");
@@ -396,11 +462,11 @@ pub fn Binder(comptime api: anytype) type {
             pushOps(l, T, r);
 
             l.pushValue(-1);
-            l.setField(zlua.registry_index, std.fmt.comptimePrint("__bind_meta_{s}", .{ @typeName(T) }));
+            l.setField(zlua.registry_index, std.fmt.comptimePrint("__bind_meta_{s}", .{@typeName(T)}));
 
             refMeta(l, T);
             l.setUserdataMetatable(R.tagOf(T));
-            std.log.debug("Registered value '{s}'", .{ name });
+            std.log.debug("Registered value '{s}'", .{name});
         }
 
         fn installHandleMeta(l: *zlua.Lua, comptime T: type, comptime r: recipes.HandleRecipe) void {
@@ -431,7 +497,7 @@ pub fn Binder(comptime api: anytype) type {
 
             refMeta(l, T);
             l.setUserdataMetatable(tag);
-            std.log.debug("Registered handle '{s}'", .{ name });
+            std.log.debug("Registered handle '{s}'", .{name});
         }
 
         /// Refs the metatable at the top of the stack so that Lua never collects it.

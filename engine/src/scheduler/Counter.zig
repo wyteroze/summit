@@ -16,7 +16,7 @@ pub fn add(self: *Counter, n: u32) void {
 pub fn decrement(self: *Counter, io: std.Io, scheduler: *Scheduler) void {
     if (self.value.fetchSub(1, .release) == 1) {
         self.lock.lockUncancelable(io);
-        
+
         var waiters = self.waiters;
         self.waiters = .empty;
         self.lock.unlock(io);

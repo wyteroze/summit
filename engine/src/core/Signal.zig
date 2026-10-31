@@ -9,7 +9,7 @@ pub const Connection = struct {
 
     pub fn disconnect(self: Connection) void {
         self.disconnect_fn(self.signal, self.id) catch |e| {
-            std.log.err("Failed to disconnect callback: {s}", .{ @errorName(e) });
+            std.log.err("Failed to disconnect callback: {s}", .{@errorName(e)});
         };
     }
 };
@@ -17,11 +17,7 @@ pub const Connection = struct {
 pub const Dispatcher = struct {
     const FlushFn = *const fn (*anyopaque) void;
     const DropFn = *const fn (*anyopaque) void;
-    const Pending = struct {
-        signal: *anyopaque,
-        flush_fn: FlushFn,
-        drop_fn: DropFn
-    };
+    const Pending = struct { signal: *anyopaque, flush_fn: FlushFn, drop_fn: DropFn };
 
     allocator: std.mem.Allocator,
     queue: std.ArrayList(Pending),
@@ -36,7 +32,7 @@ pub const Dispatcher = struct {
         self.queue.deinit(self.allocator);
         self.draining.deinit(self.allocator);
     }
-    
+
     pub fn flush(self: *Dispatcher) void {
         std.mem.swap(std.ArrayList(Pending), &self.queue, &self.draining);
         for (self.draining.items) |p| p.flush_fn(p.signal);
@@ -67,7 +63,7 @@ pub fn Signal(comptime ArgTypes: anytype) type {
             func: *const fn (*anyopaque, Args) void,
             ctx: *anyopaque,
             dtor: ?Dtor = null,
-            active: bool = true
+            active: bool = true,
         };
 
         allocator: std.mem.Allocator,
@@ -87,7 +83,7 @@ pub fn Signal(comptime ArgTypes: anytype) type {
                 .dispatcher = dispatcher,
                 .callbacks = .empty,
                 .pending = .empty,
-                .draining = .empty
+                .draining = .empty,
             };
         }
 
@@ -139,7 +135,7 @@ pub fn Signal(comptime ArgTypes: anytype) type {
             const wrapped = struct {
                 fn c(ctx_ptr: *anyopaque, args: Args) void {
                     const ctx_typed: Ctx = @ptrCast(@alignCast(ctx_ptr));
-                    @call(.auto, func, .{ ctx_typed } ++ args);
+                    @call(.auto, func, .{ctx_typed} ++ args);
                 }
             }.c;
 

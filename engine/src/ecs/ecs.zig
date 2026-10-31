@@ -16,5 +16,5 @@ pub const api = bind.module("ecs", .{
     .kind = .library,
     .members = &.{
         Entity.sub_api,
-    }
+    },
 });

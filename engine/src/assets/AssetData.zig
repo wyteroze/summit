@@ -8,9 +8,9 @@ const importers = @import("importers/importers.zig");
 const render = @import("../render/render.zig");
 
 pub const AssetResidency = enum { cpu, gpu };
-pub const AssetType = enum { 
-    mesh, 
-    image, 
+pub const AssetType = enum {
+    mesh,
+    image,
     font,
     audio,
     script_source,
@@ -18,14 +18,14 @@ pub const AssetType = enum {
     pub fn uploadable(self: AssetType) bool {
         return switch (self) {
             .mesh, .image, .font => true,
-            else => false
+            else => false,
         };
     }
 };
 
 pub const AssetData = union(AssetResidency) {
     cpu: CpuAssetData,
-    gpu: GpuAssetData
+    gpu: GpuAssetData,
 };
 
 pub const CpuAssetData = union(AssetType) {
@@ -37,30 +37,34 @@ pub const CpuAssetData = union(AssetType) {
 
     pub fn deinit(self: CpuAssetData, allocator: std.mem.Allocator) void {
         switch (self) {
-            inline else => |a| a.deinit(allocator)
+            inline else => |a| a.deinit(allocator),
         }
     }
 
     pub fn parse(allocator: std.mem.Allocator, io: std.Io, path: []const u8, bytes: []u8) !CpuAssetData {
         const ext = std.Io.Dir.path.extension(path);
 
+        // zig fmt: off
         if (std.mem.eql(u8, ext, ".obj") 
             or std.mem.eql(u8, ext, ".glb") 
             or std.mem.eql(u8, ext, ".gltf") 
             or std.mem.eql(u8, ext, ".stl") 
             or std.mem.eql(u8, ext, ".fbx")
         ) {
+            // zig fmt: on
             defer allocator.free(bytes);
             return .{ .mesh = try importers.mesh_assimp.importMesh(allocator, .{ .bytes = bytes }) };
         }
 
-        if (std.mem.eql(u8, ext, ".png")
-            or std.mem.eql(u8, ext, ".bmp")
-            or std.mem.eql(u8, ext, ".jpg")
-            or std.mem.eql(u8, ext, ".jpeg")
-            or std.mem.eql(u8, ext, ".tiff")
+        // zig fmt: off
+        if (std.mem.eql(u8, ext, ".png") 
+            or std.mem.eql(u8, ext, ".bmp") 
+            or std.mem.eql(u8, ext, ".jpg") 
+            or std.mem.eql(u8, ext, ".jpeg") 
+            or std.mem.eql(u8, ext, ".tiff") 
             or std.mem.eql(u8, ext, ".png")
         ) {
+            // zig fmt: on
             defer allocator.free(bytes);
             return .{ .image = try importers.image_zigimg.importImage(allocator, io, .{ .bytes = bytes }) };
         }
@@ -73,13 +77,19 @@ pub const CpuAssetData = union(AssetType) {
 
         if (std.mem.eql(u8, ext, ".ttf")) {
             defer allocator.free(bytes);
-            return .{ .font = try importers.font_freetype.importFont(allocator, .{ .bytes = bytes }, .{ }) };
+            return .{ .font = try importers.font_freetype.importFont(allocator, .{ .bytes = bytes }, .{}) };
         }
 
-        if (std.mem.eql(u8, ext, ".mp3")) { defer allocator.free(bytes); return .{ .audio = try importers.audio_dr.importAudio(allocator, .{ .bytes = bytes }, .{ .format = .mp3 }) }; }
-        if (std.mem.eql(u8, ext, ".wav")) { defer allocator.free(bytes); return .{ .audio = try importers.audio_dr.importAudio(allocator, .{ .bytes = bytes }, .{ .format = .wav }) }; }
+        if (std.mem.eql(u8, ext, ".mp3")) {
+            defer allocator.free(bytes);
+            return .{ .audio = try importers.audio_dr.importAudio(allocator, .{ .bytes = bytes }, .{ .format = .mp3 }) };
+        }
+        if (std.mem.eql(u8, ext, ".wav")) {
+            defer allocator.free(bytes);
+            return .{ .audio = try importers.audio_dr.importAudio(allocator, .{ .bytes = bytes }, .{ .format = .wav }) };
+        }
 
-        std.log.err("unknown file type '{s}'", .{ ext });
+        std.log.err("unknown file type '{s}'", .{ext});
         return error.UnknownFileType;
     }
 };
@@ -102,14 +112,10 @@ pub const GpuAssetData = union(AssetType) {
                 defer allocator.free(ibuf_name);
 
                 return .{ .mesh = .{
-                    .vertex_buffer = try gpu_device.createBuffer(.{
-                        .name = vbuf_name, .type = .vertex, .data = std.mem.sliceAsBytes(m.vertices)
-                    }),
-                    .index_buffer = try gpu_device.createBuffer(.{
-                        .name = ibuf_name, .type = .index, .data = std.mem.sliceAsBytes(m.indices)
-                    }),
+                    .vertex_buffer = try gpu_device.createBuffer(.{ .name = vbuf_name, .type = .vertex, .data = std.mem.sliceAsBytes(m.vertices) }),
+                    .index_buffer = try gpu_device.createBuffer(.{ .name = ibuf_name, .type = .index, .data = std.mem.sliceAsBytes(m.indices) }),
                     .vertex_count = @intCast(m.vertices.len),
-                    .index_count = @intCast(m.indices.len)
+                    .index_count = @intCast(m.indices.len),
                 } };
             },
             .image => |i| {
@@ -119,7 +125,7 @@ pub const GpuAssetData = union(AssetType) {
                 const stride: u32 = switch (i.format) {
                     .rgba8 => 4,
                     .rgba16f => 8,
-                    else => return error.UnsupportedCubemapFormat
+                    else => return error.UnsupportedCubemapFormat,
                 };
 
                 if (upload_ctx.is_cubemap) {
@@ -127,28 +133,24 @@ pub const GpuAssetData = union(AssetType) {
                     const face_data = try sliceCubemapCross(allocator, i.data, @intCast(i.width), face_size, stride);
                     defer allocator.free(face_data);
 
-                    return .{ .image =
-                        try gpu_device.createImage(.{
-                            .name = img_name,
-                            .width = face_size,
-                            .height = face_size,
-                            .data = face_data,
-                            .format = i.format,
-                            .is_cubemap = true
-                        })
-                    };
+                    return .{ .image = try gpu_device.createImage(.{
+                        .name = img_name,
+                        .width = face_size,
+                        .height = face_size,
+                        .data = face_data,
+                        .format = i.format,
+                        .is_cubemap = true,
+                    }) };
                 }
 
-                return .{ .image =
-                     try gpu_device.createImage(.{ 
-                        .name = img_name,
-                        .width = @intCast(i.width), 
-                        .height = @intCast(i.height), 
-                        .data = std.mem.sliceAsBytes(i.data),
-                        .format = i.format,
-                        .is_cubemap = false
-                    }) 
-                };
+                return .{ .image = try gpu_device.createImage(.{
+                    .name = img_name,
+                    .width = @intCast(i.width),
+                    .height = @intCast(i.height),
+                    .data = std.mem.sliceAsBytes(i.data),
+                    .format = i.format,
+                    .is_cubemap = false,
+                }) };
             },
             .font => |f| {
                 const font_name = try std.mem.concatWithSentinel(allocator, u8, &.{ "'", name, "'", " Font" }, 0);
@@ -156,14 +158,14 @@ pub const GpuAssetData = union(AssetType) {
 
                 return .{ .font = try .bake(allocator, font_name, gpu_device, f) };
             },
-            
-            else => unreachable
+
+            else => unreachable,
         }
     }
 
     pub fn deinit(self: GpuAssetData) void {
         switch (self) {
-            inline else => |a| a.deinit()
+            inline else => |a| a.deinit(),
         }
     }
 };
@@ -193,7 +195,7 @@ fn sliceCubemapCross(allocator: std.mem.Allocator, src: []const u8, src_width: u
             const dst_row_offset = face_idx * face_bytes + y * face_size * stride;
             const row_bytes = face_size * stride;
 
-            @memcpy(out[dst_row_offset..dst_row_offset + row_bytes], src[src_row_offset..src_row_offset + row_bytes]);
+            @memcpy(out[dst_row_offset .. dst_row_offset + row_bytes], src[src_row_offset .. src_row_offset + row_bytes]);
         }
     }
 

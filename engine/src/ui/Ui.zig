@@ -15,7 +15,7 @@ pub const types = @import("types.zig");
 const u64_max = std.math.maxInt(u64);
 
 pub const Interactable = bool;
-pub const PointerSignal = core.signal.Signal(.{ math.Vec2 });
+pub const PointerSignal = core.signal.Signal(.{math.Vec2});
 pub const ElementSignals = struct {
     // Nullable until Lua access them.
     // We can't really know for certain what it does
@@ -119,7 +119,10 @@ pub fn init(allocator: std.mem.Allocator) !Ui {
 
 pub fn deinit(self: *Ui) void {
     var it = self.painters.valueIterator();
-    while (it.next()) |s| { s.*.deinit(self.allocator); self.allocator.destroy(s.*); }
+    while (it.next()) |s| {
+        s.*.deinit(self.allocator);
+        self.allocator.destroy(s.*);
+    }
     self.painters.deinit();
 
     self.world.deinit();
@@ -137,7 +140,7 @@ pub fn update(self: *Ui) void {
         const known = for (self.roots.items) |r| {
             if (r.eql(e)) break true;
         } else false;
-        
+
         if (!known) self.roots.append(self.allocator, e) catch @panic("Out of memory");
     }
 
@@ -167,7 +170,7 @@ pub fn paint(self: *Ui) void {
     }
 
     var paint_entities: std.ArrayList(ecs.Entity) = .empty;
-    var iter = self.world.query(&.{ ids.painter }).iterator();
+    var iter = self.world.query(&.{ids.painter}).iterator();
     while (iter.next()) |e| paint_entities.append(allocator, e) catch @panic("Out of memory");
 
     for (paint_entities.items) |e| {
@@ -189,7 +192,7 @@ pub fn paint(self: *Ui) void {
 
         if (st.dirty) {
             tessellate(self.allocator, st.commands.items, &st.mesh) catch |err|
-                std.log.err("Failed to tessellate: {s}", .{ @errorName(err) });
+                std.log.err("Failed to tessellate: {s}", .{@errorName(err)});
             st.dirty = false;
         }
     }
@@ -227,9 +230,12 @@ pub fn createElement(self: *Ui, windowing: *Windowing, options: ?CreateElementOp
     errdefer entity.destroy();
 
     const opts = options orelse return .{ .entity = entity };
-    const parent = if (opts.parent) |p| p.entity 
-        else if (windowing.main_window) |w| (try w.getElement()).entity
-        else null;
+    const parent = if (opts.parent) |p|
+        p.entity
+    else if (windowing.main_window) |w|
+        (try w.getElement()).entity
+    else
+        null;
 
     try entity.setParent(parent);
     try self.world.set(entity, self.component_ids.interactable, Interactable, if (opts.interactable) |i| i else true);
@@ -255,7 +261,7 @@ pub fn getSignal(self: *Ui, e: ecs.Entity, comptime field: []const u8) !*Pointer
     const id = self.component_ids.signals;
     if (e.getComponent(id, ElementSignals) == null)
         try self.world.set(e, id, ElementSignals, .{});
-    
+
     const s = e.getComponent(id, ElementSignals).?;
     if (@field(s, field) == null)
         @field(s, field) = try PointerSignal.create(self.allocator, &self.world.dispatcher);
@@ -304,7 +310,7 @@ fn bubble(self: *Ui, comptime field: []const u8, target: ecs.Entity, pos: math.V
     var cur: ?ecs.Entity = target;
     while (cur) |e| : (cur = e.getParent()) {
         const s = e.getComponent(self.component_ids.signals, ElementSignals) orelse continue;
-        if (@field(s, field)) |sig| sig.fire(.{ pos });
+        if (@field(s, field)) |sig| sig.fire(.{pos});
     }
 }
 
@@ -323,12 +329,11 @@ fn hitTest(self: *Ui, e: ecs.Entity, p: math.Vec2) ?ecs.Entity {
     var i = children.len;
     while (i > 0) {
         i -= 1;
-        if (self.hitTest(children[i], p)) |hit| 
+        if (self.hitTest(children[i], p)) |hit|
             return hit;
     }
 
-    return if (self.isInteractive(e)) e 
-        else null;
+    return if (self.isInteractive(e)) e else null;
 }
 
 fn hitTestRoots(self: *Ui, p: math.Vec2) ?ecs.Entity {
@@ -337,7 +342,10 @@ fn hitTestRoots(self: *Ui, p: math.Vec2) ?ecs.Entity {
         i -= 1;
 
         const r = self.roots.items[i];
-        if (!r.isAlive() or r.getParent() != null) { _ = self.roots.orderedRemove(i); continue; }
+        if (!r.isAlive() or r.getParent() != null) {
+            _ = self.roots.orderedRemove(i);
+            continue;
+        }
         if (self.hitTest(r, p)) |hit| return hit;
     }
 
@@ -346,12 +354,14 @@ fn hitTestRoots(self: *Ui, p: math.Vec2) ?ecs.Entity {
 
 fn fireOwn(self: *Ui, comptime field: []const u8, e: ecs.Entity, pos: math.Vec2) void {
     const s = e.getComponent(self.component_ids.signals, ElementSignals) orelse return;
-    if (@field(s, field)) |sig| sig.fire(.{ pos });
+    if (@field(s, field)) |sig| sig.fire(.{pos});
 }
 
 fn setHover(self: *Ui, new: ?ecs.Entity, pos: math.Vec2) void {
     var old = self.hovered;
-    if (old) |o| if (!o.isAlive()) { old = null; };
+    if (old) |o| if (!o.isAlive()) {
+        old = null;
+    };
 
     const same = if (old != null and new != null) old.?.eql(new.?) else old == null and new == null;
     if (same) return;
@@ -389,56 +399,71 @@ fn updateHover(self: *Ui, pos: math.Vec2) void {
     if (target.isAlive()) self.bubble("pointer_moved", target, pos);
 }
 
-pub const api = bind.module("ui", .{
-    .kind = .{ .singleton = Ui },
-    .members = &.{
-        bind.record(types.Padding, .{}),
-        bind.record(types.CornerRadii, .{}),
-        bind.record(types.SizeMode, .{}),
-        bind.record(types.Text, .{}),
-        bind.record(types.Crop, .{}),
-        bind.record(types.Image, .{}),
-        bind.record(types.Borders, .{}),
-        bind.record(types.GridLayout, .{}),
-        bind.variant(types.SizeAxis, .{ .number = .fixed }),
-        bind.variant(types.GridAxis, .{ .number = .fixed }),
-        bind.func("CreateElement", Ui.createElement),
-        Element.sub_api,
-        Painter.sub_api,
-        Painter.PainterHandle.sub_api,
-    }
-});
+pub const api = bind.module("ui", .{ .kind = .{ .singleton = Ui }, .members = &.{
+    bind.record(types.Padding, .{}),
+    bind.record(types.CornerRadii, .{}),
+    bind.record(types.SizeMode, .{}),
+    bind.record(types.Text, .{}),
+    bind.record(types.Crop, .{}),
+    bind.record(types.Image, .{}),
+    bind.record(types.Borders, .{}),
+    bind.record(types.GridLayout, .{}),
+    bind.variant(types.SizeAxis, .{ .number = .fixed }),
+    bind.variant(types.GridAxis, .{ .number = .fixed }),
+    bind.func("CreateElement", Ui.createElement),
+    Element.sub_api,
+    Painter.sub_api,
+    Painter.PainterHandle.sub_api,
+} });
 
 pub const Element = struct {
     entity: ecs.Entity,
 
     const ToEntity = bind.Via(Element, ecs.Entity, struct {
-        fn f(e: Element) ecs.Entity { return e.entity; }
+        fn f(e: Element) ecs.Entity {
+            return e.entity;
+        }
     }.f);
 
     pub const sub_api = bind.handle(Element, .{
-        .alive = bind.func("isAlive", struct { fn c(self: Element) bool { return self.entity.isAlive(); } }.c),
+        .alive = bind.func("isAlive", struct {
+            fn c(self: Element) bool {
+                return self.entity.isAlive();
+            }
+        }.c),
         .inherit = bind.inherit(Element.ToEntity, ecs.Entity.sub_api.impl.recipe),
         .signals = &.{
             // `ui` argument is provided by marshaller
             bind.signal("PointerDown", struct {
-                fn c(self: Element, ui: *Ui) !*PointerSignal { return ui.getSignal(self.entity, "pointer_down"); }
+                fn c(self: Element, ui: *Ui) !*PointerSignal {
+                    return ui.getSignal(self.entity, "pointer_down");
+                }
             }.c),
             bind.signal("PointerUp", struct {
-                fn c(self: Element, ui: *Ui) !*PointerSignal { return ui.getSignal(self.entity, "pointer_up"); }
+                fn c(self: Element, ui: *Ui) !*PointerSignal {
+                    return ui.getSignal(self.entity, "pointer_up");
+                }
             }.c),
             bind.signal("Activated", struct {
-                fn c(self: Element, ui: *Ui) !*PointerSignal { return ui.getSignal(self.entity, "activated"); }
+                fn c(self: Element, ui: *Ui) !*PointerSignal {
+                    return ui.getSignal(self.entity, "activated");
+                }
             }.c),
             bind.signal("PointerEntered", struct {
-                fn c(self: Element, ui: *Ui) !*PointerSignal { return ui.getSignal(self.entity, "pointer_entered"); }
+                fn c(self: Element, ui: *Ui) !*PointerSignal {
+                    return ui.getSignal(self.entity, "pointer_entered");
+                }
             }.c),
             bind.signal("PointerMoved", struct {
-                fn c(self: Element, ui: *Ui) !*PointerSignal { return ui.getSignal(self.entity, "pointer_moved"); }
+                fn c(self: Element, ui: *Ui) !*PointerSignal {
+                    return ui.getSignal(self.entity, "pointer_moved");
+                }
             }.c),
             bind.signal("PointerLeft", struct {
-                fn c(self: Element, ui: *Ui) !*PointerSignal { return ui.getSignal(self.entity, "pointer_left"); }
+                fn c(self: Element, ui: *Ui) !*PointerSignal {
+                    return ui.getSignal(self.entity, "pointer_left");
+                }
             }.c),
-        }
+        },
     });
 };

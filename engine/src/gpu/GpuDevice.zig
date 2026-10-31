@@ -70,11 +70,11 @@ pub const GpuImage = struct {
         self.backend.deleteImage(self.handle);
     }
 
-    pub fn renderTarget(self: GpuImage) types.RenderTargetHandle { 
+    pub fn renderTarget(self: GpuImage) types.RenderTargetHandle {
         return self.backend.imageGetRtv(self.handle);
     }
 
-    pub fn depthTarget(self: GpuImage) types.DepthTargetHandle { 
+    pub fn depthTarget(self: GpuImage) types.DepthTargetHandle {
         return self.backend.imageGetDsv(self.handle);
     }
 };
@@ -144,17 +144,21 @@ pub const GpuShader = struct {
 
         for (d.stages, 0..) |s, i| {
             results[i] = try compiler.compileStage(
-                "shader", 
+                "shader",
                 s.source,
                 s.entrypoint,
-                switch (s.stage) { .vertex => .vertex, .fragment => .fragment, .compute => .compute }, 
-                .fromBackend(b.queryBackend())
+                switch (s.stage) {
+                    .vertex => .vertex,
+                    .fragment => .fragment,
+                    .compute => .compute,
+                },
+                .fromBackend(b.queryBackend()),
             );
             compiled_stages[i] = .{
                 .name = s.name,
                 .stage = s.stage,
                 .source = @ptrCast(results[i].code),
-                .entrypoint = s.entrypoint
+                .entrypoint = s.entrypoint,
             };
         }
 
@@ -203,11 +207,7 @@ pub fn init(allocator: std.mem.Allocator, b: Backend) !GpuDevice {
     compiler.* = .init();
     compiler.setModuleLookup(shader_registry.lookupShaderModule);
 
-    return .{
-        .allocator = allocator,
-        .backend = b,
-        .compiler = compiler
-    };
+    return .{ .allocator = allocator, .backend = b, .compiler = compiler };
 }
 
 pub fn deinit(self: GpuDevice) void {

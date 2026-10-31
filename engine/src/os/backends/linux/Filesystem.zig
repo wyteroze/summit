@@ -1,3 +1,4 @@
+// Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
 
@@ -12,9 +13,8 @@ pub fn init(proc_init: std.process.Init, pkg_id: []const u8) Filesystem {
 pub fn getPersistPath(self: *const Filesystem, allocator: std.mem.Allocator) ![]const u8 {
     var free = false;
     const share = self.proc_init.environ_map.get("XDG_DATA_HOME") orelse blk: {
-        const home = self.proc_init.environ_map.get("HOME")
-            orelse return error.HomeNotFound;
-        
+        const home = self.proc_init.environ_map.get("HOME") orelse return error.HomeNotFound;
+
         free = true;
         break :blk try std.Io.Dir.path.join(allocator, &.{ home, ".local", "share" });
     };
@@ -26,9 +26,8 @@ pub fn getPersistPath(self: *const Filesystem, allocator: std.mem.Allocator) ![]
 pub fn getCachePath(self: *const Filesystem, allocator: std.mem.Allocator) ![]const u8 {
     var free = false;
     const cache = self.proc_init.environ_map.get("XDG_CACHE_HOME") orelse blk: {
-        const home = self.proc_init.environ_map.get("HOME")
-            orelse return error.HomeNotFound;
-        
+        const home = self.proc_init.environ_map.get("HOME") orelse return error.HomeNotFound;
+
         free = true;
         break :blk try std.Io.Dir.path.join(allocator, &.{ home, ".cache" });
     };
@@ -38,8 +37,7 @@ pub fn getCachePath(self: *const Filesystem, allocator: std.mem.Allocator) ![]co
 }
 
 pub fn getTempPath(self: *const Filesystem, allocator: std.mem.Allocator) ![]const u8 {
-    const tmpdir = self.proc_init.environ_map.get("TMPDIR")
-        orelse "/tmp";
+    const tmpdir = self.proc_init.environ_map.get("TMPDIR") orelse "/tmp";
 
     return try std.Io.Dir.path.join(allocator, &.{ tmpdir, self.pkg_id });
 }

@@ -10,14 +10,14 @@ pub fn tessellate(allocator: std.mem.Allocator, commands: []const types.PainterC
 
     for (commands) |cmd| switch (cmd) {
         .line => |l| try appendLine(allocator, mesh, l),
-        .rectangle => |r| try appendRectangle(allocator, mesh, r)
+        .rectangle => |r| try appendRectangle(allocator, mesh, r),
     };
 }
 
 fn appendLine(allocator: std.mem.Allocator, mesh: *PainterMesh, l: types.PainterLine) !void {
     const dx = l.end.x - l.start.x;
     const dy = l.end.y - l.start.y;
-    const len = @sqrt(dx*dx + dy*dy);
+    const len = @sqrt(dx * dx + dy * dy);
 
     if (len < 0.0001 or l.thickness <= 0) return;
 
@@ -32,15 +32,12 @@ fn appendLine(allocator: std.mem.Allocator, mesh: *PainterMesh, l: types.Painter
     const base: u32 = @intCast(mesh.vertices.items.len);
 
     try mesh.vertices.appendSlice(allocator, &.{
-        .{ .pos = .{ l.start.x + nx, l.start.y + ny }, .uv = .{ half,  outer }, .color = color },
-        .{ .pos = .{ l.end.x   + nx, l.end.y   + ny }, .uv = .{ half,  outer }, .color = color },
-        .{ .pos = .{ l.end.x   - nx, l.end.y   - ny }, .uv = .{ half, -outer }, .color = color },
+        .{ .pos = .{ l.start.x + nx, l.start.y + ny }, .uv = .{ half, outer }, .color = color },
+        .{ .pos = .{ l.end.x + nx, l.end.y + ny }, .uv = .{ half, outer }, .color = color },
+        .{ .pos = .{ l.end.x - nx, l.end.y - ny }, .uv = .{ half, -outer }, .color = color },
         .{ .pos = .{ l.start.x - nx, l.start.y - ny }, .uv = .{ half, -outer }, .color = color },
     });
-    try mesh.indices.appendSlice(allocator, &.{
-        base, base+1, base+2,
-        base, base+2, base+3
-    });
+    try mesh.indices.appendSlice(allocator, &.{ base, base + 1, base + 2, base, base + 2, base + 3 });
 }
 
 fn appendRectangle(allocator: std.mem.Allocator, mesh: *PainterMesh, r: types.PainterRectangle) !void {
@@ -50,13 +47,10 @@ fn appendRectangle(allocator: std.mem.Allocator, mesh: *PainterMesh, r: types.Pa
 
     const base: u32 = @intCast(mesh.vertices.items.len);
     try mesh.vertices.appendSlice(allocator, &.{
-        .{ .pos = .{ pos.x,          pos.y          }, .uv = .{ 1, 0 }, .color = color },
-        .{ .pos = .{ pos.x + size.x, pos.y          }, .uv = .{ 1, 0 }, .color = color },
+        .{ .pos = .{ pos.x, pos.y }, .uv = .{ 1, 0 }, .color = color },
+        .{ .pos = .{ pos.x + size.x, pos.y }, .uv = .{ 1, 0 }, .color = color },
         .{ .pos = .{ pos.x + size.x, pos.y + size.y }, .uv = .{ 1, 0 }, .color = color },
-        .{ .pos = .{ pos.x,          pos.y + size.y }, .uv = .{ 1, 0 }, .color = color }
+        .{ .pos = .{ pos.x, pos.y + size.y }, .uv = .{ 1, 0 }, .color = color },
     });
-    try mesh.indices.appendSlice(allocator, &.{
-        base, base+1, base+2,
-        base, base+2, base+3
-    });
+    try mesh.indices.appendSlice(allocator, &.{ base, base + 1, base + 2, base, base + 2, base + 3 });
 }

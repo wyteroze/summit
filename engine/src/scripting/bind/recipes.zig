@@ -12,7 +12,7 @@ pub const ValueRecipe = struct {
     statics: []const types.Member = &.{},
     methods: []const types.Member = &.{},
     signals: []const types.Member = &.{},
-    ops: types.Ops = .{}
+    ops: types.Ops = .{},
 };
 
 pub const HandleRecipe = struct {
@@ -31,11 +31,11 @@ pub const HandleRecipe = struct {
 
 pub const ObjectRecipe = struct {
     name: ?[:0]const u8 = null,
-    retain: ?types.Member = null, 
+    retain: ?types.Member = null,
     release: ?types.Member = null,
     identity: bool = false,
-    props: []const types.Member = &.{}, 
-    statics: []const types.Member = &.{}, 
+    props: []const types.Member = &.{},
+    statics: []const types.Member = &.{},
     methods: []const types.Member = &.{},
     signals: []const types.Member = &.{},
     ops: types.Ops = .{},
@@ -48,8 +48,8 @@ pub const RecordRecipe = struct {
 
 pub const VariantRecipe = struct {
     name: ?[:0]const u8 = null,
-    number: ?@TypeOf(.EnumLiteral) = null,
-    push_shorthand: bool = true
+    number: ?@EnumLiteral() = null,
+    push_shorthand: bool = true,
 };
 
 pub const ModuleRecipe = struct {

@@ -10,26 +10,35 @@ pub fn Marshal(comptime Reg: type) type {
     return struct {
         pub fn parse(comptime T: type, l: *zlua.Lua, idx: i32) T {
             @setEvalBranchQuota(1_000_000);
-            if (comptime ptrToValue(T)) |V| return parseValue(V, l, idx); 
+            if (comptime ptrToValue(T)) |V| return parseValue(V, l, idx);
             if (comptime Reg.kindOf(T)) |k| switch (k) {
                 .value => return parseValue(T, l, idx).*,
                 .handle => return parseHandle(T, l, idx).*,
                 .record => return parseRecord(T, l, idx),
                 .variant => return parseUnion(T, shorthandOf(T), l, idx),
                 .object => @compileError("Objects are taken by pointer"),
-                else => unreachable
+                else => unreachable,
             };
 
             switch (@typeInfo(T)) {
-                .bool => { if (!l.isBoolean(idx)) l.typeError(idx, "boolean"); return l.toBoolean(idx); },
-                .int => { if (!l.isNumber(idx)) l.typeError(idx, "integer"); return @intCast(l.toInteger(idx) catch unreachable); },
-                .float => { if (!l.isNumber(idx)) l.typeError(idx, "number"); return @floatCast(l.toNumber(idx) catch unreachable); },
+                .bool => {
+                    if (!l.isBoolean(idx)) l.typeError(idx, "boolean");
+                    return l.toBoolean(idx);
+                },
+                .int => {
+                    if (!l.isNumber(idx)) l.typeError(idx, "integer");
+                    return @intCast(l.toInteger(idx) catch unreachable);
+                },
+                .float => {
+                    if (!l.isNumber(idx)) l.typeError(idx, "number");
+                    return @floatCast(l.toNumber(idx) catch unreachable);
+                },
                 .optional => |o| return if (l.isNoneOrNil(idx)) null else parse(o.child, l, idx),
                 .@"enum" => return parseEnum(T, l, idx),
                 .@"union" => return parseUnion(T, null, l, idx),
-                .pointer => return parseString(T, l, idx), 
+                .pointer => return parseString(T, l, idx),
                 .@"struct" => return parseRecord(T, l, idx),
-                else => @compileError(std.fmt.comptimePrint("Type {s} cannot be marshalled from Lua", .{ @typeName(T) }))
+                else => @compileError(std.fmt.comptimePrint("Type {s} cannot be marshalled from Lua", .{@typeName(T)})),
             }
         }
 
@@ -51,7 +60,9 @@ pub fn Marshal(comptime Reg: type) type {
                 .int, .comptime_int => l.pushInteger(@intCast(v)),
                 .float, .comptime_float => l.pushNumber(@floatCast(v)),
                 .optional => if (v) |x| push(l, x) else l.pushNil(),
-                .@"enum" => switch (v) { inline else => |t| _ = l.pushStringZ(comptime names.pascal(@tagName(t))) },
+                .@"enum" => switch (v) {
+                    inline else => |t| _ = l.pushStringZ(comptime names.pascal(@tagName(t))),
+                },
                 .@"union" => return pushUnion(l, v, null),
                 .@"struct" => |s| {
                     l.createTable(0, s.field_names.len);
@@ -60,9 +71,11 @@ pub fn Marshal(comptime Reg: type) type {
                         l.setField(-2, comptime names.pascal(nm));
                     }
                 },
-                
-                .pointer => if (T == []const u8) { _ = l.pushString(v); } else @compileError(std.fmt.comptimePrint("Cannot marshal pointers to Lua, but got type {s}", .{ @typeName(T) })),
-                else => @compileError(std.fmt.comptimePrint("Type {s} cannot be marshalled to Lua", .{ @typeName(T) })),
+
+                .pointer => if (T == []const u8) {
+                    _ = l.pushString(v);
+                } else @compileError(std.fmt.comptimePrint("Cannot marshal pointers to Lua, but got type {s}", .{@typeName(T)})),
+                else => @compileError(std.fmt.comptimePrint("Type {s} cannot be marshalled to Lua", .{@typeName(T)})),
             }
         }
 
@@ -99,7 +112,7 @@ pub fn Marshal(comptime Reg: type) type {
             const map: std.StaticStringMap(T) = comptime blk: {
                 const info = @typeInfo(T).@"enum";
                 var kv: [info.field_names.len]struct { []const u8, T } = undefined;
-                for (info.field_names, 0..) |nm, i| kv[i] = .{ names.pascal(nm), @enumFromInt(info.field_values[i]) };
+                for (info.field_names, 0..) |nm, i| kv[i] = .{ names.pascal(nm), @fromBackingInt(@intCast(info.field_values[i])) };
 
                 break :blk .initComptime(kv);
             };
@@ -165,7 +178,7 @@ pub fn Marshal(comptime Reg: type) type {
 
         fn parseRecord(comptime T: type, l: *zlua.Lua, idx: i32) T {
             const t = l.absIndex(idx);
-            if (l.typeOf(t) != .table) l.raiseErrorStr("expected a table for %s", .{ @typeName(T).ptr });
+            if (l.typeOf(t) != .table) l.raiseErrorStr("expected a table for %s", .{@typeName(T).ptr});
             const info = @typeInfo(T).@"struct";
 
             var out: T = .{};
@@ -179,7 +192,7 @@ pub fn Marshal(comptime Reg: type) type {
 
             l.pushNil();
             while (l.next(t)) {
-                if (l.typeOf(-2) != .string) l.raiseErrorStr("%s: field names must be strings", .{ @typeName(T).ptr });
+                if (l.typeOf(-2) != .string) l.raiseErrorStr("%s: field names must be strings", .{@typeName(T).ptr});
 
                 const key = l.toString(-2) catch unreachable;
                 var known = false;

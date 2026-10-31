@@ -6,17 +6,32 @@ const Fiber = @import("../Fiber.zig");
 pub const Registers = extern struct {
     sp: usize = 0,
     x18: usize = 0, // thanks apple
-    x19: usize = 0, x20: usize = 0, x21: usize = 0, x22: usize = 0, x23: usize = 0, 
-    x24: usize = 0, x25: usize = 0, x26: usize = 0, x27: usize = 0, x28: usize = 0,
+    x19: usize = 0,
+    x20: usize = 0,
+    x21: usize = 0,
+    x22: usize = 0,
+    x23: usize = 0,
+    x24: usize = 0,
+    x25: usize = 0,
+    x26: usize = 0,
+    x27: usize = 0,
+    x28: usize = 0,
     fp: usize = 0,
     lr: usize = 0,
-    d8: u64 = 0, d9: u64 = 0, d10: u64 = 0, d11: u64 = 0, d12: u64 = 0, d13: u64 = 0,
-    d14: u64 = 0, d15: u64 = 0,
+    d8: u64 = 0,
+    d9: u64 = 0,
+    d10: u64 = 0,
+    d11: u64 = 0,
+    d12: u64 = 0,
+    d13: u64 = 0,
+    d14: u64 = 0,
+    d15: u64 = 0,
 };
+// zig fmt: on
 
 pub fn swap(_: *Registers, _: *Registers) callconv(.naked) void {
     asm volatile (
-        // x0 = from, x1 = to
+    // x0 = from, x1 = to
         \\ mov x9, sp
         \\ str x9,  [x0, #0x00]
         \\ str x18, [x0, #0x08]
@@ -53,17 +68,34 @@ pub noinline fn doSwap(from: *Registers, to: *Registers) void {
     const sym = comptime if (builtin.target.os.tag.isDarwin()) "bl _swap" else "bl swap";
     asm volatile (sym
         :
-        : [from] "{x0}" (from), [to] "{x1}" (to)
+        : [from] "{x0}" (from),
+          [to] "{x1}" (to),
         : .{
-            .x0 = true, .x1 = true, .x9 = true,
-            .x19 = true, .x20 = true, .x21 = true, .x22 = true,
-            .x23 = true, .x24 = true, .x25 = true, .x26 = true,
-            .x27 = true, .x28 = true, .x29 = true, .lr = true,
-            .d8 = true, .d9 = true, .d10 = true, .d11 = true,
-            .d12 = true, .d13 = true, .d14 = true, .d15 = true,
-            .memory = true
-        }
-    );
+          .x0 = true,
+          .x1 = true,
+          .x9 = true,
+          .x19 = true,
+          .x20 = true,
+          .x21 = true,
+          .x22 = true,
+          .x23 = true,
+          .x24 = true,
+          .x25 = true,
+          .x26 = true,
+          .x27 = true,
+          .x28 = true,
+          .x29 = true,
+          .lr = true,
+          .d8 = true,
+          .d9 = true,
+          .d10 = true,
+          .d11 = true,
+          .d12 = true,
+          .d13 = true,
+          .d14 = true,
+          .d15 = true,
+          .memory = true,
+        });
 }
 
 pub fn trampoline() callconv(.naked) noreturn {
@@ -71,21 +103,16 @@ pub fn trampoline() callconv(.naked) noreturn {
         \\ mov x0, x19
         \\ bl %[land]
         :
-        : [land] "X" (&Fiber.trampolineLand)
+        : [land] "X" (&Fiber.trampolineLand),
     );
 }
 
 pub inline fn readx18() usize {
     return asm volatile ("mov %[out], x18"
-        : [out] "=r" (-> usize)
+        : [out] "=r" (-> usize),
     );
 }
 
 pub fn initRegs(sp: usize, self: *anyopaque) Registers {
-    return .{
-        .sp = sp,
-        .x18 = readx18(),
-        .lr = @intFromPtr(&trampoline),
-        .x19 = @intFromPtr(self)
-    };
+    return .{ .sp = sp, .x18 = readx18(), .lr = @intFromPtr(&trampoline), .x19 = @intFromPtr(self) };
 }

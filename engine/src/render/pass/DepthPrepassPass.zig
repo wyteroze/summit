@@ -23,19 +23,19 @@ pub fn init(gpu_device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader) !DepthP
             .depth_write = true,
             .color_write_mask = .none(),
             .resources = &.{
-                .{ .name = "VSParams", .kind = .uniform_buffer, .visibility = .vertex }
+                .{ .name = "VSParams", .kind = .uniform_buffer, .visibility = .vertex },
             },
             .layout = &.{
                 .{ .offset = 0, .format = .float3 },
                 .{ .offset = 12, .format = .float3 },
-                .{ .offset = 24, .format = .float2 }
-            }
+                .{ .offset = 24, .format = .float2 },
+            },
         }),
         .vs_ubuf = try gpu_device.createBuffer(.{
             .name = "Depth prepass vs ubuf",
             .type = .uniform,
             .usage = .dynamic,
-            .size = @sizeOf([3]math.Mat4)
+            .size = @sizeOf([3]math.Mat4),
         }),
     };
 }
@@ -54,19 +54,15 @@ pub fn execute(self: *DepthPrepassPass, ctx: pass.PassContext) void {
     self.pipeline.apply();
 
     for (ctx.scene.objects) |obj| {
-        const vs_params: [3][4][4]f32 = .{
-            obj.model.m,
-            ctx.view.view_matrix.m,
-            ctx.view.proj_matrix.m
-        };
+        const vs_params: [3][4][4]f32 = .{ obj.model.m, ctx.view.view_matrix.m, ctx.view.proj_matrix.m };
         self.vs_ubuf.update(std.mem.asBytes(&vs_params));
 
         self.pipeline.applyBindings(.{
             .vertex_buffers = .{ obj.mesh.vertex_buffer.handle, null, null, null },
             .index_buffer = obj.mesh.index_buffer.handle,
             .resources = &.{
-                .{ .name = "VSParams", .handle = .{ .uniform_buffer = self.vs_ubuf.handle } }
-            }
+                .{ .name = "VSParams", .handle = .{ .uniform_buffer = self.vs_ubuf.handle } },
+            },
         });
 
         self.pipeline.draw(0, obj.mesh.index_count, 1);
@@ -82,8 +78,8 @@ pub fn deinit(self: *DepthPrepassPass, allocator: std.mem.Allocator) void {
 pub fn node(self: *DepthPrepassPass) pass.PassNode {
     return .{
         .name = "DepthPrepassPass",
-        .reads = &.{ resource.color_target },
-        .writes = &.{ resource.depth_buffer },
+        .reads = &.{resource.color_target},
+        .writes = &.{resource.depth_buffer},
         .ptr = self,
         .execute_fn = struct {
             fn c(ptr: *anyopaque, ctx: pass.PassContext) void {
@@ -94,6 +90,6 @@ pub fn node(self: *DepthPrepassPass) pass.PassNode {
             fn c(ptr: *anyopaque, allocator: std.mem.Allocator) void {
                 deinit(@ptrCast(@alignCast(ptr)), allocator);
             }
-        }.c
+        }.c,
     };
 }

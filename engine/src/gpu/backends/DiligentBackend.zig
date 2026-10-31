@@ -9,8 +9,8 @@ fn buildResourceDescs(buf: []c.SummitResourceDesc, resources: []const desc.Resou
     for (resources, 0..) |r, i| {
         buf[i] = .{
             .name = r.name.ptr,
-            .kind = @intFromEnum(r.kind),
-            .visibility = @intFromEnum(r.visibility),
+            .kind = @backingInt(r.kind),
+            .visibility = @backingInt(r.visibility),
         };
     }
 
@@ -19,11 +19,13 @@ fn buildResourceDescs(buf: []c.SummitResourceDesc, resources: []const desc.Resou
 
 fn buildBoundResources(buf: []c.SummitBoundResource, resources: []const desc.BoundResource) []c.SummitBoundResource {
     for (resources, 0..) |r, i| {
-        const handle_ptr = switch (r.handle) { inline else => |h| h.ptr };
+        const handle_ptr = switch (r.handle) {
+            inline else => |h| h.ptr,
+        };
 
         buf[i] = .{
             .name = r.name.ptr,
-            .kind = @intFromEnum(std.meta.activeTag(r.handle)),
+            .kind = @backingInt(std.meta.activeTag(r.handle)),
             .handle_ptr = handle_ptr,
         };
     }
@@ -35,26 +37,24 @@ const DiligentBackend = @This();
 handle: c.SummitDiligentDeviceHandle = undefined,
 
 pub fn init() DiligentBackend {
-    return .{
-        .handle = c.diligent_init()
-    };
+    return .{ .handle = c.diligent_init() };
 }
 
 pub fn deinit(self: DiligentBackend) void {
     c.diligent_deinit(self.handle);
 }
 
-pub fn createBuffer(self: DiligentBackend, d: desc.BufferDesc) types.BufferHandle { 
+pub fn createBuffer(self: DiligentBackend, d: desc.BufferDesc) types.BufferHandle {
     const buf_h = c.diligent_create_buffer(self.handle, .{
         .name = d.name.ptr,
-        .type = @intFromEnum(d.type),
-        .usage = @intFromEnum(d.usage),
+        .type = @backingInt(d.type),
+        .usage = @backingInt(d.usage),
         .stride = d.stride,
         .size = if (d.data) |data| data.len else d.size,
         .data = if (d.data) |data| data.ptr else @ptrFromInt(0),
     });
 
-    return .{ .ptr = buf_h.ptr.? }; 
+    return .{ .ptr = buf_h.ptr.? };
 }
 
 pub fn destroyBuffer(self: DiligentBackend, h: types.BufferHandle) void {
@@ -65,16 +65,16 @@ pub fn updateBuffer(self: DiligentBackend, h: types.BufferHandle, data: []const 
     c.diligent_update_buffer(self.handle, .{ .ptr = h.ptr }, data.ptr, data.len);
 }
 
-pub fn createSampler(self: DiligentBackend, d: desc.SamplerDesc) types.SamplerHandle { 
+pub fn createSampler(self: DiligentBackend, d: desc.SamplerDesc) types.SamplerHandle {
     const sam_h = c.diligent_create_sampler(self.handle, .{
-        .wrap_u = @intFromEnum(d.wrap_u),
-        .wrap_v = @intFromEnum(d.wrap_v),
-        .min_filter = @intFromEnum(d.min_filter),
-        .mag_filter = @intFromEnum(d.mag_filter),
-        .mip_filter = @intFromEnum(d.mip_filter)
+        .wrap_u = @backingInt(d.wrap_u),
+        .wrap_v = @backingInt(d.wrap_v),
+        .min_filter = @backingInt(d.min_filter),
+        .mag_filter = @backingInt(d.mag_filter),
+        .mip_filter = @backingInt(d.mip_filter),
     });
 
-    return .{ .ptr = sam_h.ptr.? }; 
+    return .{ .ptr = sam_h.ptr.? };
 }
 
 pub fn createImage(self: DiligentBackend, d: desc.ImageDesc) types.ImageHandle {
@@ -82,20 +82,20 @@ pub fn createImage(self: DiligentBackend, d: desc.ImageDesc) types.ImageHandle {
         .name = d.name,
         .width = d.width,
         .height = d.height,
-        .format = @intFromEnum(d.format),
+        .format = @backingInt(d.format),
         .data = if (d.data) |data| data.ptr else @ptrFromInt(0),
         .is_cubemap = d.is_cubemap,
-        .is_render_target = d.is_render_target
+        .is_render_target = d.is_render_target,
     });
 
-    return .{ .ptr = img_h.ptr.? }; 
+    return .{ .ptr = img_h.ptr.? };
 }
 
 pub fn destroyImage(self: DiligentBackend, h: types.ImageHandle) void {
     c.diligent_destroy_image(self.handle, .{ .ptr = h.ptr });
 }
 
-pub fn createPipeline(self: DiligentBackend, d: desc.PipelineDesc) types.PipelineHandle { 
+pub fn createPipeline(self: DiligentBackend, d: desc.PipelineDesc) types.PipelineHandle {
     std.debug.assert(d.resources.len <= 16);
     var resource_buf: [16]c.SummitResourceDesc = undefined;
     const resources = buildResourceDescs(&resource_buf, d.resources);
@@ -104,27 +104,22 @@ pub fn createPipeline(self: DiligentBackend, d: desc.PipelineDesc) types.Pipelin
         .name = d.name,
         .shader = .{ .ptr = d.shader.ptr },
         .depth_write = d.depth_write,
-        .index_type = @intFromEnum(d.index_type),
-        .cull_mode = @intFromEnum(d.cull_mode),
+        .index_type = @backingInt(d.index_type),
+        .cull_mode = @backingInt(d.cull_mode),
         .layout = @ptrCast(d.layout.ptr),
         .layout_len = d.layout.len,
         .resources = resources.ptr,
         .resources_len = resources.len,
-        .color_write_mask = .{
-            .red = d.color_write_mask.red,
-            .green = d.color_write_mask.green,
-            .blue = d.color_write_mask.blue,
-            .alpha = d.color_write_mask.alpha
-        },
+        .color_write_mask = .{ .red = d.color_write_mask.red, .green = d.color_write_mask.green, .blue = d.color_write_mask.blue, .alpha = d.color_write_mask.alpha },
         .alpha_blend_enabled = d.alpha_blend_enabled,
-        .depth_format = if (d.depth_format) |f| @intFromEnum(f) else 0,
+        .depth_format = if (d.depth_format) |f| @backingInt(f) else 0,
         .has_depth_format = d.depth_format != null,
-        .color_format = if (d.color_format) |f| @intFromEnum(f) else 0,
+        .color_format = if (d.color_format) |f| @backingInt(f) else 0,
         .has_color_format = d.color_format != null,
-        .comparison_func = @intFromEnum(d.comparison_func)
+        .comparison_func = @backingInt(d.comparison_func),
     });
 
-    return .{ .ptr = pipe_h.ptr.? }; 
+    return .{ .ptr = pipe_h.ptr.? };
 }
 
 pub fn destroyPipeline(self: DiligentBackend, h: types.PipelineHandle) void {
@@ -148,7 +143,7 @@ pub fn createComputePipeline(self: DiligentBackend, d: desc.ComputePipelineDesc)
         .name = d.name,
         .shader = .{ .ptr = d.shader.ptr },
         .resources = resources.ptr,
-        .resources_len = resources.len
+        .resources_len = resources.len,
     });
 
     return .{ .ptr = pipe_h.ptr.? };
@@ -173,17 +168,14 @@ pub fn createShader(self: DiligentBackend, d: desc.ShaderDesc) types.ShaderHandl
     for (d.stages, 0..) |stage, i| {
         stages[i] = .{
             .name = stage.name,
-            .stage = @intFromEnum(stage.stage),
+            .stage = @backingInt(stage.stage),
             .source = stage.source.ptr,
             .source_len = @intCast(stage.source.len),
-            .entrypoint = stage.entrypoint.ptr
+            .entrypoint = stage.entrypoint.ptr,
         };
     }
 
-    const shd_h = c.diligent_create_shader(self.handle, .{
-        .stages = &stages,
-        .stages_len = d.stages.len
-    });
+    const shd_h = c.diligent_create_shader(self.handle, .{ .stages = &stages, .stages_len = d.stages.len });
 
     return .{ .ptr = shd_h.ptr.? };
 }
@@ -194,14 +186,12 @@ pub fn beginPass(self: DiligentBackend, d: desc.PassDesc) void {
         .height = d.height,
         .clear_color = if (d.clear_color) |cc| cc.toArr() else undefined,
         .has_clear_color = d.clear_color != null,
-
         .clear_depth = d.clear_depth orelse undefined,
         .has_clear_depth = d.clear_depth != null,
         .depth_target = if (d.depth_target) |dt| .{ .ptr = dt.ptr } else undefined,
         .has_depth_target = d.depth_target != null,
-
         .color_target = if (d.color_target) |ct| .{ .ptr = ct.ptr } else undefined,
-        .has_color_target = d.color_target != null
+        .has_color_target = d.color_target != null,
     });
 }
 
@@ -227,7 +217,7 @@ pub fn applyPipelineBindings(self: DiligentBackend, h: types.PipelineHandle, d: 
         .vertex_buffers = vertex_buffers,
         .index_buffer = .{ .ptr = if (d.index_buffer) |handle| handle.ptr else @ptrFromInt(0) },
         .resources = resources.ptr,
-        .resources_len = resources.len
+        .resources_len = resources.len,
     });
 }
 
@@ -240,7 +230,7 @@ pub fn applyComputeBindings(self: DiligentBackend, h: types.ComputePipelineHandl
         .vertex_buffers = @splat(.{ .ptr = @ptrFromInt(0) }),
         .index_buffer = .{ .ptr = @ptrFromInt(0) },
         .resources = resources.ptr,
-        .resources_len = resources.len
+        .resources_len = resources.len,
     });
 }
 
@@ -270,7 +260,7 @@ pub fn destroySwapchain(self: DiligentBackend, h: types.SwapchainHandle) void {
     c.diligent_destroy_swapchain(self.handle, .{ .ptr = h.ptr });
 }
 
-pub fn endPass(self: DiligentBackend) void { 
+pub fn endPass(self: DiligentBackend) void {
     c.diligent_end_pass(self.handle);
 }
 
@@ -290,6 +280,6 @@ pub fn queryBackend(_: DiligentBackend) desc.Backend {
         c.SUMMIT_BACKEND_DIRECT3D11 => .direct3d11,
         c.SUMMIT_BACKEND_DIRECT3D12 => .direct3d12,
         c.SUMMIT_BACKEND_VULKAN => .vulkan,
-        else => unreachable
+        else => unreachable,
     };
 }

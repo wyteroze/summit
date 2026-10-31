@@ -72,14 +72,14 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
             break;
         }
     }
-    
+
     self.os = try .init(p_init, builtin.os.tag, "net.wyteroze.summit");
     try self.scheduler.init(try self.getAlloc("Scheduler"), io, &self.os);
     try self.platform.init(try self.getAlloc("Platform"), .initSdl());
     self.ui = try .init(try self.getAlloc("Ui"));
     self.gpu_device = try .init(try self.getAlloc("Gpu"), .initDiligent());
     self.assets = try .init(try self.getAlloc("Assets"), io, &self.gpu_device, project_path);
-    
+
     // Skybox
     const skybox_cubemap = try self.assets.load("assets://images/skybox_island.png");
     try skybox_cubemap.upload(.{ .is_cubemap = true });
@@ -96,7 +96,7 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
 
     self.host = .{ .world = &self.world, .assets = &self.assets, .input = &self.input, .ui = &self.ui, .audio = &self.audio, .windowing = &self.windowing };
     self.runtime = try .init(try self.getAlloc("LuaRuntime"), &self.host);
-    
+
     // Register components
     // TODO: Register these once somewhere, and access them there
     // instead of having to do world.components.id() over and over again.
@@ -137,8 +137,8 @@ pub fn deinit(self: *Summit) void {
 
 fn onPlatformEvent(self: *Summit, evt: Platform.desc.PlatformEvent) void {
     switch (evt) {
-        .quit => { self.running = false; return; },
-        else => {}
+        .quit => self.running = false,
+        else => {},
     }
 }
 
@@ -218,7 +218,7 @@ pub fn setupTestScene(self: *Summit) !void {
     try world.set(light, light_id, render.types.Light, .{
         .color = .fromRgbFloat(1.0, 1.0, 1.0, 1.0),
         .intensity = 5,
-        .kind = .{ .point = .{ .radius = 10 } }
+        .kind = .{ .point = .{ .radius = 10 } },
     });
     try world.set(light, pos_id, math.Vec3, .zero);
     try light.setParent(scene);
@@ -239,9 +239,8 @@ pub fn setupTestScene(self: *Summit) !void {
         defer source.cpuRelease();
         const script = try self.runtime.loadScript("teapot.luau", try source.cpuGet(.script_source));
         try world.set(entity, script_id, scripting.Runtime.ScriptHandle, script);
-        self.runtime.instantiateEntity(script, entity) catch |e| std.log.err("Failed to instantiate teapot script: {t}", .{ e });
+        self.runtime.instantiateEntity(script, entity) catch |e| std.log.err("Failed to instantiate teapot script: {t}", .{e});
     }
-
 
     // Render at logical size for 3D, while UI renders at pixel size to stay crisp.
     const view_entity = try ui.world.spawnEntity();
@@ -274,42 +273,39 @@ fn collectUiItems(
         const corners = if (ui.world.getComponent(entity, cids.corner_radii, Ui.types.CornerRadii)) |c| c.* else null;
         const borders = if (ui.world.getComponent(entity, cids.borders, Ui.types.Borders)) |b| b.* else null;
         const image = if (ui.world.getComponent(entity, cids.image, Ui.types.Image)) |i| i.* else null;
-        const color: core.Color = if (ui.world.getComponent(entity, cids.color, core.Color)) |c| c.*
-            else if (image != null) .fromRgbFloat(1.0, 1.0, 1.0, 1.0)
-            else .fromRgbFloat(1.0, 1.0, 1.0, 0.0);
+        const color: core.Color = if (ui.world.getComponent(entity, cids.color, core.Color)) |c|
+            c.*
+        else if (image != null)
+            .fromRgbFloat(1.0, 1.0, 1.0, 1.0)
+        else
+            .fromRgbFloat(1.0, 1.0, 1.0, 0.0);
 
-        const texture = if (image) |i| blk: { break :blk ((i.source orelse break :blk null).ensureGpuGet(.image, .{}) catch break :blk null).handle; } else null;
+        const texture = if (image) |i| blk: {
+            break :blk ((i.source orelse break :blk null).ensureGpuGet(.image, .{}) catch break :blk null).handle;
+        } else null;
         const uv_pos: math.Vec2 = if (image) |i| i.crop.min else .zero;
         const uv_size: math.Vec2 = if (image) |i| i.crop.max.sub(i.crop.min) else .one;
 
-        items.append(alloc, .{ .quad = .{
-            .pos = pos.arr(),
-            .size = size.arr(),
-            .color = color.srgbDecode(),
-            .texture = texture,
-            .uv_pos = uv_pos.arr(),
-            .uv_size = uv_size.arr(),
-            .corners = if (corners) |c| blk: {
-                const m = @min(size.x/2, size.y/2);
-                break :blk .{
-                    @min(c.top_left, m),
-                    @min(c.top_right, m),
-                    @min(c.bottom_left, m),
-                    @min(c.bottom_right, m)
-                };
-            } else @splat(0),
-            .borders = if (borders) |b| blk: {
-                // Max, should probably be in a better place.
-                const m = 100;
-                break :blk .{
-                    @min(b.top, m),
-                    @min(b.bottom, m),
-                    @min(b.left, m),
-                    @min(b.right, m)
-                };
-            } else @splat(0),
-            .border_color = if (borders) |b| b.color else .fromRgbFloat(0, 0, 0, 0)
-        } }) catch @panic("Out of memory");
+        items.append(alloc, .{
+            .quad = .{
+                .pos = pos.arr(),
+                .size = size.arr(),
+                .color = color.srgbDecode(),
+                .texture = texture,
+                .uv_pos = uv_pos.arr(),
+                .uv_size = uv_size.arr(),
+                .corners = if (corners) |c| blk: {
+                    const m = @min(size.x / 2, size.y / 2);
+                    break :blk .{ @min(c.top_left, m), @min(c.top_right, m), @min(c.bottom_left, m), @min(c.bottom_right, m) };
+                } else @splat(0),
+                .borders = if (borders) |b| blk: {
+                    // Max, should probably be in a better place.
+                    const m = 100;
+                    break :blk .{ @min(b.top, m), @min(b.bottom, m), @min(b.left, m), @min(b.right, m) };
+                } else @splat(0),
+                .border_color = if (borders) |b| b.color else .fromRgbFloat(0, 0, 0, 0),
+            },
+        }) catch @panic("Out of memory");
 
         if (ui.world.getComponent(entity, cids.text, Ui.types.Text)) |txt| {
             if (ui.world.getComponent(entity, cids.computed_text_layout, Ui.types.ComputedTextLayout)) |ct| {
@@ -371,7 +367,7 @@ fn submitToRenderer(self: *Summit) void {
 
     // 3D world
 
-    const light_query = w.query(&.{ light_id });
+    const light_query = w.query(&.{light_id});
     var light_iter = light_query.iterator();
     while (light_iter.next()) |entity| {
         const l = w.getComponent(entity, light_id, render.types.Light).?;
@@ -383,16 +379,19 @@ fn submitToRenderer(self: *Summit) void {
             .directional => blk: {
                 const rot_mat = math.Quat.fromEuler(rot.toRadians()).toMat4();
                 break :blk rot_mat.transformDirection(.new(0, 0, 1)).normalize();
-            }
+            },
         };
 
         const rgb = l.color.srgbDecode();
         lights.append(allocator, .{
             .position_or_dir = pos_or_dir.arr(),
-            .kind = @intFromEnum(l.kind),
+            .kind = @backingInt(l.kind),
             .color = .{ rgb.r, rgb.g, rgb.b },
             .intensity = l.intensity,
-            .radius = switch (l.kind) { .point => |pp| pp.radius, .directional => 0 },
+            .radius = switch (l.kind) {
+                .point => |pp| pp.radius,
+                .directional => 0,
+            },
         }) catch @panic("Out of memory");
     }
 
@@ -412,21 +411,21 @@ fn submitToRenderer(self: *Summit) void {
         const mesh_data = if (mesh) |m| m.ensureGpuGet(.mesh, .{}) catch continue else renderer.default_quad;
         // Mesh with no image = plain white
         const image_data = if (image) |i| i.ensureGpuGet(.image, .{}) catch continue else renderer.default_image;
-        
+
         const rot: math.Vec3 = if (w.getComponent(entity, rot_id, math.Vec3)) |r| r.* else .zero;
         const pos: math.Vec3 = if (w.getComponent(entity, pos_id, math.Vec3)) |p| p.* else .zero;
         const scale: math.Vec3 = if (w.getComponent(entity, scale_id, math.Vec3)) |scale| scale.* else .one;
         // Not visible (or invalid), don't waste resources rendering it.
         if (scale.x <= 0 or scale.y <= 0 or scale.z <= 0) continue;
-        
+
         const model: math.Mat4 = .fromTRS(pos, .fromEuler(rot.toRadians()), scale);
-        objects.append(allocator, .{ 
-            .model = model, 
-            .mesh = mesh_data, 
-            .material = .{ 
-                .image = image_data, 
-                .sampler = renderer.default_sampler 
-            }
+        objects.append(allocator, .{
+            .model = model,
+            .mesh = mesh_data,
+            .material = .{
+                .image = image_data,
+                .sampler = renderer.default_sampler,
+            },
         }) catch @panic("Out of memory");
     }
 
@@ -434,7 +433,7 @@ fn submitToRenderer(self: *Summit) void {
 
     var window_lists: std.array_hash_map.Auto(u64, struct { id: u64, entity: ecs.Entity, items: std.ArrayList(render.types.UiItem) }) = .{};
     {
-        var it = ui.world.query(&.{ ui_cids.window }).iterator();
+        var it = ui.world.query(&.{ui_cids.window}).iterator();
         while (it.next()) |e| {
             const win = ui.world.getComponent(e, ui_cids.window, Ui.types.Window).?;
             window_lists.put(allocator, e.toU64(), .{ .id = win.id, .entity = e, .items = .empty }) catch @panic("Out of memory");
@@ -443,7 +442,7 @@ fn submitToRenderer(self: *Summit) void {
 
     // Collect RenderViews
     {
-        const q =  ui.world.query(&.{ ui_cids.render_view });
+        const q = ui.world.query(&.{ui_cids.render_view});
 
         var it = q.iterator();
         while (it.next()) |entity| {
@@ -469,12 +468,12 @@ fn submitToRenderer(self: *Summit) void {
 
             const view = renderer.getView(entity.toU64()) orelse
                 (renderer.createView(entity.toU64(), px, rv.camera) catch |e| {
-                    std.log.err("Failed to create view: {s}", .{ @errorName(e) });
+                    std.log.err("Failed to create view: {s}", .{@errorName(e)});
                     continue;
                 });
 
             view.resize(px) catch |e| {
-                std.log.err("Failed to resize view: {s}", .{ @errorName(e) });
+                std.log.err("Failed to resize view: {s}", .{@errorName(e)});
                 continue;
             };
 
@@ -492,8 +491,13 @@ fn submitToRenderer(self: *Summit) void {
 
             requests.append(allocator, .{
                 .frame = .{ .view_matrix = view_mat, .proj_matrix = proj, .viewport_size = px },
-                .scene = .{ .ambient = scene.environment.ambient, .clear_color = scene.environment.clear_color,
-                            .lights = lights.items, .objects = objects.items, .ui_items = &.{} },
+                .scene = .{
+                    .ambient = scene.environment.ambient,
+                    .clear_color = scene.environment.clear_color,
+                    .lights = lights.items,
+                    .objects = objects.items,
+                    .ui_items = &.{},
+                },
                 .render_view_id = entity.toU64(),
             }) catch @panic("Out of memory");
 
@@ -514,7 +518,7 @@ fn submitToRenderer(self: *Summit) void {
         window_requests.append(allocator, .{ .window_id = wl.id, .ui_items = wl.items.items }) catch @panic("Out of memory");
     }
 
-    renderer.render(requests.items, window_requests.items) catch |e| std.log.err("render() failed: {s}", .{ @errorName(e) });
+    renderer.render(requests.items, window_requests.items) catch |e| std.log.err("render() failed: {s}", .{@errorName(e)});
 }
 
 fn submitToAudio(self: *Summit) void {
@@ -527,7 +531,7 @@ fn submitToAudio(self: *Summit) void {
     const rot_id = w.components.id("Rotation").?;
 
     const listener = blk: {
-        var it = w.query(&.{ listener_id }).iterator();
+        var it = w.query(&.{listener_id}).iterator();
         break :blk if (it.next()) |e| e else null;
     };
     const listener_pos: math.Vec3 = if (listener) |l| if (w.getComponent(l, pos_id, math.Vec3)) |p| p.* else .zero else .zero;
@@ -544,7 +548,10 @@ fn submitToAudio(self: *Summit) void {
         const owner = t.owner orelse continue;
         const id = audio.getHandle(index).id;
 
-        if (!owner.isAlive()) { audio.destroy(id); continue; }
+        if (!owner.isAlive()) {
+            audio.destroy(id);
+            continue;
+        }
         const speaker = w.getComponent(owner, speaker_id, Audio.Speaker) orelse {
             audio.destroy(id);
             continue;

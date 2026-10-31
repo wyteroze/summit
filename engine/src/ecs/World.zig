@@ -12,12 +12,9 @@ const signal = @import("../core/signal.zig");
 const lua_components = @import("lua_components.zig");
 
 pub const WriteMode = enum { add, set, upsert };
-pub const FieldTypeSpec = struct {
-    name: []const u8,
-    type_name: []const u8
-};
+pub const FieldTypeSpec = struct { name: []const u8, type_name: []const u8 };
 
-pub const UpdateSignal = signal.Signal(.{ f32 });
+pub const UpdateSignal = signal.Signal(.{f32});
 pub const DestroySignal = signal.Signal(.{});
 
 const World = @This();
@@ -144,11 +141,7 @@ pub fn spawnEntity(self: *World) !Entity {
     if (self.free.pop()) |idx| {
         self.alive.items[idx] = true;
 
-        const e: Entity = .{
-            .index = idx,
-            .generation = self.generations.items[idx],
-            .world = self
-        };
+        const e: Entity = .{ .index = idx, .generation = self.generations.items[idx], .world = self };
 
         try self.hierarchy.changed.append(self.allocator, e);
         return e;
@@ -158,12 +151,8 @@ pub fn spawnEntity(self: *World) !Entity {
     try self.generations.append(self.allocator, 0);
     try self.alive.append(self.allocator, true);
 
-    const e: Entity = .{
-        .index = idx,
-        .generation = 0,
-        .world = self
-    };
-    
+    const e: Entity = .{ .index = idx, .generation = 0, .world = self };
+
     try self.update_signals.append(self.allocator, null);
     try self.destroy_signals.append(self.allocator, null);
     try self.hierarchy.changed.append(self.allocator, e);
@@ -174,8 +163,7 @@ pub fn spawnEntity(self: *World) !Entity {
 pub fn isEntityAlive(self: *World, entity: Entity) bool {
     if (entity.index >= self.alive.items.len) return false;
 
-    return self.alive.items[entity.index]
-        and self.generations.items[entity.index] == entity.generation;
+    return self.alive.items[entity.index] and self.generations.items[entity.index] == entity.generation;
 }
 
 pub fn destroyEntity(self: *World, entity: Entity) void {
@@ -229,12 +217,12 @@ pub fn query(self: *World, required: []const ComponentId) Query {
 }
 
 pub fn registerSystem(
-    self: *World, 
-    sys_query: []const ComponentId, 
-    init_fn: ?SystemRegistry.SystemInitFn, 
+    self: *World,
+    sys_query: []const ComponentId,
+    init_fn: ?SystemRegistry.SystemInitFn,
     update_fn: SystemRegistry.SystemUpdateFn,
     deinit_fn: ?SystemRegistry.SystemDeinitFn,
-    ctx: *anyopaque
+    ctx: *anyopaque,
 ) !SystemRegistry.SystemHandle {
     return self.systems.register(self, sys_query, init_fn, update_fn, deinit_fn, ctx);
 }
@@ -244,7 +232,7 @@ pub fn unregisterSystem(self: *World, name: []const u8) void {
 }
 
 pub fn update(self: *World, dt: f32) void {
-    for (self.update_signals.items) |sig| if (sig) |s| s.fire(.{ dt });
+    for (self.update_signals.items) |sig| if (sig) |s| s.fire(.{dt});
     self.systems.runAll(self, dt);
     self.dispatcher.flush();
 }
@@ -273,7 +261,7 @@ pub fn format(
     _: *const @This(),
     writer: *std.Io.Writer,
 ) std.Io.Writer.Error!void {
-    try writer.print("World", .{ });
+    try writer.print("World", .{});
 }
 
 const bind = @import("../scripting/bind/bind.zig");

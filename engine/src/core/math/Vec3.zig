@@ -4,30 +4,66 @@ const std = @import("std");
 
 pub const Vec3 = extern struct {
     pub const Simd3 = @Vector(3, f32);
-    x: f32, y: f32, z: f32,
+    x: f32,
+    y: f32,
+    z: f32,
 
     pub const zero: Vec3 = .{ .x = 0, .y = 0, .z = 0 };
     pub const one: Vec3 = .{ .x = 1, .y = 1, .z = 1 };
 
-    pub fn new(x: f32, y: f32, z: f32) Vec3 { return .{ .x = x, .y = y, .z = z }; }
-    pub fn fromSimd(vec: Simd3) Vec3 { return .{ .x = vec[0], .y = vec[1], .z = vec[2] }; }
-    pub fn fromArr(array: [3]f32) Vec3 { return .{ .x = array[0], .y = array[1], .z = array[2] };  }
-    pub fn simd(self: Vec3) Simd3 { return Simd3{ self.x, self.y, self.z }; }
-    pub fn arr(self: Vec3) [3]f32 { return .{ self.x, self.y, self.z }; }
+    pub fn new(x: f32, y: f32, z: f32) Vec3 {
+        return .{ .x = x, .y = y, .z = z };
+    }
+    pub fn fromSimd(vec: Simd3) Vec3 {
+        return .{ .x = vec[0], .y = vec[1], .z = vec[2] };
+    }
+    pub fn fromArr(array: [3]f32) Vec3 {
+        return .{ .x = array[0], .y = array[1], .z = array[2] };
+    }
+    pub fn simd(self: Vec3) Simd3 {
+        return Simd3{ self.x, self.y, self.z };
+    }
+    pub fn arr(self: Vec3) [3]f32 {
+        return .{ self.x, self.y, self.z };
+    }
 
-    pub fn eq(self: Vec3, other: Vec3) bool { return @reduce(.And, self.simd() == other.simd()); }
-    pub fn neq(self: Vec3, other: Vec3) bool { return @reduce(.Or, self.simd() != other.simd()); }
-    pub fn add(self: Vec3, other: Vec3) Vec3 { return .fromSimd(self.simd() + other.simd()); }
-    pub fn sub(self: Vec3, other: Vec3) Vec3 { return .fromSimd(self.simd() - other.simd()); }
-    pub fn mul(self: Vec3, other: Vec3) Vec3 { return .fromSimd(self.simd() * other.simd()); }
-    pub fn div(self: Vec3, other: Vec3) Vec3 { return .fromSimd(self.simd() / other.simd()); }
-    pub fn dot(self: Vec3, other: Vec3) f32 { return @reduce(.Add, self.simd() * other.simd()); }
-    pub fn lerp(self: Vec3, other: Vec3, t: f32) Vec3 { return self.add(other.sub(self).scale(t)); }
-    pub fn scale(self: Vec3, s: f32) Vec3 { return .fromSimd(self.simd() * @as(Simd3, @splat(s))); }
-    pub fn length(self: Vec3) f32 { return @sqrt(self.dot(self)); }
+    pub fn eq(self: Vec3, other: Vec3) bool {
+        return @reduce(.And, self.simd() == other.simd());
+    }
+    pub fn neq(self: Vec3, other: Vec3) bool {
+        return @reduce(.Or, self.simd() != other.simd());
+    }
+    pub fn add(self: Vec3, other: Vec3) Vec3 {
+        return .fromSimd(self.simd() + other.simd());
+    }
+    pub fn sub(self: Vec3, other: Vec3) Vec3 {
+        return .fromSimd(self.simd() - other.simd());
+    }
+    pub fn mul(self: Vec3, other: Vec3) Vec3 {
+        return .fromSimd(self.simd() * other.simd());
+    }
+    pub fn div(self: Vec3, other: Vec3) Vec3 {
+        return .fromSimd(self.simd() / other.simd());
+    }
+    pub fn dot(self: Vec3, other: Vec3) f32 {
+        return @reduce(.Add, self.simd() * other.simd());
+    }
+    pub fn lerp(self: Vec3, other: Vec3, t: f32) Vec3 {
+        return self.add(other.sub(self).scale(t));
+    }
+    pub fn scale(self: Vec3, s: f32) Vec3 {
+        return .fromSimd(self.simd() * @as(Simd3, @splat(s)));
+    }
+    pub fn length(self: Vec3) f32 {
+        return @sqrt(self.dot(self));
+    }
 
-    pub fn toRadians(self: Vec3) Vec3 { return .fromSimd(self.simd() * @as(Simd3, @splat(std.math.pi / 180.0))); }
-    pub fn toDegrees(self: Vec3) Vec3 { return .fromSimd(self.simd() * @as(Simd3, @splat(180.0 / std.math.pi))); }
+    pub fn toRadians(self: Vec3) Vec3 {
+        return .fromSimd(self.simd() * @as(Simd3, @splat(std.math.pi / 180.0)));
+    }
+    pub fn toDegrees(self: Vec3) Vec3 {
+        return .fromSimd(self.simd() * @as(Simd3, @splat(180.0 / std.math.pi)));
+    }
 
     pub fn cross(self: Vec3, other: Vec3) Vec3 {
         const a = self.simd();
@@ -63,16 +99,16 @@ const bind = @import("../../scripting/bind/bind.zig");
 pub const api = bind.value(Vec3, .{
     .name = "Vec3",
     .fields = &.{ "x", "y", "z" },
-    .statics = &.{ 
-        bind.constant("zero", Vec3.zero), 
+    .statics = &.{
+        bind.constant("zero", Vec3.zero),
         bind.constant("one", Vec3.one),
         bind.func("new", Vec3.new),
     },
-    .ops = .{ 
-        .tostring = .auto, 
+    .ops = .{
+        .tostring = .auto,
         .add = .{ .member = bind.func("add", Vec3.add) },
         .sub = .{ .member = bind.func("sub", Vec3.sub) },
         .mul = .{ .member = bind.func("mul", Vec3.mul) },
-        .div = .{ .member = bind.func("div", Vec3.div) }
-    }
+        .div = .{ .member = bind.func("div", Vec3.div) },
+    },
 });

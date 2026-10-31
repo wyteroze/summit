@@ -11,7 +11,7 @@ pub const GlyphInfo = struct {
     uv_size: [2]f32,
     size: [2]f32,
     bearing: [2]f32,
-    advance: f32
+    advance: f32,
 };
 
 const FontAtlas = @This();
@@ -28,7 +28,6 @@ line_gap: f32, // Extra line spacing
 pub fn deinit(self: FontAtlas) void {
     self.texture.deinit();
     self.sampler.deinit();
-    // Sorry..
     @constCast(&self.glyphs).deinit();
 }
 
@@ -39,7 +38,7 @@ pub fn bake(allocator: std.mem.Allocator, name: [:0]const u8, device: *gpu.GpuDe
         max_w = @max(max_w, g.size[0]);
         max_h = @max(max_h, g.size[1]);
     }
-    
+
     const cell_w = max_w + 2;
     const cell_h = max_h + 2;
     const cols: u32 = 16;
@@ -75,7 +74,7 @@ pub fn bake(allocator: std.mem.Allocator, name: [:0]const u8, device: *gpu.GpuDe
             .uv_size = .{ @as(f32, @floatFromInt(g.size[0])) / @as(f32, @floatFromInt(atlas_w)), @as(f32, @floatFromInt(g.size[1])) / @as(f32, @floatFromInt(atlas_h)) },
             .size = .{ @floatFromInt(g.size[0]), @floatFromInt(g.size[1]) },
             .bearing = .{ @floatFromInt(g.bearing[0]), @floatFromInt(g.bearing[1]) },
-            .advance = g.advance
+            .advance = g.advance,
         });
     }
 
@@ -98,7 +97,7 @@ pub fn bake(allocator: std.mem.Allocator, name: [:0]const u8, device: *gpu.GpuDe
         .descent = font.descent,
         .line_gap = font.line_gap,
         .white_uv = white_uv_pos,
-        .raster_size = text.sdf_raster_size
+        .raster_size = text.sdf_raster_size,
     };
 }
 

@@ -22,14 +22,14 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
-    if (registry_path) |p| std.log.debug("[docgen] registry path provided: '{s}'", .{ p });
-    if (out_dir) |d| std.log.debug("[docgen] output path provided: '{s}'", .{ d });
+    if (registry_path) |p| std.log.debug("[docgen] registry path provided: '{s}'", .{p});
+    if (out_dir) |d| std.log.debug("[docgen] output path provided: '{s}'", .{d});
 
     std.log.debug("searching for binding paths...", .{});
     const paths = try BindingScan.findBindingPaths(io, arena, registry_path.?);
 
-    std.log.debug("[docgen]: found these binding paths ({d} total):", .{ paths.len });
+    std.log.debug("[docgen]: found these binding paths ({d} total):", .{paths.len});
     for (paths) |p| {
-        std.log.debug("{s}", .{ p });
+        std.log.debug("{s}", .{p});
     }
 }

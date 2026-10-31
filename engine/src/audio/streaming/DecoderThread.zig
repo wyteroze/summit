@@ -17,7 +17,7 @@ thread: ?std.Thread = null,
 
 pub fn start(self: *DecoderThread) !void {
     self.running.store(true, .release);
-    self.thread = try .spawn(.{}, run, .{ self });
+    self.thread = try .spawn(.{}, run, .{self});
 }
 
 pub fn deinit(self: *DecoderThread) void {
@@ -57,7 +57,7 @@ fn run(self: *DecoderThread) void {
                 did_work = true;
             }
         }
-        
+
         // This should be a futex in the future.
         if (!did_work) self.io.sleep(.fromNanoseconds(poll_ns), .awake) catch {};
     }
