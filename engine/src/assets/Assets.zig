@@ -147,6 +147,8 @@ pub fn init(allocator: std.mem.Allocator, io: std.Io, gpu_device: *gpu.GpuDevice
 
     inline for (asset_sources) |s| {
         const src_ptr = try allocator.create(DirSource);
+        errdefer allocator.destroy(src_ptr);
+
         src_ptr.* = try s.init(allocator, io);
         if (std.mem.eql(u8, s.scheme, "asset") and proj_path != null) {
             const path = try std.Io.Dir.path.join(allocator, &.{ proj_path.?, "assets" });
