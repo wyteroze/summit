@@ -2,7 +2,7 @@
 
 const std = @import("std");
 const zlua = @import("zlua");
-const ecs = @import("../../ecs/ecs.zig");
+const ecs = @import("../../ecs/Ecs.zig");
 const Assets = @import("../../assets/Assets.zig");
 const Input = @import("../../input/Input.zig");
 const Ui = @import("../../ui/Ui.zig");

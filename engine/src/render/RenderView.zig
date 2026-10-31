@@ -4,7 +4,7 @@ const std = @import("std");
 const types = @import("types.zig");
 const gpu = @import("../gpu/gpu.zig");
 const Renderer = @import("Renderer.zig");
-const ecs = @import("../ecs/ecs.zig");
+const ecs = @import("../ecs/Ecs.zig");
 
 const tile_size = Renderer.tile_size;
 const max_lights_per_tile = Renderer.max_lights_per_tile;

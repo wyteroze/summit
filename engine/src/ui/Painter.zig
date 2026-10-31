@@ -7,7 +7,7 @@
 //! It also doesn't require its layout to be processed and has less customizability, sacrificing expressiveness for being much faster.
 
 const std = @import("std");
-const ecs = @import("../ecs/ecs.zig");
+const ecs = @import("../ecs/Ecs.zig");
 const core = @import("../core/core.zig");
 const Ui = @import("Ui.zig");
 const types = @import("types.zig");

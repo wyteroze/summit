@@ -1,7 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const ecs = @import("ecs.zig");
+const ecs = @import("Ecs.zig");
 const World = ecs.World;
 const Entity = ecs.Entity;
 
