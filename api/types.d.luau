@@ -274,13 +274,28 @@ declare extern type Entity with
     --- You must register custom components using `World:RegisterComponent()` prior to using this.
     function AddComponent(self, name: string, value: any): ()
 
-    --- Fires when this entity is destroyed.
-    read Destroyed: Signal<()>
-    --- Fires when this entity is updated, with the frame delta time as the first argument.
-    read Updated: Signal<number>
-    --- The components of this entity. 
-    read Components: { [string]: any }
+    function __index(self, key: string): any?
+    function __newindex(self, key: string, value: any): any?
+
+    [string]: any?
 end
+
+declare extern type World with
+
+end
+
+export type Script = {
+    init: ((entity: Entity) -> ())?,
+    update: ((entity: Entity, dt: number) -> ())?,
+    deinit: ((entity: Entity) -> ())?,
+}
+
+export type System = {
+    query: { string }?,
+    init: ((world: World) -> ())?,
+    update: ((entity: Entity, dt: number) -> ())?,
+    deinit: (() -> ())?,
+}
 
 -- INPUT --
 

@@ -106,7 +106,7 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     _ = try self.world.registerComponent(math.Vec3, "Position"); // For moving entities
     _ = try self.world.registerComponent(math.Vec3, "Rotation"); // For rotating entites (Euler)
     _ = try self.world.registerComponent(math.Vec3, "Scale"); // For scaling entities
-    _ = try self.world.registerComponent(scripting.Script, "Script"); // For giving entities behavior
+    _ = try self.world.registerComponent(scripting.Runtime.ScriptHandle, "Script"); // For giving entities behavior
     _ = try self.world.registerComponent(render.types.Light, "Light"); // For creating sources of illumination
     _ = try self.world.registerComponent([]const u8, "Name"); // For naming an entity (we don't use it, but lua does)
     _ = try self.world.registerComponent(Audio.types.AudioListener, "AudioListener");
@@ -166,8 +166,8 @@ pub fn setupTestScene(self: *Summit) !void {
     self.windowing.main_window = window;
     try window.focus();
 
-    const world = &self.world;
-    const ui = &self.ui;
+    var world = &self.world;
+    var ui = &self.ui;
 
     // Create a scene inside of the world
     const scene = try world.spawnEntity();
@@ -180,6 +180,20 @@ pub fn setupTestScene(self: *Summit) !void {
     const script_id = world.components.id("Script").?;
     const scene_id = world.components.id("Scene").?;
     const light_id = world.components.id("Light").?;
+
+    // Systems
+    {
+        const src = try self.assets.load("assets://systems/fly_cam.luau");
+        defer src.cpuRelease();
+        const script = try self.runtime.loadScript("fly_cam.luau", try src.cpuGet(.script_source));
+        _ = self.runtime.instantiateSystem(script, world) catch |e| std.log.err("Failed to instantiate fly system: {t}", .{e});
+    }
+    {
+        const src = try self.assets.load("assets://systems/spin.luau");
+        defer src.cpuRelease();
+        const script = try self.runtime.loadScript("spin.luau", try src.cpuGet(.script_source));
+        _ = self.runtime.instantiateSystem(script, world) catch |e| std.log.err("Failed to instantiate spin system: {t}", .{e});
+    }
 
     // Make a camera for the scene
     const camera = try world.spawnEntity();
@@ -194,19 +208,6 @@ pub fn setupTestScene(self: *Summit) !void {
     try world.set(camera_2, rot_id, math.Vec3, .new(0, 0, 0));
     try world.set(camera_2, scale_id, math.Vec3, .new(1, 1, 1));
     try world.set(camera_2, camera_id, Camera, .{});
-
-    // Camera script
-    {
-        const source = try self.assets.load("assets://scripts/camera.luau");
-        defer source.cpuRelease();
-        const script = try self.runtime.loadScript(try source.cpuGet(.script_source));
-
-        try world.set(camera, script_id, scripting.Script, script);
-        const stored_script = world.getComponent(camera, script_id, scripting.Script).?;
-        stored_script.instantiate(camera) catch |e| {
-            std.log.err("Failed to instantiate camera script: {s}", .{ @errorName(e) });
-        };
-    }
 
     try world.set(scene, scene_id, Ui.types.Scene, .{});
 
@@ -225,16 +226,22 @@ pub fn setupTestScene(self: *Summit) !void {
     // Parent the component under the scene
     try entity.setParent(scene);
 
-    // Add a script to the component
-    const source = try self.assets.load("assets://scripts/teapot.luau");
-    defer source.cpuRelease();
-    const script = try self.runtime.loadScript(try source.cpuGet(.script_source));
+    // Scripts
+    {
+        const source = try self.assets.load("assets://scripts/camera.luau");
+        defer source.cpuRelease();
+        const script = try self.runtime.loadScript("camera.luau", try source.cpuGet(.script_source));
+        try world.set(camera, script_id, scripting.Runtime.ScriptHandle, script);
+        self.runtime.instantiateEntity(script, camera) catch |e| std.log.err("Failed to instantiate camera script: {t}", .{e});
+    }
+    {
+        const source = try self.assets.load("assets://scripts/teapot.luau");
+        defer source.cpuRelease();
+        const script = try self.runtime.loadScript("teapot.luau", try source.cpuGet(.script_source));
+        try world.set(entity, script_id, scripting.Runtime.ScriptHandle, script);
+        self.runtime.instantiateEntity(script, entity) catch |e| std.log.err("Failed to instantiate teapot script: {t}", .{ e });
+    }
 
-    try world.set(entity, script_id, scripting.Script, script);
-    const stored_script = world.getComponent(entity, script_id, scripting.Script).?;
-    stored_script.instantiate(entity) catch |e| {
-        std.log.err("Failed to instantiate entity script: {s}", .{ @errorName(e) });
-    };
 
     // Render at logical size for 3D, while UI renders at pixel size to stay crisp.
     const view_entity = try ui.world.spawnEntity();

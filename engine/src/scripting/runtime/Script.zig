@@ -2,6 +2,7 @@
 
 const std = @import("std");
 const zlua = @import("zlua");
+const core = @import("../../core/core.zig");
 const ecs = @import("../../ecs/ecs.zig");
 const bind = @import("../bind/bind.zig");
 const types = @import("../../assets/types.zig");
@@ -9,14 +10,15 @@ const Lua = zlua.Lua;
 
 const Script = @This();
 source: types.ScriptSource,
+arena: std.heap.ArenaAllocator,
 main: *Lua,
 state: *Lua,
 thread_ref: i32,
 ref: i32,
-instance_ref: ?i32 = null,
 binder: bind.Binder(bind.api),
+on_deinit: core.signal.Signal(.{ *Script }),
 
-pub fn init(main: *Lua, state: *Lua, thread_ref: i32, source: types.ScriptSource, binder: bind.Binder(bind.api)) !Script {
+pub fn init(dispatcher: *core.signal.Dispatcher, name: ?[:0]const u8, main: *Lua, state: *Lua, thread_ref: i32, source: types.ScriptSource, binder: bind.Binder(bind.api)) !Script {
     // compile and run script
     const bytecode = switch (source.type) {
         .text => try zlua.compile(state.allocator(), source.data, .{}),
@@ -24,13 +26,12 @@ pub fn init(main: *Lua, state: *Lua, thread_ref: i32, source: types.ScriptSource
     };
     defer if (source.type == .text) state.allocator().free(bytecode);
 
-
     if (bytecode.len > 0 and bytecode[0] == 0) {
         std.log.err("Script compilation failed: {s}", .{ bytecode[1..] });
         return error.ScriptCompilationFailed;
     }
 
-    try state.loadBytecode("Script", bytecode);
+    try state.loadBytecode(name orelse "Unnamed script", bytecode);
     state.protectedCall(.{ .args = 0, .results = 1 }) catch {
         std.log.err("Failed to initialize script: {s}", .{ state.toString(-1) catch unreachable });
         state.pop(1);
@@ -38,98 +39,147 @@ pub fn init(main: *Lua, state: *Lua, thread_ref: i32, source: types.ScriptSource
         return error.ScriptInitFailed;
     };
 
+    if (!state.isTable(-1)) {
+        std.log.err("Script must return a table; got {t} instead", .{ state.typeOf(-1) });
+        return error.ScriptMustReturnTable;
+    }
+
     const ref = state.ref(-1);
     state.pop(1);
 
     return .{
         .source = source,
+        .arena = .init(state.allocator()),
         .main = main,
         .state = state,
         .thread_ref = thread_ref,
         .ref = ref,
-        .binder = binder
+        .binder = binder,
+        .on_deinit = .init(state.allocator(), dispatcher)
     };
+}
+
+pub fn deinit(self: *Script) void {
+    self.state.unref(self.ref);
+    self.main.unref(self.thread_ref);
+    self.on_deinit.deinit();
+    self.arena.deinit();
+}
+
+pub fn allocator(self: *Script) std.mem.Allocator {
+    return self.arena.allocator();
 }
 
 pub fn callFunction(self: *const Script, name: [:0]const u8, comptime ResultTypes: []const type, args: anytype) !@Tuple(ResultTypes) {
-    const top = self.state.getTop();
-    defer self.state.setTop(top);
+    const l = self.state;
+    const top = l.getTop();
+    defer l.setTop(top);
 
+    _ = l.getIndexRaw(zlua.registry_index, self.ref);
+    if (l.getField(-1, name) != .function) return error.NotAFunction;
+
+    return self.callFunctionAtIndex(-1, ResultTypes, args);
+}
+
+fn callFunctionAtIndex(self: *const Script, idx: i32, comptime ResultTypes: []const type, args: anytype) !@Tuple(ResultTypes) {
+    const l = self.state;
+    const top = l.getTop();
+    defer l.setTop(top);
+
+    const abs_index = l.absIndex(idx);
     const handler_idx = self.pushMsgHandler();
-    _ = self.state.getGlobal(name) catch return error.UnknownFunction;
+    l.pushValue(abs_index);
 
-    inline for (args) |a| {
-        self.binder.pushValue(self.state, a);
-    }
-
-    self.state.protectedCall(.{ .args = args.len, .results = ResultTypes.len, .msg_handler = handler_idx }) catch self.luaErr();
+    inline for (args) |a| self.binder.pushValue(self.state, a);
+    
+    self.state.protectedCall(.{ .args = args.len, .results = ResultTypes.len, .msg_handler = handler_idx }) 
+        catch { self.luaErr(); return error.FunctionCallFailed; };
 
     var results: @Tuple(ResultTypes) = undefined;
     inline for (ResultTypes, 0..) |R, i| {
-        const idx = top + 1 + 1 + @as(i32, @intCast(i));
-        results[i] = self.binder.parseValue(self.state, R, idx);
+        const r_idx = handler_idx + 1 + @as(i32, @intCast(i));
+        results[i] = self.binder.parseValue(self.state, R, r_idx);
     }
 
     return results;
 }
 
-/// This is only callable once `instantiate` is called. The first parameter of the function is the
-/// returned value of the instantiate function.
-pub fn callMethod(self: *const Script, name: [:0]const u8, comptime ResultTypes: []const type, args: anytype) !@Tuple(ResultTypes) {
-    const top = self.state.getTop();
-    defer self.state.setTop(top);
-
-    const handler_idx = self.pushMsgHandler();
-    _ = self.state.getIndexRaw(zlua.registry_index, self.instance_ref.?);
-    _ = self.state.getField(-1, name);
-    if (!self.state.isFunction(-1)) return error.UnknownFunction;
-
-    self.state.pushValue(-2);
-    self.state.remove(-3);
-
-    inline for (args) |a| {
-        self.binder.pushValue(self.state, a);
-    }
-
-    self.state.protectedCall(.{ .args = args.len+1, .results = ResultTypes.len, .msg_handler = handler_idx }) catch {
-        self.luaErr();
-        return error.MethodCallFailed;
-    };
-
-    var results: @Tuple(ResultTypes) = undefined;
-    inline for (ResultTypes, 0..) |R, i| {
-        const idx = handler_idx + 1 + @as(i32, @intCast(i));
-        results[i] = self.binder.parseValue(self.state, R, idx);
-    }
-
-    return results;
-}
-
-/// Param is the first value passed to the .new function.
-pub fn instantiate(self: *Script, param: anytype) !void {
+pub fn instantiateSystem(self: *Script, world: *ecs.World) !ecs.SystemRegistry.SystemHandle {
     if (self.ref == 0) return error.NoInstanceTable;
-    const top = self.state.getTop();
-    defer self.state.setTop(top);
+    const l = self.state;
 
-    const handler_idx = self.pushMsgHandler();
-    _ = self.state.getIndexRaw(zlua.registry_index, self.ref);
-    _ = self.state.getField(-1, "new");
-    self.state.remove(-2);
+    const top = l.getTop();
+    defer l.setTop(top);
 
-    self.binder.pushValue(self.state, param);
-    self.state.protectedCall(.{ .args = 1, .results = 1, .msg_handler = handler_idx }) catch {
-        self.luaErr();
-        return error.InstantiateFailed;
-    };
+    const alloc = self.allocator();
+    var ids: std.ArrayList(ecs.ComponentId) = .empty;
+    _ = l.getIndexRaw(zlua.registry_index, self.ref);
+    if (l.getField(-1, "query") != .table) {
+        std.log.err("Systems must have a `query` table containing component names.", .{});
+        return error.InvalidOrNoQuery;
+    }
 
-    self.instance_ref = self.state.ref(-1);
+    l.pushNil();
+    while (l.next(-2)) {
+        const component_name = l.checkString(-1);
+        std.log.debug("component_id = {s}", .{ component_name });
+        if (world.components.id(component_name)) |id| try ids.append(alloc, id);
+
+        l.pop(1);
+    }
+    l.pop(1);
+
+    const init_type = l.getField(-1, "init");
+    const deinit_type = l.getField(-2, "deinit");
+    l.pop(2);    
+
+    return try world.registerSystem(
+        try ids.toOwnedSlice(alloc),
+        if (init_type == .function) struct { fn init(_: *ecs.World, ctx: *anyopaque) void { 
+            const slf: *Script = @ptrCast(@alignCast(ctx));
+            _ = slf.callFunction("init", &.{}, .{ }) catch {}; 
+        } }.init else null,
+        struct { fn update(e: ecs.Entity, dt: f32, ctx: *anyopaque) void {
+            const slf: *Script = @ptrCast(@alignCast(ctx));
+            _ = slf.callFunction("update", &.{}, .{ e, dt }) catch {};
+        } }.update,
+        if (deinit_type == .function) struct { fn deinit(ctx: *anyopaque) void {
+            const slf: *Script = @ptrCast(@alignCast(ctx));
+            _ = slf.callFunction("deinit", &.{}, .{}) catch {};
+        } }.deinit else null,
+        self
+    );
 }
 
-pub fn deinit(self: *const Script) void {
-    if (self.instance_ref) |r| self.state.unref(r);
-    self.state.unref(self.ref);
-    self.main.unref(self.thread_ref);
+pub fn instantiateEntity(self: *Script, entity: ecs.Entity) !void {
+    if (self.ref == 0) return error.NoInstanceTable;
+    const l = self.state;
+
+    const top = l.getTop();
+    defer l.setTop(top);
+
+    _ = try self.callFunction("init", &.{}, .{ entity });
 }
+
+// /// Param is the first value passed to the .new function.
+// pub fn instantiate(self: *Script, param: anytype) !void {
+//     if (self.ref == 0) return error.NoInstanceTable;
+//     const top = self.state.getTop();
+//     defer self.state.setTop(top);
+
+//     const handler_idx = self.pushMsgHandler();
+//     _ = self.state.getIndexRaw(zlua.registry_index, self.ref);
+//     _ = self.state.getField(-1, "new");
+//     self.state.remove(-2);
+
+//     self.binder.pushValue(self.state, param);
+//     self.state.protectedCall(.{ .args = 1, .results = 1, .msg_handler = handler_idx }) catch {
+//         self.luaErr();
+//         return error.InstantiateFailed;
+//     };
+
+//     self.table_ref = self.state.ref(-1);
+// }
 
 fn pushMsgHandler(self: *const Script) i32 {
     self.state.pushFunction(zlua.wrap(struct {
@@ -156,7 +206,7 @@ fn luaErr(self: *const Script) void {
 
             // todo: change second format arg to script path, I removed it without
             // knowing this needed it and I'm too lazy to add it back
-            std.log.err("{s}\n         in {s} (line {s})", .{ err_msg, "script", line });
+            std.log.err("{s}         in {s} (line {s})", .{ err_msg, "script", line });
             formatted = true;
         }
     }
