@@ -46,7 +46,7 @@ pub const sub_api = bind.handle(TrackHandle, .{
     .name = "AudioTrack",
     .alive = bind.func("isAlive", TrackHandle.isAlive),
     .methods = &.{
-        bind.func("Play", struct {
+        bind.func("play", struct {
             fn c(h: TrackHandle) !void {
                 const self = try h.require();
                 try h.audio.start(h, .{
@@ -56,30 +56,30 @@ pub const sub_api = bind.handle(TrackHandle, .{
                 });
             }
         }.c),
-        bind.func("Stop", struct {
+        bind.func("stop", struct {
             fn c(h: TrackHandle) !void {
                 if (!h.isAlive()) return error.TrackDestroyed;
                 _ = h.audio.stop(h.id);
             }
         }.c),
-        bind.func("Destroy", struct {
+        bind.func("destroy", struct {
             fn c(h: TrackHandle) void {
                 if (h.isAlive()) h.audio.destroy(h.id);
             }
         }.c),
     },
     .signals = &.{
-        bind.signal("Played", struct {
+        bind.signal("played", struct {
             fn c(self: TrackHandle) !*TrackEvent {
                 return &(try self.require()).played;
             }
         }.c),
-        bind.signal("Looped", struct {
+        bind.signal("looped", struct {
             fn c(self: TrackHandle) !*TrackEvent {
                 return &(try self.require()).looped;
             }
         }.c),
-        bind.signal("Stopped", struct {
+        bind.signal("stopped", struct {
             fn c(self: TrackHandle) !*TrackEvent {
                 return &(try self.require()).stopped;
             }

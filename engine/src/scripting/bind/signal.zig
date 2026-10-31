@@ -18,7 +18,7 @@ pub fn Handle(comptime Sig: type) type {
 pub const connection = bind.value(signal.Connection, .{
     .name = "SignalConnection",
     .methods = &.{
-        bind.func("Disconnect", signal.Connection.disconnect),
+        bind.func("disconnect", signal.Connection.disconnect),
     },
 });
 
@@ -26,7 +26,7 @@ pub fn handle(comptime Sig: type, comptime Mar: type) types.Member {
     return bind.handle(Handle(Sig), .{
         .name = "Signal",
         .methods = &.{
-            bind.func("Connect", connectFn(Sig, Mar)),
+            bind.func("connect", connectFn(Sig, Mar)),
         },
     });
 }

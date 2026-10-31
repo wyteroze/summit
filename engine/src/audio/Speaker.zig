@@ -57,10 +57,10 @@ pub const SpeakerHandle = struct {
         .name = "Speaker",
         .alive = bind.func("isAlive", SpeakerHandle.isAlive),
         .methods = &.{
-            bind.func("Play", SpeakerHandle.play),
+            bind.func("play", SpeakerHandle.play),
         },
         .props = &.{
-            bind.prop("Volume", struct {
+            bind.prop("volume", struct {
                 fn get(self: SpeakerHandle) !f32 {
                     return (try self.require()).volume;
                 }
@@ -69,7 +69,7 @@ pub const SpeakerHandle = struct {
                     (try self.require()).volume = std.math.clamp(volume, min_volume, max_volume);
                 }
             }.set),
-            bind.prop("MinDistance", struct {
+            bind.prop("minDistance", struct {
                 fn get(self: SpeakerHandle) !f32 {
                     return (try self.require()).min_distance;
                 }
@@ -78,7 +78,7 @@ pub const SpeakerHandle = struct {
                     (try self.require()).min_distance = @max(distance, 0);
                 }
             }.set),
-            bind.prop("MaxDistance", struct {
+            bind.prop("maxDistance", struct {
                 fn get(self: SpeakerHandle) !f32 {
                     return (try self.require()).max_distance;
                 }
@@ -87,7 +87,7 @@ pub const SpeakerHandle = struct {
                     (try self.require()).max_distance = @max(distance, 0);
                 }
             }.set),
-            bind.prop("Attenuation", struct {
+            bind.prop("attenuation", struct {
                 fn get(self: SpeakerHandle) !Audio.types.Attenuation {
                     return (try self.require()).attenuation;
                 }

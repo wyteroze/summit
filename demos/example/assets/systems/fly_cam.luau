@@ -16,9 +16,9 @@ end
 -- pitch = x, yaw = y, roll = z
 
 local function rotToRightVector(rot: Vec3): Vec3
-    local pitch = math.rad(rot.X)
-    local yaw = math.rad(rot.Y)
-    local roll = math.rad(rot.Z)
+    local pitch = math.rad(rot.x)
+    local yaw = math.rad(rot.y)
+    local roll = math.rad(rot.z)
 
     return Vec3.new(
         math.cos(roll) * math.cos(yaw) - math.sin(roll) * math.sin(pitch) * math.sin(yaw),
@@ -28,9 +28,9 @@ local function rotToRightVector(rot: Vec3): Vec3
 end
 
 local function rotToUpVector(rot: Vec3): Vec3
-    local pitch = math.rad(rot.X)
-    local yaw = math.rad(rot.Y)
-    local roll = math.rad(rot.Z)
+    local pitch = math.rad(rot.x)
+    local yaw = math.rad(rot.y)
+    local roll = math.rad(rot.z)
 
     return Vec3.new(
         math.sin(roll) * math.cos(yaw) + math.cos(roll) * math.sin(pitch) * math.sin(yaw),
@@ -40,8 +40,8 @@ local function rotToUpVector(rot: Vec3): Vec3
 end
 
 local function rotToForwardVector(rot: Vec3): Vec3
-    local pitch = math.rad(rot.X)
-    local yaw = math.rad(rot.Y)
+    local pitch = math.rad(rot.x)
+    local yaw = math.rad(rot.y)
 
     return Vec3.new(
         math.cos(pitch) * math.sin(yaw),
@@ -51,51 +51,50 @@ local function rotToForwardVector(rot: Vec3): Vec3
 end
 
 function flyCam.init(world: World)
-    input.Keyboards.KeyPressed:Connect(function(key, consumed, win)
-        if consumed or win ~= windowing.MainWindow then return end
+    input.keyboards.keyPressed:connect(function(key, consumed, win)
+        if consumed or win ~= windowing.mainWindow then return end
         if key == "Escape" then
-            if input.IsCursorLocked() then input.SetCursorLocked(false) end
-            if not input.IsCursorVisible() then input.SetCursorVisible(true) end
+            if input.isCursorLocked() then input.setCursorLocked(false) end
+            if not input.isCursorVisible() then input.setCursorVisible(true) end
         end
     end)
 
-    input.Mice.ButtonPressed:Connect(function(btn, consumed, win)
-        if consumed or win ~= windowing.MainWindow then return end
+    input.mice.buttonPressed:connect(function(btn, consumed, win)
+        if consumed or win ~= windowing.mainWindow then return end
         if btn == "Left" then
-            if not input.IsCursorLocked() then input.SetCursorLocked(true) end
-            if input.IsCursorVisible() then input.SetCursorVisible(false) end
+            if not input.isCursorLocked() then input.setCursorLocked(true) end
+            if input.isCursorVisible() then input.setCursorVisible(false) end
         end
     end)
 
-    input.Mice.Scrolled:Connect(function(delta, consumed, win)
-        speed = math.max(0, speed + delta.Y)
+    input.mice.scrolled:connect(function(delta, consumed, win)
+        speed = math.max(0, speed + delta.y)
     end)
 end
 
 function flyCam.update(entity: Entity, dt: number)
-    -- `not windowing.MainWindow` is temporary, will be removed when engine state is more organized.
-    if not windowing.MainWindow or not windowing.MainWindow.Focused then return end
+    if windowing.mainWindow.focused then return end
 
-    local kb = input.GetKeyboard(1) :: Keyboard
-    local ms = input.GetMouse(1) :: Mouse
+    local kb = input.getKeyboard(1) :: Keyboard
+    local ms = input.getMouse(1) :: Mouse
 
     -- TODO: Allow vec * (or /) number 
     
     -- 5 m/s
-    local moveX = (btn(kb:IsKeyPressed("D"))-btn(kb:IsKeyPressed("A")))*dt*speed
-    local moveY = (btn(kb:IsKeyPressed("Space"))-btn(kb:IsKeyPressed("LeftShift")))*dt*speed
-    local moveZ = (btn(kb:IsKeyPressed("W"))-btn(kb:IsKeyPressed("S")))*dt*speed
+    local moveX = (btn(kb:isKeyPressed("D"))-btn(kb:isKeyPressed("A")))*dt*speed
+    local moveY = (btn(kb:isKeyPressed("Space"))-btn(kb:isKeyPressed("LeftShift")))*dt*speed
+    local moveZ = (btn(kb:isKeyPressed("W"))-btn(kb:isKeyPressed("S")))*dt*speed
 
-    local msDelta = if input.IsCursorLocked() then ms:GetMoveDelta() else Vec2.new(0, 0)
-    local rot = entity.Components.Rotation
-        + Vec3.new(msDelta.Y, msDelta.X, 0)
+    local msDelta = if input.isCursorLocked() then ms:getMoveDelta() else Vec2.new(0, 0)
+    local rot = entity.components.Rotation
+        + Vec3.new(msDelta.y, msDelta.x, 0)
 
-    entity.Components.Position +=
+    entity.components.Position +=
         rotToRightVector(rot) * Vec3.new(moveX, moveX, moveX)
         + rotToUpVector(rot) * Vec3.new(moveY, moveY, moveY)
         + rotToForwardVector(rot) * Vec3.new(moveZ, moveZ, moveZ)
 
-    entity.Components.Rotation = rot
+    entity.components.Rotation = rot
 end
 
 function flyCam.deinit()

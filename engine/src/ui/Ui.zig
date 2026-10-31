@@ -399,22 +399,25 @@ fn updateHover(self: *Ui, pos: math.Vec2) void {
     if (target.isAlive()) self.bubble("pointer_moved", target, pos);
 }
 
-pub const api = bind.module("ui", .{ .kind = .{ .singleton = Ui }, .members = &.{
-    bind.record(types.Padding, .{}),
-    bind.record(types.CornerRadii, .{}),
-    bind.record(types.SizeMode, .{}),
-    bind.record(types.Text, .{}),
-    bind.record(types.Crop, .{}),
-    bind.record(types.Image, .{}),
-    bind.record(types.Borders, .{}),
-    bind.record(types.GridLayout, .{}),
-    bind.variant(types.SizeAxis, .{ .number = .fixed }),
-    bind.variant(types.GridAxis, .{ .number = .fixed }),
-    bind.func("CreateElement", Ui.createElement),
-    Element.sub_api,
-    Painter.sub_api,
-    Painter.PainterHandle.sub_api,
-} });
+pub const api = bind.module("ui", .{
+    .kind = .{ .singleton = Ui },
+    .members = &.{
+        bind.record(types.Padding, .{}),
+        bind.record(types.CornerRadii, .{}),
+        bind.record(types.SizeMode, .{}),
+        bind.record(types.Text, .{}),
+        bind.record(types.Crop, .{}),
+        bind.record(types.Image, .{}),
+        bind.record(types.Borders, .{}),
+        bind.record(types.GridLayout, .{}),
+        bind.variant(types.SizeAxis, .{ .number = .fixed }),
+        bind.variant(types.GridAxis, .{ .number = .fixed }),
+        bind.func("createElement", Ui.createElement),
+        Element.sub_api,
+        Painter.sub_api,
+        Painter.PainterHandle.sub_api,
+    },
+});
 
 pub const Element = struct {
     entity: ecs.Entity,
@@ -434,32 +437,32 @@ pub const Element = struct {
         .inherit = bind.inherit(Element.ToEntity, ecs.Entity.sub_api.impl.recipe),
         .signals = &.{
             // `ui` argument is provided by marshaller
-            bind.signal("PointerDown", struct {
+            bind.signal("pointerDown", struct {
                 fn c(self: Element, ui: *Ui) !*PointerSignal {
                     return ui.getSignal(self.entity, "pointer_down");
                 }
             }.c),
-            bind.signal("PointerUp", struct {
+            bind.signal("pointerUp", struct {
                 fn c(self: Element, ui: *Ui) !*PointerSignal {
                     return ui.getSignal(self.entity, "pointer_up");
                 }
             }.c),
-            bind.signal("Activated", struct {
+            bind.signal("activated", struct {
                 fn c(self: Element, ui: *Ui) !*PointerSignal {
                     return ui.getSignal(self.entity, "activated");
                 }
             }.c),
-            bind.signal("PointerEntered", struct {
+            bind.signal("pointerEntered", struct {
                 fn c(self: Element, ui: *Ui) !*PointerSignal {
                     return ui.getSignal(self.entity, "pointer_entered");
                 }
             }.c),
-            bind.signal("PointerMoved", struct {
+            bind.signal("pointerMoved", struct {
                 fn c(self: Element, ui: *Ui) !*PointerSignal {
                     return ui.getSignal(self.entity, "pointer_moved");
                 }
             }.c),
-            bind.signal("PointerLeft", struct {
+            bind.signal("pointerLeft", struct {
                 fn c(self: Element, ui: *Ui) !*PointerSignal {
                     return ui.getSignal(self.entity, "pointer_left");
                 }

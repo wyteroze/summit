@@ -88,7 +88,7 @@ pub const Keycode = enum {
     Unknown,
 
     pub fn format(
-        self: *const @This(),
+        self: @This(),
         writer: *std.Io.Writer,
     ) !void {
         try writer.print("Keycode '{s:0}'", .{@tagName(self)});

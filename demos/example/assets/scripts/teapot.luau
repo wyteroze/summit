@@ -7,17 +7,17 @@ local teapot: Script = {}
 
 function teapot.init(entity: Entity)
     print("Teapot init")
-    entity:AddComponent("Position", Vec3.new(0, 0, 5))
-    entity:AddComponent("Rotation", Vec3.new(0, 0, 0))
-    entity:AddComponent("Mesh", assets.load("assets://models/cube.fbx"))
-    entity:AddComponent("Image", assets.load("assets://images/chicken.jpg"))
-    -- entity:AddComponent("Spin", Vec3.new(5, 10, 15))
+    entity:addComponent("Position", Vec3.new(0, 0, 5))
+    entity:addComponent("Rotation", Vec3.new(0, 0, 0))
+    entity:addComponent("Mesh", assets.load("assets://models/cube.fbx"))
+    entity:addComponent("Image", assets.load("assets://images/chicken.jpg"))
+    -- entity:addComponent("Spin", Vec3.new(5, 10, 15))
 
-    entity:AddComponent("Speaker", {
-        Volume = 1,
-        MinDistance = 1,
-        MaxDistance = 100,
-        Attenuation = "InverseSquare",
+    entity:addComponent("Speaker", {
+        volume = 1,
+        minDistance = 1,
+        maxDistance = 100,
+        attenuation = "inverseSquare",
     })
 end
 

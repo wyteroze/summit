@@ -2,12 +2,12 @@
 
 const std = @import("std");
 
-pub fn pascal(comptime s: []const u8) [:0]const u8 {
+pub fn camel(comptime s: []const u8) [:0]const u8 {
     comptime {
         var out: [s.len:0]u8 = undefined;
-
         var n: usize = 0;
-        var up = true;
+        var up = false;
+
         for (s) |c| {
             if (c == '_') {
                 up = true;
