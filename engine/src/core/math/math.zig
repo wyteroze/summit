@@ -9,5 +9,5 @@ pub const api = .{
     @import("Vec2.zig").api,
     @import("Vec3.zig").api,
     @import("Quat.zig").api,
-    @import("Mat4.zig").api
+    @import("Mat4.zig").api,
 };

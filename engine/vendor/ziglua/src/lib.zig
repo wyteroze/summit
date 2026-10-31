@@ -840,7 +840,7 @@ pub const Lua = opaque {
     /// See https://www.lua.org/manual/5.4/manual.html#lua_arith
     pub fn arith(lua: *Lua, op: ArithOperator) void {
         comptime checkSupport(.{ .lua52, .lua53, .lua54, .lua55 }, @src().fn_name);
-        c.lua_arith(@ptrCast(lua), @intFromEnum(op));
+        c.lua_arith(@ptrCast(lua), @backingInt(op));
     }
 
     /// Sets a new panic function and returns the old one
@@ -924,7 +924,7 @@ pub const Lua = opaque {
     ///
     /// See https://www.lua.org/manual/5.4/manual.html#lua_callk
     pub fn callCont(lua: *Lua, args: CallContArgs) void {
-        comptime checkSupport(.{ .lua52, .lua53, .lua54, .lua55, }, @src().fn_name);
+        comptime checkSupport(.{ .lua52, .lua53, .lua54, .lua55 }, @src().fn_name);
         c.lua_callk(@ptrCast(lua), args.args, args.results, args.ctx, args.k);
     }
 
@@ -994,7 +994,7 @@ pub const Lua = opaque {
     /// See https://www.lua.org/manual/5.4/manual.html#lua_compare
     pub fn compare(lua: *Lua, index1: i32, index2: i32, op: CompareOperator) bool {
         comptime checkSupport(.{ .lua52, .lua53, .lua54, .lua55 }, @src().fn_name);
-        return c.lua_compare(@ptrCast(lua), index1, index2, @intFromEnum(op)) != 0;
+        return c.lua_compare(@ptrCast(lua), index1, index2, @backingInt(op)) != 0;
     }
 
     /// Concatenates the `n` values at the top of the stack, pops them, and leaves the result at the top
@@ -1209,12 +1209,12 @@ pub const Lua = opaque {
     }
 
     pub fn gcSetGoal(lua: *Lua, goal: i32) i32 {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         return c.lua_gc(@ptrCast(lua), c.LUA_GCSETGOAL, goal);
     }
 
     pub fn gcSetStepSize(lua: *Lua, size: i32) i32 {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         return c.lua_gc(@ptrCast(lua), c.LUA_GCSETSTEPSIZE, size);
     }
 
@@ -1267,7 +1267,7 @@ pub const Lua = opaque {
     ///
     /// See https://www.lua.org/manual/5.2/manual.html#lua_getctx
     pub fn getContext(lua: *Lua, ctx: *i32) GetContextError!void {
-        comptime checkSupport(.{ .lua52 }, @src().fn_name);
+        comptime checkSupport(.{.lua52}, @src().fn_name);
         const ret = c.lua_getctx(@ptrCast(lua), ctx);
         switch (ret) {
             StatusCode.ok, StatusCode.yield => return,
@@ -1321,7 +1321,7 @@ pub const Lua = opaque {
     /// See https://www.lua.org/manual/5.4/manual.html#lua_getfield
     pub fn getField(lua: *Lua, index: i32, key: [:0]const u8) LuaType {
         switch (lang) {
-            .lua53, .lua54, .lua55, .luau => return @enumFromInt(c.lua_getfield(@ptrCast(lua), index, key.ptr)),
+            .lua53, .lua54, .lua55, .luau => return @fromBackingInt(@intCast(c.lua_getfield(@ptrCast(lua), index, key.ptr))),
             else => {
                 c.lua_getfield(@ptrCast(lua), index, key.ptr);
                 return lua.typeOf(-1);
@@ -1339,7 +1339,7 @@ pub const Lua = opaque {
     pub fn getGlobal(lua: *Lua, name: [:0]const u8) LuaType {
         return blk: {
             switch (lang) {
-                .lua53, .lua54, .lua55, .luau => break :blk @enumFromInt(c.lua_getglobal(@as(*LuaState, @ptrCast(lua)), name.ptr)),
+                .lua53, .lua54, .lua55, .luau => break :blk @fromBackingInt(@intCast(c.lua_getglobal(@as(*LuaState, @ptrCast(lua)), name.ptr))),
                 else => {
                     c.lua_getglobal(@as(*LuaState, @ptrCast(lua)), name.ptr);
                     break :blk lua.typeOf(-1);
@@ -1362,7 +1362,7 @@ pub const Lua = opaque {
     /// See https://www.lua.org/manual/5.4/manual.html#lua_geti
     pub fn getIndex(lua: *Lua, index: i32, i: Integer) LuaType {
         comptime checkSupport(.{ .lua53, .lua54, .lua55 }, @src().fn_name);
-        return @enumFromInt(c.lua_geti(@ptrCast(lua), index, i));
+        return @fromBackingInt(@intCast(c.lua_geti(@ptrCast(lua), index, i)));
     }
 
     pub fn getUserValue52(lua: *Lua, index: i32) void {
@@ -1370,11 +1370,11 @@ pub const Lua = opaque {
     }
 
     fn getUserValue53(lua: *Lua, index: i32) LuaType {
-        return @enumFromInt(c.lua_getuservalue(@ptrCast(lua), index));
+        return @fromBackingInt(@intCast(c.lua_getuservalue(@ptrCast(lua), index)));
     }
 
     fn getUserValue54(lua: *Lua, index: i32, n: i32) LuaType {
-        return @enumFromInt(c.lua_getiuservalue(@ptrCast(lua), index, n));
+        return @fromBackingInt(@intCast(c.lua_getiuservalue(@ptrCast(lua), index, n)));
     }
 
     /// Pushes onto the stack the nth user value associated with the full userdata at the given index
@@ -1415,7 +1415,7 @@ pub const Lua = opaque {
     /// See https://www.lua.org/manual/5.4/manual.html#lua_gettable
     pub fn getTable(lua: *Lua, index: i32) LuaType {
         switch (lang) {
-            .lua53, .lua54, .lua55, .luau => return @enumFromInt(c.lua_gettable(@ptrCast(lua), index)),
+            .lua53, .lua54, .lua55, .luau => return @fromBackingInt(@intCast(c.lua_gettable(@ptrCast(lua), index))),
             else => {
                 c.lua_gettable(@ptrCast(lua), index);
                 return lua.typeOf(-1);
@@ -1437,14 +1437,14 @@ pub const Lua = opaque {
 
     /// Only available in Luau
     pub fn setReadonly(lua: *Lua, idx: i32, enabled: bool) void {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         if (lang != .luau) @compileError(@src().fn_name ++ " is only available in Luau.");
         c.lua_setreadonly(@ptrCast(lua), idx, @intFromBool(enabled));
     }
 
     /// Only available in Luau
     pub fn getReadonly(lua: *Lua, idx: i32) bool {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         if (lang != .luau) @compileError(@src().fn_name ++ " is only available in Luau.");
         return c.lua_getreadonly(@ptrCast(lua), idx) != 0;
     }
@@ -1507,7 +1507,7 @@ pub const Lua = opaque {
         comptime checkSupport(.{ .lua53, .lua54, .lua55, .luau }, @src().fn_name);
         return switch (lang) {
             .luau => c.lua_type(@ptrCast(lua), index) == c.LUA_TINTEGER,
-            else => c.lua_isinteger(@ptrCast(lua), index) != 0
+            else => c.lua_isinteger(@ptrCast(lua), index) != 0,
         };
     }
 
@@ -1619,7 +1619,7 @@ pub const Lua = opaque {
     /// * Lua Runtime Errors: `none`
     ///
     pub fn isVector(lua: *Lua, index: i32) bool {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         return c.lua_isvector(@as(*LuaState, @ptrCast(lua)), index);
     }
 
@@ -1800,7 +1800,7 @@ pub const Lua = opaque {
     };
 
     pub fn newUserdataTagged(lua: *Lua, comptime T: type, tag: i32) *T {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         const UTAG_PROXY = c.LUA_UTAG_LIMIT + 1; // not exposed in headers
         std.debug.assert((tag >= 0 and tag < c.LUA_UTAG_LIMIT) or tag == UTAG_PROXY); // Luau will do the same assert, this is easier to debug
         // safe to .? because this function throws a Lua error on out of memory
@@ -1814,7 +1814,7 @@ pub const Lua = opaque {
     ///
     /// Only available in Luau.
     pub fn getUserdataTag(lua: *Lua, index: i32) error{ExpectedTaggedUserdata}!i32 {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         const tag = c.lua_userdatatag(@ptrCast(lua), index);
         if (tag == -1) return error.ExpectedTaggedUserdata;
         return tag;
@@ -1827,7 +1827,7 @@ pub const Lua = opaque {
     ///
     /// Note: Luau doesn't support the usual Lua __gc metatable destructor.  Use this instead.
     pub fn newUserdataDtor(lua: *Lua, comptime T: type, dtor_fn: CUserdataDtorFn) *T {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         // safe to .? because this function throws a Lua error on out of memory
         // so the returned pointer should never be null
         const ptr = c.lua_newuserdatadtor(@ptrCast(lua), @sizeOf(T), @ptrCast(dtor_fn)).?;
@@ -1835,7 +1835,7 @@ pub const Lua = opaque {
     }
 
     pub fn setUserdataDtor(lua: *Lua, tag: i32, dtor_fn: CUserdataDtorFn) void {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         c.lua_setuserdatadtor(@ptrCast(lua), tag, @ptrCast(dtor_fn));
     }
 
@@ -2063,7 +2063,7 @@ pub const Lua = opaque {
     ///
     /// See https://www.lua.org/manual/5.4/manual.html#lua_pushcclosure
     pub fn pushClosureNamed(lua: *Lua, c_fn: CFn, debugname: [:0]const u8, n: i32) void {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         c.lua_pushcclosurek(@ptrCast(lua), c_fn, debugname, n, null);
     }
 
@@ -2087,7 +2087,7 @@ pub const Lua = opaque {
     ///
     /// See https://www.lua.org/manual/5.4/manual.html#lua_pushcfunction
     pub fn pushFunctionNamed(lua: *Lua, c_fn: CFn, debugname: [:0]const u8) void {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         c.lua_pushcclosurek(@ptrCast(lua), c_fn, debugname, 0, null);
     }
 
@@ -2259,7 +2259,7 @@ pub const Lua = opaque {
     ///
     /// See https://www.lua.org/manual/5.2/manual.html#lua_pushunsigned
     pub fn pushUnsigned(lua: *Lua, n: Unsigned) void {
-        comptime checkSupport(.{ .lua52 }, @src().fn_name);
+        comptime checkSupport(.{.lua52}, @src().fn_name);
         return c.lua_pushunsigned(@ptrCast(lua), n);
     }
 
@@ -2314,7 +2314,7 @@ pub const Lua = opaque {
     /// See https://www.lua.org/manual/5.4/manual.html#lua_rawget
     pub fn getTableRaw(lua: *Lua, index: i32) LuaType {
         switch (lang) {
-            .lua53, .lua54, .lua55, .luau => return @enumFromInt(c.lua_rawget(@ptrCast(lua), index)),
+            .lua53, .lua54, .lua55, .luau => return @fromBackingInt(@intCast(c.lua_rawget(@ptrCast(lua), index))),
             else => {
                 c.lua_rawget(@ptrCast(lua), index);
                 return lua.typeOf(-1);
@@ -2339,7 +2339,7 @@ pub const Lua = opaque {
     /// See https://www.lua.org/manual/5.4/manual.html#lua_rawgeti
     pub fn getIndexRaw(lua: *Lua, index: i32, table_index: RawTableIndex) LuaType {
         switch (lang) {
-            .lua53, .lua54, .lua55, .luau => return @enumFromInt(c.lua_rawgeti(@ptrCast(lua), index, table_index)),
+            .lua53, .lua54, .lua55, .luau => return @fromBackingInt(@intCast(c.lua_rawgeti(@ptrCast(lua), index, table_index))),
             else => {
                 c.lua_rawgeti(@ptrCast(lua), index, table_index);
                 return lua.typeOf(-1);
@@ -2360,8 +2360,8 @@ pub const Lua = opaque {
     pub fn getPtrRaw(lua: *Lua, index: i32, p: *const anyopaque) LuaType {
         comptime checkSupport(.{ .lua52, .lua53, .lua54, .lua55, .luau }, @src().fn_name);
         switch (lang) {
-            .lua53, .lua54, .lua55 => return @enumFromInt(c.lua_rawgetp(@ptrCast(lua), index, p)),
-            .luau => return @enumFromInt(c.lua_rawgetp(@as(*LuaState, @ptrCast(lua)), index, @constCast(p))),
+            .lua53, .lua54, .lua55 => return @fromBackingInt(@intCast(c.lua_rawgetp(@ptrCast(lua), index, p))),
+            .luau => return @fromBackingInt(@intCast(c.lua_rawgetp(@as(*LuaState, @ptrCast(lua)), index, @constCast(p)))),
             else => {
                 c.lua_rawgetp(@ptrCast(lua), index, p);
                 return lua.typeOf(-1);
@@ -2380,8 +2380,8 @@ pub const Lua = opaque {
     ///
     /// See https://sleitnick.github.io/luau-api/reference.html#lua_rawgetptagged
     pub fn getPtrRawTagged(lua: *Lua, index: i32, p: *const anyopaque, tag: i32) LuaType {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
-        return @enumFromInt(c.lua_rawgetptagged(@as(*LuaState, @ptrCast(lua)), index, @constCast(p), tag));
+        comptime checkSupport(.{.luau}, @src().fn_name);
+        return @fromBackingInt(@intCast(c.lua_rawgetptagged(@as(*LuaState, @ptrCast(lua)), index, @constCast(p), tag)));
     }
 
     /// Returns the raw "length" of the value at the given index:
@@ -2459,7 +2459,7 @@ pub const Lua = opaque {
     ///
     /// See https://sleitnick.github.io/luau-api/reference.html#lua_rawsetptagged
     pub fn setPtrRawTagged(lua: *Lua, index: i32, p: *const anyopaque, tag: i32) void {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         c.lua_rawsetptagged(@as(*LuaState, @ptrCast(lua)), index, @constCast(p), tag);
     }
 
@@ -2510,7 +2510,7 @@ pub const Lua = opaque {
             StatusCode.err_runtime => return error.LuaRuntime,
             StatusCode.err_memory => return error.OutOfMemory,
             StatusCode.err_error => return error.LuaMsgHandler,
-            else => return @enumFromInt(thread_status),
+            else => return @fromBackingInt(@intCast(thread_status)),
         }
     }
 
@@ -2524,7 +2524,7 @@ pub const Lua = opaque {
             StatusCode.err_memory => return error.OutOfMemory,
             StatusCode.err_error => return error.LuaMsgHandler,
             StatusCode.err_gcmm => return error.LuaGCMetaMethod,
-            else => return @enumFromInt(thread_status),
+            else => return @fromBackingInt(@intCast(thread_status)),
         }
     }
 
@@ -2537,7 +2537,7 @@ pub const Lua = opaque {
             StatusCode.err_runtime => return error.LuaRuntime,
             StatusCode.err_memory => return error.OutOfMemory,
             StatusCode.err_error => return error.LuaMsgHandler,
-            else => return @enumFromInt(thread_status),
+            else => return @fromBackingInt(@intCast(thread_status)),
         }
     }
 
@@ -2548,7 +2548,7 @@ pub const Lua = opaque {
             StatusCode.err_runtime => return error.LuaRuntime,
             StatusCode.err_memory => return error.OutOfMemory,
             StatusCode.err_error => return error.LuaMsgHandler,
-            else => return @enumFromInt(thread_status),
+            else => return @fromBackingInt(@intCast(thread_status)),
         }
     }
 
@@ -2700,7 +2700,7 @@ pub const Lua = opaque {
     ///
     /// Only available in Luau
     pub fn setUserdataTag(lua: *Lua, index: i32, tag: i32) void {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         std.debug.assert((tag >= 0 and tag < c.LUA_UTAG_LIMIT)); // Luau will do the same assert, this is easier to debug
         c.lua_setuserdatatag(@ptrCast(lua), index, tag);
     }
@@ -2728,7 +2728,7 @@ pub const Lua = opaque {
     ///
     /// See https://www.lua.org/manual/5.4/manual.html#lua_status
     pub fn status(lua: *Lua) Status {
-        return @enumFromInt(c.lua_status(@ptrCast(lua)));
+        return @fromBackingInt(@intCast(c.lua_status(@ptrCast(lua))));
     }
 
     /// Converts the zero-terminated string `str` to a number, pushes that
@@ -2929,7 +2929,7 @@ pub const Lua = opaque {
     ///
     /// See https://www.lua.org/manual/5.2/manual.html#lua_tounsignedx
     pub fn toUnsigned(lua: *Lua, index: i32) error{ExpectedNumber}!Unsigned {
-        comptime checkSupport(.{ .lua52 }, @src().fn_name);
+        comptime checkSupport(.{.lua52}, @src().fn_name);
         var success: c_int = undefined;
         const result = c.lua_tounsignedx(@ptrCast(lua), index, &success);
         if (success == 0) return error.ExpectedNumber;
@@ -2972,7 +2972,7 @@ pub const Lua = opaque {
 
     /// Only available in Luau
     pub fn toUserdataTagged(lua: *Lua, comptime T: type, index: i32, tag: i32) error{ExpectedTaggedUserdata}!*T {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         if (c.lua_touserdatatagged(@ptrCast(lua), index, tag)) |ptr| return @ptrCast(@alignCast(ptr));
         return error.ExpectedTaggedUserdata;
     }
@@ -2982,7 +2982,7 @@ pub const Lua = opaque {
     ///
     /// Only available in Luau
     pub fn toVector(lua: *Lua, index: i32) error{ExpectedVector}![luau_vector_size]f32 {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         const res = c.lua_tovector(@ptrCast(lua), index);
         if (res) |r| {
             switch (luau_vector_size) {
@@ -2999,7 +2999,7 @@ pub const Lua = opaque {
     ///
     /// Only available in Luau
     pub fn toStringAtom(lua: *Lua, index: i32) error{ExpectedString}!struct { i32, [:0]const u8 } {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         var length: usize = undefined;
         var atom: c_int = undefined;
         if (c.lua_tolstringatom(@ptrCast(lua), index, &length, &atom)) |ptr| {
@@ -3013,7 +3013,7 @@ pub const Lua = opaque {
     ///
     /// Only available in Luau
     pub fn namecallAtom(lua: *Lua) error{ExpectedNamecall}!struct { i32, [:0]const u8 } {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         var atom: c_int = undefined;
         if (c.lua_namecallatom(@ptrCast(lua), &atom)) |ptr| {
             return .{ atom, std.mem.span(ptr) };
@@ -3030,7 +3030,7 @@ pub const Lua = opaque {
     ///
     /// See https://www.lua.org/manual/5.4/manual.html#lua_type
     pub fn typeOf(lua: *Lua, index: i32) LuaType {
-        return @enumFromInt(c.lua_type(@ptrCast(lua), index));
+        return @fromBackingInt(@intCast(c.lua_type(@ptrCast(lua), index)));
     }
 
     /// Returns the name of the given `LuaType` as a null-terminated slice
@@ -3041,7 +3041,7 @@ pub const Lua = opaque {
     ///
     /// See https://www.lua.org/manual/5.4/manual.html#lua_typename
     pub fn typeName(lua: *Lua, t: LuaType) [:0]const u8 {
-        return std.mem.span(c.lua_typename(@ptrCast(lua), @intFromEnum(t)));
+        return std.mem.span(c.lua_typename(@ptrCast(lua), @backingInt(t)));
     }
 
     /// Returns the pseudo-index that represents the `i`th upvalue of the running function
@@ -3445,7 +3445,7 @@ pub const Lua = opaque {
 
     /// Only available in Luau
     pub fn setInterruptCallbackFn(lua: *Lua, cb: ?CInterruptCallbackFn) void {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         if (c.lua_callbacks(@ptrCast(lua))) |cb_struct| {
             cb_struct.*.interrupt = cb;
         }
@@ -3453,7 +3453,7 @@ pub const Lua = opaque {
 
     /// Only available in Luau
     pub fn setUserAtomCallbackFn(lua: *Lua, cb: CUserAtomCallbackFn) void {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         if (c.lua_callbacks(@ptrCast(lua))) |cb_struct| {
             cb_struct.*.useratom = cb;
         }
@@ -3636,7 +3636,7 @@ pub const Lua = opaque {
 
         inline for (std.meta.fields(T)) |field| {
             if (std.mem.eql(u8, field.name, name)) {
-                return @enumFromInt(field.value);
+                return @fromBackingInt(@intCast(field.value));
             }
         }
 
@@ -3679,7 +3679,7 @@ pub const Lua = opaque {
     ///
     /// See https://www.lua.org/manual/5.4/manual.html#luaL_checktype
     pub fn checkType(lua: *Lua, arg: i32, t: LuaType) void {
-        c.luaL_checktype(@ptrCast(lua), arg, @intFromEnum(t));
+        c.luaL_checktype(@ptrCast(lua), arg, @backingInt(t));
     }
 
     /// Checks whether the function argument `arg` is a userdata of the type `name`.
@@ -3731,7 +3731,7 @@ pub const Lua = opaque {
     ///
     /// Only available in Luau
     pub fn checkVector(lua: *Lua, arg: i32) [luau_vector_size]f32 {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         const vec = lua.toVector(arg) catch {
             lua.typeError(arg, lua.typeName(LuaType.vector));
         };
@@ -3817,7 +3817,7 @@ pub const Lua = opaque {
     ///
     /// Only available in Luau
     pub fn raiseInterruptErrorStr(lua: *Lua, fmt: [:0]const u8, args: anytype) noreturn {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         c.lua_rawcheckstack(@ptrCast(lua), 1);
         lua.raiseErrorStr(fmt, args);
         unreachable;
@@ -3862,7 +3862,7 @@ pub const Lua = opaque {
     ///
     /// See https://www.lua.org/manual/5.4/manual.html#luaL_getmetafield
     pub fn getMetaField(lua: *Lua, obj: i32, field: [:0]const u8) LuaType {
-        return @enumFromInt(c.luaL_getmetafield(@ptrCast(lua), obj, field.ptr));
+        return @fromBackingInt(@intCast(c.luaL_getmetafield(@ptrCast(lua), obj, field.ptr)));
     }
 
     /// Pushes onto the stack the metatable associated with the name tname in the
@@ -3876,7 +3876,7 @@ pub const Lua = opaque {
     /// See https://www.lua.org/manual/5.4/manual.html#luaL_getmetatable
     pub fn getMetatableRegistry(lua: *Lua, table_name: [:0]const u8) LuaType {
         switch (lang) {
-            .lua53, .lua54, .lua55, .luau => return @enumFromInt(c.luaL_getmetatable(@as(*LuaState, @ptrCast(lua)), table_name.ptr)),
+            .lua53, .lua54, .lua55, .luau => return @fromBackingInt(@intCast(c.luaL_getmetatable(@as(*LuaState, @ptrCast(lua)), table_name.ptr))),
             else => {
                 c.luaL_getmetatable(@as(*LuaState, @ptrCast(lua)), table_name.ptr);
                 return lua.typeOf(-1);
@@ -3886,7 +3886,7 @@ pub const Lua = opaque {
 
     // Summit
 
-    /// Takes a table from the top of the stack and sets it as a metatable to be used by lua_newuserdatataggedwithmetatable. 
+    /// Takes a table from the top of the stack and sets it as a metatable to be used by lua_newuserdatataggedwithmetatable.
     /// Table is popped from the stack.
     ///
     /// Only available in Luau
@@ -3894,11 +3894,11 @@ pub const Lua = opaque {
     /// * Pops from Stack: `1`
     /// * Pushes to Stack: `0`
     pub fn setUserdataMetatable(lua: *Lua, tag: i32) void {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         c.lua_setuserdatametatable(@as(*LuaState, @ptrCast(lua)), tag);
     }
 
-    /// Retrieves the metatable associated with the userdata tag and places it on top of the stack. 
+    /// Retrieves the metatable associated with the userdata tag and places it on top of the stack.
     /// If a table was not associated, nil is placed instead.
     ///
     /// Only available in Luau
@@ -3907,7 +3907,7 @@ pub const Lua = opaque {
     /// * Pushes to Stack: `1`
     /// * Lua Runtime Errors: `any`
     pub fn getUserdataMetatable(lua: *Lua, tag: i32) void {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         c.lua_getuserdatametatable(@as(*LuaState, @ptrCast(lua)), tag);
     }
 
@@ -3920,9 +3920,9 @@ pub const Lua = opaque {
     /// * Pushes to Stack: `0`
     /// * Lua Runtime Errors: `any`
     pub fn allocationRate(lua: *Lua) ?i64 {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         const ar = c.lua_allocationrate(@as(*LuaState, @ptrCast(lua)));
-        return if (ar == -1) null else ar; 
+        return if (ar == -1) null else ar;
     }
 
     /// Ensures that the value `t[field]`, where `t` is the value at `index`, is a table, and pushes that table onto the stack.
@@ -4181,7 +4181,7 @@ pub const Lua = opaque {
     ///
     /// See https://www.lua.org/manual/5.2/manual.html#luaL_optunsigned
     pub fn optUnsigned(lua: *Lua, arg: i32) ?Unsigned {
-        comptime checkSupport(.{ .lua52 }, @src().fn_name);
+        comptime checkSupport(.{.lua52}, @src().fn_name);
         if (lua.isNoneOrNil(arg)) return null;
         return lua.checkUnsigned(arg);
     }
@@ -4623,7 +4623,7 @@ pub const Lua = opaque {
     /// * Pushes to Stack: `0`
     /// * Lua Runtime Errors: `any`
     pub fn openVector(lua: *Lua) void {
-        comptime checkSupport(.{ .luau }, @src().fn_name);
+        comptime checkSupport(.{.luau}, @src().fn_name);
         lua.requireF(c.LUA_VECLIBNAME, c.luaopen_vector, true);
     }
 
@@ -5495,11 +5495,11 @@ pub fn wrap(comptime function: anytype) TypeOfWrap(function) {
                     },
                 };
                 if (has_error_union) {
-                    @call(.always_inline, function, .{ lua, @as(Event, @enumFromInt(ar.?.event)), &debug_info }) catch |err| {
+                    @call(.always_inline, function, .{ lua, @as(Event, @fromBackingInt(@intCast(ar.?.event))), &debug_info }) catch |err| {
                         lua.raiseErrorStr(@errorName(err), .{});
                     };
                 } else {
-                    @call(.always_inline, function, .{ lua, @as(Event, @enumFromInt(ar.?.event)), &debug_info });
+                    @call(.always_inline, function, .{ lua, @as(Event, @fromBackingInt(@intCast(ar.?.event))), &debug_info });
                 }
             }
         }.inner,
@@ -5508,11 +5508,11 @@ pub fn wrap(comptime function: anytype) TypeOfWrap(function) {
                 // this is called by Lua, state should never be null
                 var lua: *Lua = @ptrCast(state.?);
                 if (has_error_union) {
-                    return @call(.always_inline, function, .{ lua, @as(Status, @enumFromInt(status)), ctx }) catch |err| {
+                    return @call(.always_inline, function, .{ lua, @as(Status, @fromBackingInt(@intCast(status))), ctx }) catch |err| {
                         lua.raiseErrorStr(@errorName(err), .{});
                     };
                 } else {
-                    return @call(.always_inline, function, .{ lua, @as(Status, @enumFromInt(status)), ctx });
+                    return @call(.always_inline, function, .{ lua, @as(Status, @fromBackingInt(@intCast(status))), ctx });
                 }
             }
         }.inner,
@@ -5670,7 +5670,10 @@ pub fn compile(allocator: Allocator, source: []const u8, options: CompileOptions
         .vectorLib = options.vector_lib,
         .vectorCtor = options.vector_ctor,
         .vectorType = options.vector_type,
-        .vectorPrecision = switch (options.vector_precision) { .single => 1, .double => 2 },
+        .vectorPrecision = switch (options.vector_precision) {
+            .single => 1,
+            .double => 2,
+        },
         .mutableGlobals = options.mutable_globals,
         .userdataTypes = options.userdata_types,
         .librariesWithKnownMembers = options.libraries_with_known_members,

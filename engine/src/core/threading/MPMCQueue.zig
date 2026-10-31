@@ -7,10 +7,7 @@ pub fn MPMCQueue(comptime T: type, comptime capacity: usize) type {
     return struct {
         const Self = @This();
 
-        const Slot = struct {
-            seq: std.atomic.Value(usize),
-            value: T
-        };
+        const Slot = struct { seq: std.atomic.Value(usize), value: T };
 
         io: std.Io,
         slots: [capacity]Slot,
@@ -18,16 +15,11 @@ pub fn MPMCQueue(comptime T: type, comptime capacity: usize) type {
         dequeue_pos: std.atomic.Value(usize),
 
         pub fn init(io: std.Io) Self {
-            var self: Self = .{
-                .io = io,
-                .slots = undefined,
-                .enqueue_pos = .init(0),
-                .dequeue_pos = .init(0)
-            };
+            var self: Self = .{ .io = io, .slots = undefined, .enqueue_pos = .init(0), .dequeue_pos = .init(0) };
             for (&self.slots, 0..) |*slot, i| {
                 slot.* = .{ .seq = .init(i), .value = undefined };
             }
-            
+
             return self;
         }
 
@@ -39,11 +31,11 @@ pub fn MPMCQueue(comptime T: type, comptime capacity: usize) type {
                 const diff = @as(isize, @intCast(seq)) - @as(isize, @intCast(pos));
 
                 if (diff == 0) {
-                    if (self.enqueue_pos.cmpxchgWeak(pos, pos+1, .monotonic, .monotonic)) |a| {
+                    if (self.enqueue_pos.cmpxchgWeak(pos, pos + 1, .monotonic, .monotonic)) |a| {
                         pos = a;
                     } else {
                         slot.value = value;
-                        slot.seq.store(pos+1, .release);
+                        slot.seq.store(pos + 1, .release);
                         return;
                     }
                 } else if (diff < 0) {

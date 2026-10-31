@@ -25,14 +25,14 @@ frame_delta: math.Vec2 = .zero,
 scroll_delta: math.Vec2 = .zero,
 
 pub fn init(dispatcher: *signal.Dispatcher, allocator: std.mem.Allocator, id: usize) MouseDevice {
-    return .{ 
+    return .{
         .allocator = allocator,
         .buttons_pressed = .init(allocator),
         .button_pressed = .init(allocator, dispatcher),
         .button_released = .init(allocator, dispatcher),
         .moved_evt = .init(allocator, dispatcher),
         .scrolled_evt = .init(allocator, dispatcher),
-        .id = id
+        .id = id,
     };
 }
 
@@ -47,12 +47,12 @@ pub fn deinit(self: *MouseDevice) void {
 pub fn buttonDown(self: *MouseDevice, event: Platform.desc.MouseButtonEvent, consumed: bool, win: *Windowing.Window) !void {
     self.button_pressed.fire(.{ event.button, consumed, win.getHandle() });
     try self.buttons_pressed.put(event.button, true);
-} 
+}
 
 pub fn buttonUp(self: *MouseDevice, event: Platform.desc.MouseButtonEvent, consumed: bool, win: *Windowing.Window) void {
     self.button_released.fire(.{ event.button, consumed, win.getHandle() });
-    if (!self.buttons_pressed.remove(event.button)) 
-        std.log.warn("buttonUp() called on MouseDevice {d} for a button that isn't pressed", .{ self.id });
+    if (!self.buttons_pressed.remove(event.button))
+        std.log.warn("buttonUp() called on MouseDevice {d} for a button that isn't pressed", .{self.id});
 }
 
 pub fn isButtonDown(self: *MouseDevice, key: Platform.desc.MouseButton) bool {
@@ -96,5 +96,5 @@ pub fn format(
     self: @This(),
     writer: *std.Io.Writer,
 ) std.Io.Writer.Error!void {
-    try writer.print("MouseDevice {d}", .{ self.id });
+    try writer.print("MouseDevice {d}", .{self.id});
 }

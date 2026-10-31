@@ -12,7 +12,7 @@ const SdlBackend = @This();
 
 pub fn init(_: SdlBackend) void {
     sdl3.init(flags) catch {
-        std.log.err("Failed to init sdl3: {s}", .{ sdl3.errors.get() orelse "no error message" });
+        std.log.err("Failed to init sdl3: {s}", .{sdl3.errors.get() orelse "no error message"});
     };
 }
 
@@ -21,26 +21,21 @@ pub fn deinit(_: SdlBackend) void {
 }
 
 pub fn createSurface(_: SdlBackend, d: desc.SurfaceDesc) !types.SurfaceHandle {
-    const w: sdl3.video.Window = try .init(
-        d.title, 
-        @intCast(d.width), 
-        @intCast(d.height),
-        .{
-            .metal = true, 
-            .high_pixel_density = true,
-            .minimized = d.minimized,
-            .maximized = d.maximized,
-            .fullscreen = d.fullscreen,
-            .utility = d.utility,
-            .popup_menu = d.popup,
-            .tooltip = d.tooltip,
-            .hidden = d.hidden,
-            .resizable = d.resizable,
-            .always_on_top = d.always_on_top,
-            .transparent = d.transparent,
-            .borderless = d.borderless,
-        }
-    );
+    const w: sdl3.video.Window = try .init(d.title, @intCast(d.width), @intCast(d.height), .{
+        .metal = true,
+        .high_pixel_density = true,
+        .minimized = d.minimized,
+        .maximized = d.maximized,
+        .fullscreen = d.fullscreen,
+        .utility = d.utility,
+        .popup_menu = d.popup,
+        .tooltip = d.tooltip,
+        .hidden = d.hidden,
+        .resizable = d.resizable,
+        .always_on_top = d.always_on_top,
+        .transparent = d.transparent,
+        .borderless = d.borderless,
+    });
 
     if (d.parent) |parent| {
         const p = try sdl3.video.Window.fromId(@intCast(parent.id));
@@ -50,6 +45,7 @@ pub fn createSurface(_: SdlBackend, d: desc.SurfaceDesc) !types.SurfaceHandle {
     if (d.modal) try w.setModal(true);
 
     const props = try w.getProperties();
+    // zig fmt: off
     const handle = if (props.android_window) |win| win.value
         else if (props.ui_kit_window) |win| win.value
         else if (props.cocoa_window != null) sdl3.c.SDL_Metal_CreateView(w.value)
@@ -58,7 +54,8 @@ pub fn createSurface(_: SdlBackend, d: desc.SurfaceDesc) !types.SurfaceHandle {
         else if (props.wayland_viewport) |win| win.value
         else if (props.x11_display) |win| win.value
         else unreachable;
-    
+    // zig fmt: on
+
     return .{ .id = try w.getId(), .handle = handle.? };
 }
 
@@ -122,7 +119,7 @@ pub fn focusSurface(_: SdlBackend, h: types.SurfaceHandle) !void {
 
 pub fn destroySurface(_: SdlBackend, h: types.SurfaceHandle) void {
     const w = sdl3.video.Window.fromId(@intCast(h.id)) catch {
-        std.log.debug("Failed to get window from id: {?s}", .{ sdl3.errors.get() });
+        std.log.debug("Failed to get window from id: {?s}", .{sdl3.errors.get()});
         return;
     };
 
@@ -134,7 +131,7 @@ pub fn pollEvent(_: SdlBackend) ?desc.PlatformEvent {
 
     return switch (event) {
         .quit => return .quit,
-        .window_resized => |e| return .{ .surface_resize = .{  .id = @intCast(e.id), .width = @intCast(e.width),  .height = @intCast(e.height)  } },
+        .window_resized => |e| return .{ .surface_resize = .{ .id = @intCast(e.id), .width = @intCast(e.width), .height = @intCast(e.height) } },
         .window_close_requested => |e| return .{ .surface_closed = @intCast(e.id) },
         .window_enter_fullscreen => |e| return .{ .surface_fullscreened = @intCast(e.id) },
         .window_leave_fullscreen => |e| return .{ .surface_fullscreen_exited = @intCast(e.id) },
@@ -143,42 +140,41 @@ pub fn pollEvent(_: SdlBackend) ?desc.PlatformEvent {
         .window_restored => |e| return .{ .surface_restored = @intCast(e.id) },
         .keyboard_added => |e| return .{ .keyboard_connected = .{ .id = e.id.value } },
         .keyboard_removed => |e| return .{ .keyboard_disconnected = .{ .id = e.id.value } },
-        .key_down => |e| return .{ .keyboard_key_down = .{ 
-            .window_id = e.window_id orelse 0, 
+        .key_down => |e| return .{ .keyboard_key_down = .{
+            .window_id = e.window_id orelse 0,
             .keyboard_id = if (e.id) |id| id.value else 0,
             .repeat = e.repeat,
-            .keycode = sdlKeycodeToPlatformKeycode(e.key)
+            .keycode = sdlKeycodeToPlatformKeycode(e.key),
         } },
         .key_up => |e| return .{ .keyboard_key_up = .{
-            .window_id = e.window_id orelse 0, 
+            .window_id = e.window_id orelse 0,
             .keyboard_id = if (e.id) |id| id.value else 0,
             .repeat = e.repeat,
-            .keycode = sdlKeycodeToPlatformKeycode(e.key)
+            .keycode = sdlKeycodeToPlatformKeycode(e.key),
         } },
         .mouse_added => |e| return .{ .mouse_connected = .{ .id = e.id.value } },
         .mouse_removed => |e| return .{ .mouse_disconnected = .{ .id = e.id.value } },
-        // We use ID 1 as the default, because 0 is treated as 
-        // invalid mouse in SDL.
+        // We use ID 1 as the default, because 0 is treated as invalid mouse in SDL.
         .mouse_button_down => |e| return .{ .mouse_button_down = .{
             .window_id = e.window_id orelse 1,
             .mouse_id = if (e.id) |id| id.value else 1,
-            .button = sdlMouseButtonToPlatformMouseButton(e.button)
+            .button = sdlMouseButtonToPlatformMouseButton(e.button),
         } },
         .mouse_button_up => |e| return .{ .mouse_button_up = .{
             .window_id = e.window_id orelse 1,
             .mouse_id = if (e.id) |id| id.value else 1,
-            .button = sdlMouseButtonToPlatformMouseButton(e.button)
+            .button = sdlMouseButtonToPlatformMouseButton(e.button),
         } },
         .mouse_motion => |e| return .{ .mouse_moved = .{
             .window_id = e.window_id orelse 1,
             .mouse_id = if (e.id) |id| id.value else 1,
             .position = .{ e.x, e.y },
-            .delta = .{ e.x_rel, e.y_rel }
+            .delta = .{ e.x_rel, e.y_rel },
         } },
         .mouse_wheel => |e| return .{ .mouse_scrolled = .{
             .window_id = e.window_id orelse 1,
             .mouse_id = if (e.id) |id| id.value else 1,
-            .delta = .{ e.scroll_x, e.scroll_y }
+            .delta = .{ e.scroll_x, e.scroll_y },
         } },
         .gamepad_added => |e| return .{ .gamepad_connected = .{ .id = e.id.value } },
         .gamepad_removed => |e| return .{ .gamepad_disconnected = .{ .id = e.id.value } },
@@ -193,7 +189,7 @@ pub fn pollEvent(_: SdlBackend) ?desc.PlatformEvent {
         .gamepad_axis_motion => |e| return .{ .gamepad_axis_changed = .{
             .gamepad_id = e.id.value,
             .axis = sdlGamepadAxisToPlatformGamepadAxis(e.axis),
-            .value = e.value
+            .value = e.value,
         } },
         else => null,
     };
@@ -204,15 +200,21 @@ pub fn showError(_: SdlBackend, msg: [:0]const u8) void {
 }
 
 pub fn setCursorLocked(_: SdlBackend, mode: bool) void {
-    const windows = sdl3.video.getWindows() catch |e| { std.log.err("Failed to get windows: {s}", .{ @errorName(e) }); return; };
+    const windows = sdl3.video.getWindows() catch |e| {
+        std.log.err("Failed to get windows: {s}", .{@errorName(e)});
+        return;
+    };
     defer sdl3.free(windows);
 
     if (windows.len == 0) return;
-    sdl3.mouse.setWindowRelativeMode(windows[0], mode) catch |e| std.log.err("Failed to set cursor lock mode: {s}", .{ @errorName(e) });
+    sdl3.mouse.setWindowRelativeMode(windows[0], mode) catch |e| std.log.err("Failed to set cursor lock mode: {s}", .{@errorName(e)});
 }
 
 pub fn getCursorLocked(_: SdlBackend) bool {
-    const windows = sdl3.video.getWindows() catch |e| { std.log.err("Failed to get windows: {s}", .{ @errorName(e) }); return false; };
+    const windows = sdl3.video.getWindows() catch |e| {
+        std.log.err("Failed to get windows: {s}", .{@errorName(e)});
+        return false;
+    };
     defer sdl3.free(windows);
 
     if (windows.len == 0) return false;
@@ -221,9 +223,9 @@ pub fn getCursorLocked(_: SdlBackend) bool {
 
 pub fn setCursorVisible(_: SdlBackend, mode: bool) void {
     if (mode) {
-        sdl3.mouse.show() catch |e| std.log.err("Error when trying to show cursor: {s}", .{ @errorName(e) });
+        sdl3.mouse.show() catch |e| std.log.err("Error when trying to show cursor: {s}", .{@errorName(e)});
     } else {
-        sdl3.mouse.hide() catch |e| std.log.err("Error when trying to hide cursor: {s}", .{ @errorName(e) });
+        sdl3.mouse.hide() catch |e| std.log.err("Error when trying to hide cursor: {s}", .{@errorName(e)});
     }
 }
 
@@ -245,12 +247,12 @@ pub fn closeAudioDevice(_: SdlBackend, h: types.AudioDeviceHandle) void {
 }
 
 pub fn audioDeviceCreateStream(
-    _: SdlBackend, 
-    h: types.AudioDeviceHandle, 
-    d: desc.AudioSpec, 
-    comptime Userdata: type, 
-    comptime callback: ?*const fn (?*Userdata, types.AudioStreamHandle, usize, usize) void, 
-    user_data: ?*Userdata
+    _: SdlBackend,
+    h: types.AudioDeviceHandle,
+    d: desc.AudioSpec,
+    comptime Userdata: type,
+    comptime callback: ?*const fn (?*Userdata, types.AudioStreamHandle, usize, usize) void,
+    user_data: ?*Userdata,
 ) !types.AudioStreamHandle {
     const device = sdl3.audio.Device{ .value = h.id };
     const stream = try device.openStream(platformAudioSpecToSdlAudioSpec(d), Userdata, struct {
@@ -267,23 +269,22 @@ pub fn deinitStream(_: SdlBackend, h: types.AudioStreamHandle) void {
 }
 
 pub fn pauseAudioStream(_: SdlBackend, h: types.AudioStreamHandle) void {
-    (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).pauseDevice() 
-        catch |e| std.log.err("Failed to pause audio stream: {s}", .{ @errorName(e) });
+    (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).pauseDevice() catch |e| std.log.err("Failed to pause audio stream: {s}", .{@errorName(e)});
 }
 
 pub fn resumeAudioStream(_: SdlBackend, h: types.AudioStreamHandle) void {
-    (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).resumeDevice() 
-        catch |e| std.log.err("Failed to resume audio stream: {s}", .{ @errorName(e) });
+    (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).resumeDevice() catch |e| std.log.err("Failed to resume audio stream: {s}", .{@errorName(e)});
 }
 
 pub fn setAudioStreamGain(_: SdlBackend, h: types.AudioStreamHandle, gain: f32) void {
-    (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).setGain(gain) 
-        catch |e| std.log.err("Failed to set audio gain: {s}", .{ @errorName(e) });
+    (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).setGain(gain) catch |e| std.log.err("Failed to set audio gain: {s}", .{@errorName(e)});
 }
 
 pub fn getAudioStreamGain(_: SdlBackend, h: types.AudioStreamHandle) f32 {
-    return (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).getGain() 
-        catch |e| blk: { std.log.err("Failed to get audio gain: {s}", .{ @errorName(e) }); break :blk 0; };
+    return (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).getGain() catch |e| blk: {
+        std.log.err("Failed to get audio gain: {s}", .{@errorName(e)});
+        break :blk 0;
+    };
 }
 
 pub fn putAudioStreamData(_: SdlBackend, h: types.AudioStreamHandle, data: []const u8) !void {
@@ -294,9 +295,11 @@ pub fn putAudioStreamData(_: SdlBackend, h: types.AudioStreamHandle, data: []con
 
 fn platformAudioSpecToSdlAudioSpec(spec: desc.AudioSpec) sdl3.audio.Spec {
     return .{
-        .format = switch (spec.format) { .f32_le => .floating_32_bit_little_endian },
+        .format = switch (spec.format) {
+            .f32_le => .floating_32_bit_little_endian,
+        },
         .sample_rate = @intCast(spec.sample_rate),
-        .num_channels = @intCast(spec.channels)
+        .num_channels = @intCast(spec.channels),
     };
 }
 
@@ -554,13 +557,13 @@ const key_pairs = [_]KeyPair{
     .{ .sdl = .left_meta, .plat = .LeftMeta },
     .{ .sdl = .right_meta, .plat = .RightMeta },
     .{ .sdl = .left_hyper, .plat = .LeftHyper },
-    .{ .sdl = .right_hyper, .plat = .RightHyper }
+    .{ .sdl = .right_hyper, .plat = .RightHyper },
 };
 
 fn sdlKeycodeToPlatformKeycode(keycode: ?sdl3.keycode.Keycode) desc.Keycode {
     if (keycode == null) return .Unknown;
     inline for (key_pairs) |p| if (p.sdl == keycode.?) return p.plat;
-    
+
     return .Unknown;
 }
 
@@ -576,7 +579,7 @@ const mouse_pairs = [_]MousePair{
     .{ .sdl = .middle, .plat = .Middle },
     .{ .sdl = .right, .plat = .Right },
     .{ .sdl = .x1, .plat = .SideButtonBack },
-    .{ .sdl = .x2, .plat = .SideButtonForward }
+    .{ .sdl = .x2, .plat = .SideButtonForward },
 };
 
 fn sdlMouseButtonToPlatformMouseButton(button: sdl3.mouse.Button) desc.MouseButton {
@@ -613,7 +616,7 @@ const gamepad_button_pairs = [_]GamepadButtonPair{
     .{ .sdl = .left_paddle1, .plat = .TopLeftPaddle },
     .{ .sdl = .left_paddle2, .plat = .BottomLeftPaddle },
     .{ .sdl = .right_paddle1, .plat = .TopRightPaddle },
-    .{ .sdl = .right_paddle2, .plat = .BottomRightPaddle }
+    .{ .sdl = .right_paddle2, .plat = .BottomRightPaddle },
 };
 
 fn sdlGamepadButtonToPlatformGamepadButton(button: sdl3.gamepad.Button) desc.GamepadButton {
@@ -633,7 +636,7 @@ const gamepad_axis_pairs = [_]GamepadAxisPair{
     .{ .sdl = .left_x, .plat = .LeftStickX },
     .{ .sdl = .left_y, .plat = .LeftStickY },
     .{ .sdl = .right_x, .plat = .RightStickX },
-    .{ .sdl = .right_y, .plat = .RightStickY }
+    .{ .sdl = .right_y, .plat = .RightStickY },
 };
 
 fn sdlGamepadAxisToPlatformGamepadAxis(axis: sdl3.gamepad.Axis) desc.GamepadAxis {

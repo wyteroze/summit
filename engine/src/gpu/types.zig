@@ -16,15 +16,15 @@ pub const ComparisonFunc = enum { less, less_equal, greater, greater_equal, alwa
 
 pub const PixelFormat = enum {
     /// 4 channels, 8 bits each, 32 total.
-    rgba8, 
+    rgba8,
     /// 4 channels, 16 bits each, 64 total.
-    rgba16f, 
+    rgba16f,
     /// Depth stencil
     /// 2 channels. 24 bits for depth, 8 bits for stencil, 32 total.
     d24_s8,
     d32,
     r8_unorm,
-    bgra8
+    bgra8,
 };
 
 pub const IndexType = enum { none, uint16, uint32 };
@@ -37,12 +37,12 @@ pub const GpuLight = extern struct {
     color: [3]f32,
     intensity: f32,
     radius: f32,
-    _pad: [3]f32 = undefined
+    _pad: [3]f32 = undefined,
 };
 
 pub const GpuLightParams = extern struct {
     ambient: [3]f32,
     _pad: f32 = undefined,
     screen_size: [2]u32,
-    tile_count: [2]u32
+    tile_count: [2]u32,
 };

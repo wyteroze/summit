@@ -13,7 +13,7 @@ pub fn init(proc_init: std.process.Init, comptime os_tag: std.Target.Os.Tag, pkg
         .macos, .ios, .tvos, .watchos, .visionos, .maccatalyst => .initDarwin(proc_init, pkg_id),
         .linux => .initLinux(proc_init, pkg_id),
 
-        else => @compileError("This platform is not supported by any existing backends.")
+        else => @compileError("This platform is not supported by any existing backends."),
     };
 
     return .{ .backend = backend, .package_id = pkg_id };
@@ -34,7 +34,7 @@ pub const Filesystem = struct {
         return switch (self.os.backend) {
             .darwin => |b| b.filesystem.getPersistPath(allocator),
             .linux => |b| b.filesystem.getPersistPath(allocator),
-            .windows => |b| b.filesystem.getPersistPath(allocator)
+            .windows => |b| b.filesystem.getPersistPath(allocator),
         };
     }
 
@@ -42,7 +42,7 @@ pub const Filesystem = struct {
         return switch (self.os.backend) {
             .darwin => |b| b.filesystem.getTempPath(allocator),
             .linux => |b| b.filesystem.getTempPath(allocator),
-            .windows => |b| b.filesystem.getTempPath(allocator)
+            .windows => |b| b.filesystem.getTempPath(allocator),
         };
     }
 
@@ -50,7 +50,7 @@ pub const Filesystem = struct {
         return switch (self.os.backend) {
             .darwin => |b| b.filesystem.getCachePath(allocator),
             .linux => |b| b.filesystem.getCachePath(allocator),
-            .windows => |b| b.filesystem.getCachePath(allocator)
+            .windows => |b| b.filesystem.getCachePath(allocator),
         };
     }
 };
@@ -65,7 +65,7 @@ pub const Scheduling = struct {
         /// Unknown size (either no p/e cores on this device or we can't classify it)
         normal,
         /// Efficiency core
-        small
+        small,
     };
 
     /// Priority of a thread.
@@ -74,7 +74,7 @@ pub const Scheduling = struct {
         high,
         normal,
         low,
-        lowest
+        lowest,
     };
 
     /// Represents a logical CPU core.

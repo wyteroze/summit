@@ -32,7 +32,7 @@ pub fn DeviceHandle(comptime D: type, comptime map_field: []const u8) type {
             writer: *std.Io.Writer,
         ) std.Io.Writer.Error!void {
             const device = self.require() catch return writer.print("<invalid handle>", .{});
-            try writer.print("{f}", .{ device });
+            try writer.print("{f}", .{device});
         }
     };
 }

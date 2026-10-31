@@ -6,13 +6,22 @@ const Mat4 = @import("Mat4.zig").Mat4;
 
 pub const Quat = extern struct {
     const Simd4 = @Vector(4, f32);
-    x: f32, y: f32, z: f32, w: f32,
+    x: f32,
+    y: f32,
+    z: f32,
+    w: f32,
 
     pub const identity: Quat = .{ .x = 0, .y = 0, .z = 0, .w = 1 };
 
-    pub fn new(x: f32, y: f32, z: f32, w: f32) Quat { return .{ .x = x, .y = y, .z = z, .w = w }; }
-    pub fn simd(self: Quat) Simd4 { return .{ self.x, self.y, self.z, self.w }; }
-    pub fn fromSimd(v: Simd4) Quat { return .{ .x = v[0], .y = v[1], .z = v[2], .w = v[3] }; }
+    pub fn new(x: f32, y: f32, z: f32, w: f32) Quat {
+        return .{ .x = x, .y = y, .z = z, .w = w };
+    }
+    pub fn simd(self: Quat) Simd4 {
+        return .{ self.x, self.y, self.z, self.w };
+    }
+    pub fn fromSimd(v: Simd4) Quat {
+        return .{ .x = v[0], .y = v[1], .z = v[2], .w = v[3] };
+    }
 
     // YXZ order. RADIANS!!!
     pub fn fromEuler(vec: Vec3) Quat {
@@ -31,7 +40,7 @@ pub const Quat = extern struct {
             .x = sx * cy * cz + cx * sy * sz,
             .y = cx * sy * cz - sx * cy * sz,
             .z = cx * cy * sz - sx * sy * cz,
-            .w = cx * cy * cz + sx * sy * sz
+            .w = cx * cy * cz + sx * sy * sz,
         };
     }
 
@@ -67,7 +76,7 @@ pub const Quat = extern struct {
             .x = n.x * s,
             .y = n.y * s,
             .z = n.z * s,
-            .w = @cos(half)
+            .w = @cos(half),
         };
     }
 
@@ -76,7 +85,7 @@ pub const Quat = extern struct {
             .x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
             .y = a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
             .z = a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
-            .w = a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z
+            .w = a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
         };
     }
 
@@ -103,7 +112,7 @@ pub const Quat = extern struct {
             .{ 1 - 2 * (yy + zz), 2 * (xy - wz), 2 * (xz + wy), 0 },
             .{ 2 * (xy + wz), 1 - 2 * (xx + zz), 2 * (yz - wx), 0 },
             .{ 2 * (xz - wy), 2 * (yz + wx), 1 - 2 * (xx + yy), 0 },
-            .{ 0, 0, 0, 1 }
+            .{ 0, 0, 0, 1 },
         } };
     }
 
@@ -112,8 +121,8 @@ pub const Quat = extern struct {
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
         try writer.print(
-            "Quat({d:.2}, {d:.2}, {d:.2}, {d:.2})", 
-            .{ self.x, self.y, self.z, self.w }
+            "Quat({d:.2}, {d:.2}, {d:.2}, {d:.2})",
+            .{ self.x, self.y, self.z, self.w },
         );
     }
 

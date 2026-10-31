@@ -19,12 +19,7 @@ pub fn iterator(self: Query) Iterator {
     var smallest_count: usize = std.math.maxInt(usize);
 
     for (self.required, 0..) |id, i| {
-        const set = self.world.storageFor(id) orelse return .{
-            .world = self.world,
-            .required = self.required,
-            .driver = null,
-            .cursor = 0
-        };
+        const set = self.world.storageFor(id) orelse return .{ .world = self.world, .required = self.required, .driver = null, .cursor = 0 };
 
         if (set.count() < smallest_count) {
             smallest_count = set.count();
@@ -33,25 +28,10 @@ pub fn iterator(self: Query) Iterator {
     }
 
     // Can't think of a better way to do this, sorry
-    if (smallest_idx >= self.required.len) return .{
-        .world = self.world, 
-        .required = self.required, 
-        .driver = null, 
-        .cursor = 0
-    };
-    const driver = self.world.storageFor(self.required[smallest_idx]) orelse return .{
-        .world = self.world,
-        .required = self.required,
-        .driver = null,
-        .cursor = 0
-    };
+    if (smallest_idx >= self.required.len) return .{ .world = self.world, .required = self.required, .driver = null, .cursor = 0 };
+    const driver = self.world.storageFor(self.required[smallest_idx]) orelse return .{ .world = self.world, .required = self.required, .driver = null, .cursor = 0 };
 
-    return .{
-        .world = self.world,
-        .required = self.required,
-        .driver = driver,
-        .cursor = 0
-    };
+    return .{ .world = self.world, .required = self.required, .driver = driver, .cursor = 0 };
 }
 
 pub const Iterator = struct {

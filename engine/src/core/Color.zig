@@ -3,6 +3,7 @@
 const std = @import("std");
 const clamp = std.math.clamp;
 
+// zig fmt: off
 pub const ColorName = enum {
     AliceBlue, AntiqueWhite, Aqua, Aquamarine, Azure,
     Beige, Bisque, Black, BlanchedAlmond, Blue, BlueViolet, Brown, BurlyWood,
@@ -56,6 +57,7 @@ pub const ColorName = enum {
         };
     }
 };
+// zig fmt: on
 
 const Color = @This();
 r: f32 = 1,
@@ -68,25 +70,25 @@ pub fn fromRgb(rc: u8, gc: u8, bc: u8, ac: u8) Color {
         .r = @as(f32, @floatFromInt(rc)) / 255.0,
         .g = @as(f32, @floatFromInt(gc)) / 255.0,
         .b = @as(f32, @floatFromInt(bc)) / 255.0,
-        .a = @as(f32, @floatFromInt(ac)) / 255.0
+        .a = @as(f32, @floatFromInt(ac)) / 255.0,
     };
 }
 
 pub fn toRgb(self: Color) struct { u8, u8, u8, u8 } {
-    return .{ 
-        @trunc(clamp(self.r * 255.0, 0.0, 255.0)), 
-        @trunc(clamp(self.g * 255.0, 0.0, 255.0)), 
-        @trunc(clamp(self.b * 255.0, 0.0, 255.0)), 
-        @trunc(clamp(self.a * 255.0, 0.0, 255.0))
+    return .{
+        @trunc(clamp(self.r * 255.0, 0.0, 255.0)),
+        @trunc(clamp(self.g * 255.0, 0.0, 255.0)),
+        @trunc(clamp(self.b * 255.0, 0.0, 255.0)),
+        @trunc(clamp(self.a * 255.0, 0.0, 255.0)),
     };
 }
 
 pub fn fromRgbFloat(rc: f32, gc: f32, bc: f32, ac: ?f32) Color {
-    return .{ 
-        .r = clamp(rc, 0.0, 1.0), 
-        .g = clamp(gc, 0.0, 1.0), 
-        .b = clamp(bc, 0.0, 1.0), 
-        .a = clamp(ac orelse 1.0, 0.0, 1.0)
+    return .{
+        .r = clamp(rc, 0.0, 1.0),
+        .g = clamp(gc, 0.0, 1.0),
+        .b = clamp(bc, 0.0, 1.0),
+        .a = clamp(ac orelse 1.0, 0.0, 1.0),
     };
 }
 
@@ -123,9 +125,11 @@ pub fn toHsv(self: Color) struct { f32, f32, f32, f32 } {
 
     var h: f32 = 0.0;
     if (delta > 0.0) {
+        // zig fmt: off
         h = (1.0 / 6.0) * if (max == self.r) @mod((self.g - self.b) / delta, 6.0)
-        else if (max == self.g) (self.b - self.r) / delta + 2.0
-        else (self.r - self.g) / delta + 4.0;
+            else if (max == self.g) (self.b - self.r) / delta + 2.0
+            else (self.r - self.g) / delta + 4.0;
+        // zig fmt: on
     }
 
     const s: f32 = if (max > 0.0) delta / max else 0.0;
@@ -150,20 +154,24 @@ pub fn toHex(self: Color) u32 {
     const r, const g, const b, const a = toRgb(self);
 
     return (@as(u32, r) << 24) |
-           (@as(u32, g) << 16) |
-           (@as(u32, b) << 8)  |
-            @as(u32, a);
+        (@as(u32, g) << 16) |
+        (@as(u32, b) << 8) |
+        @as(u32, a);
 }
 
-pub fn toArr(self: Color) [4]f32 { return .{ self.r, self.g, self.b, self.a }; }
-pub fn fromArr(arr: [4]f32) Color { return .{ .r = arr[0], .g = arr[1], .b = arr[2], .a = arr[3] }; }
+pub fn toArr(self: Color) [4]f32 {
+    return .{ self.r, self.g, self.b, self.a };
+}
+pub fn fromArr(arr: [4]f32) Color {
+    return .{ .r = arr[0], .g = arr[1], .b = arr[2], .a = arr[3] };
+}
 
 pub fn srgbEncode(self: Color) Color {
     return .{
         .r = srgbEncodeChannel(self.r),
         .g = srgbEncodeChannel(self.g),
         .b = srgbEncodeChannel(self.b),
-        .a = self.a
+        .a = self.a,
     };
 }
 
@@ -172,7 +180,7 @@ pub fn srgbDecode(self: Color) Color {
         .r = srgbDecodeChannel(self.r),
         .g = srgbDecodeChannel(self.g),
         .b = srgbDecodeChannel(self.b),
-        .a = self.a
+        .a = self.a,
     };
 }
 
@@ -181,7 +189,7 @@ pub fn lerp(self: Color, other: Color, t: f32) Color {
         .r = std.math.lerp(self.r, other.r, t),
         .g = std.math.lerp(self.g, other.g, t),
         .b = std.math.lerp(self.b, other.b, t),
-        .a = std.math.lerp(self.a, other.a, t)
+        .a = std.math.lerp(self.a, other.a, t),
     };
 }
 
@@ -190,10 +198,7 @@ pub fn withAlpha(self: Color, alpha: f32) Color {
 }
 
 pub fn eql(self: Color, other: Color) bool {
-    return self.r == other.r
-        and self.g == other.g
-        and self.b == other.b
-        and self.a == other.a;
+    return self.r == other.r and self.g == other.g and self.b == other.b and self.a == other.a;
 }
 
 fn srgbEncodeChannel(c: f32) f32 {
@@ -229,5 +234,5 @@ pub const api = bind.value(Color, .{
         bind.func("fromHSV", Color.fromHsv),
         //bind.func("fromHex", Color.fromHexString)
     },
-    .ops = .{ .tostring = .auto }
+    .ops = .{ .tostring = .auto },
 });

@@ -12,7 +12,7 @@ pub fn findBindingPaths(io: std.Io, allocator: std.mem.Allocator, registry_path:
     if (ast.errors.len > 0) return error.RegistryHasErrors;
 
     var paths: std.ArrayList([]const u8) = .empty;
-    
+
     const bindings_init = findBindingsInitNode(&ast) orelse return error.BindingsDeclNotFound;
 
     var elem_buf: [2]std.zig.Ast.Node.Index = undefined;
@@ -30,11 +30,11 @@ fn findBindingsInitNode(ast: *const std.zig.Ast) ?std.zig.Ast.Node.Index {
     for (ast.rootDecls()) |d| {
         switch (ast.nodeTag(d)) {
             .simple_var_decl, .local_var_decl, .global_var_decl, .aligned_var_decl => {},
-            else => continue
+            else => continue,
         }
 
         const var_decl = ast.fullVarDecl(d) orelse continue;
-        const name_tok = var_decl.ast.mut_token+1; // the token after the const/var keyword
+        const name_tok = var_decl.ast.mut_token + 1; // the token after the const/var keyword
         const name = ast.tokenSlice(name_tok);
         if (!std.mem.eql(u8, name, "bindings")) continue;
 
@@ -47,15 +47,21 @@ fn findBindingsInitNode(ast: *const std.zig.Ast) ?std.zig.Ast.Node.Index {
 fn arrayInitElements(
     ast: *const std.zig.Ast,
     node: std.zig.Ast.Node.Index,
-    buf: *[2]std.zig.Ast.Node.Index
+    buf: *[2]std.zig.Ast.Node.Index,
 ) ?[]const std.zig.Ast.Node.Index {
     return switch (ast.nodeTag(node)) {
         .array_init_dot_two, .array_init_dot_two_comma => blk: {
             const opt_pair = ast.nodeData(node).opt_node_and_opt_node;
             var len: usize = 0;
 
-            if (opt_pair[0].unwrap()) |n| { buf[len] = n; len += 1; }
-            if (opt_pair[1].unwrap()) |n| { buf[len] = n; len += 1; }
+            if (opt_pair[0].unwrap()) |n| {
+                buf[len] = n;
+                len += 1;
+            }
+            if (opt_pair[1].unwrap()) |n| {
+                buf[len] = n;
+                len += 1;
+            }
 
             break :blk buf[0..len];
         },
@@ -63,7 +69,7 @@ fn arrayInitElements(
             const range = ast.nodeData(node).extra_range;
             break :blk ast.extraDataSlice(range, std.zig.Ast.Node.Index);
         },
-        else => null
+        else => null,
     };
 }
 
@@ -76,8 +82,14 @@ fn importPathFromBuiltinCall(ast: *const std.zig.Ast, node: std.zig.Ast.Node.Ind
             const opt_pair = ast.nodeData(node).opt_node_and_opt_node;
             var len: usize = 0;
 
-            if (opt_pair[0].unwrap()) |n| { arg_buf[len] = n; len += 1; }
-            if (opt_pair[1].unwrap()) |n| { arg_buf[len] = n; len += 1; }
+            if (opt_pair[0].unwrap()) |n| {
+                arg_buf[len] = n;
+                len += 1;
+            }
+            if (opt_pair[1].unwrap()) |n| {
+                arg_buf[len] = n;
+                len += 1;
+            }
 
             break :blk arg_buf[0..len];
         },

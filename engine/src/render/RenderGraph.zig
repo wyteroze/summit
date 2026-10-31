@@ -20,7 +20,7 @@ pub fn init(allocator: std.mem.Allocator) RenderGraph {
         .sorted = .empty,
         .resources = .init(allocator),
         .external_resources = .init(allocator),
-        .dirty = true
+        .dirty = true,
     };
 }
 
@@ -51,9 +51,7 @@ pub fn compile(self: *RenderGraph) !void {
         for (n.writes) |w| {
             const result = try producer_of.getOrPut(w.id);
             if (result.found_existing) {
-                std.log.err("resource '{s}' is written by both '{s}' and '{s}'", .{
-                    w.name, self.nodes.items[result.value_ptr.*].name, n.name
-                });
+                std.log.err("resource '{s}' is written by both '{s}' and '{s}'", .{ w.name, self.nodes.items[result.value_ptr.*].name, n.name });
 
                 return error.DuplicateResourceWriter;
             }

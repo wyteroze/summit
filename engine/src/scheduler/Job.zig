@@ -19,7 +19,7 @@ pub fn Wrap(comptime func: anytype) type {
         pub fn submit(self: *const @This(), scheduler: *Scheduler, opts: struct {
             priority: JobPriority = .normal,
             affinity: JobAffinity = .any,
-            counter: ?*Counter = null
+            counter: ?*Counter = null,
         }) void {
             const wrapped = struct {
                 fn c(ctx: *anyopaque) void {
@@ -29,12 +29,12 @@ pub fn Wrap(comptime func: anytype) type {
             }.c;
 
             if (opts.counter) |c| c.add(1);
-            scheduler.submit(.{ 
-                .func = wrapped, 
+            scheduler.submit(.{
+                .func = wrapped,
                 .data = @ptrCast(&self.args),
                 .counter = opts.counter,
                 .priority = opts.priority,
-                .affinity = opts.affinity
+                .affinity = opts.affinity,
             });
         }
     };
@@ -47,12 +47,12 @@ pub const JobPriority = enum(u8) {
     high = 1,
     normal = 2,
     low = 3,
-    background = 4
+    background = 4,
 };
 
 pub const JobAffinity = enum {
     /// Job can run on any thread
     any,
     /// Job can only run on main thread
-    main
+    main,
 };

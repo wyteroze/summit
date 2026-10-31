@@ -37,17 +37,17 @@ pub fn init(gpu_device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader) !Forwar
                 .{ .offset = 24, .format = .float2 },
             },
         }),
-        .vs_ubuf = try gpu_device.createBuffer(.{ 
-            .name = "Vs ubuf", 
-            .type = .uniform, 
-            .usage = .dynamic, 
-            .size = @sizeOf([3]math.Mat4) 
+        .vs_ubuf = try gpu_device.createBuffer(.{
+            .name = "Vs ubuf",
+            .type = .uniform,
+            .usage = .dynamic,
+            .size = @sizeOf([3]math.Mat4),
         }),
-        .light_ubuf = try gpu_device.createBuffer(.{ 
-            .name = "Light ubuf", 
-            .type = .uniform, 
-            .usage = .dynamic, 
-            .size = @sizeOf(gpu.types.GpuLightParams) 
+        .light_ubuf = try gpu_device.createBuffer(.{
+            .name = "Light ubuf",
+            .type = .uniform,
+            .usage = .dynamic,
+            .size = @sizeOf(gpu.types.GpuLightParams),
         }),
     };
 }
@@ -59,7 +59,7 @@ pub fn execute(self: *ForwardPass, ctx: pass.PassContext) void {
         .width = ctx.view.viewport_size[0],
         .height = ctx.view.viewport_size[1],
         .depth_target = depth_handle,
-        .color_target = color_handle
+        .color_target = color_handle,
     });
     self.pipeline.apply();
 
@@ -69,12 +69,12 @@ pub fn execute(self: *ForwardPass, ctx: pass.PassContext) void {
 
     const tile_count: [2]u32 = .{
         (ctx.view.viewport_size[0] + 15) / 16,
-        (ctx.view.viewport_size[1] + 15) / 16
+        (ctx.view.viewport_size[1] + 15) / 16,
     };
-    const light_params = gpu.types.GpuLightParams{
+    const light_params: gpu.types.GpuLightParams = .{
         .ambient = ctx.scene.ambient.toArr()[0..3].*,
         .screen_size = ctx.view.viewport_size,
-        .tile_count = tile_count
+        .tile_count = tile_count,
     };
     self.light_ubuf.update(std.mem.asBytes(&light_params));
 
@@ -96,8 +96,8 @@ pub fn execute(self: *ForwardPass, ctx: pass.PassContext) void {
                 .{ .name = "lightParams", .handle = .{ .uniform_buffer = self.light_ubuf.handle } },
                 .{ .name = "lights", .handle = .{ .storage_buffer = lights_handle } },
                 .{ .name = "lightGrid", .handle = .{ .storage_buffer = light_grid_handle } },
-                .{ .name = "lightIndexList", .handle = .{ .storage_buffer = light_index_list_handle } }
-            }
+                .{ .name = "lightIndexList", .handle = .{ .storage_buffer = light_index_list_handle } },
+            },
         });
 
         self.pipeline.draw(0, obj.mesh.index_count, 1);
@@ -115,7 +115,7 @@ pub fn node(self: *ForwardPass) pass.PassNode {
     return .{
         .name = "ForwardPass",
         .reads = &.{ resource.depth_buffer, resource.lights_buffer, resource.light_grid, resource.light_index_list, resource.color_target },
-        .writes = &.{ },
+        .writes = &.{},
         .ptr = self,
         .execute_fn = struct {
             fn c(ptr: *anyopaque, ctx: pass.PassContext) void {

@@ -6,7 +6,7 @@ pub const types = @import("types.zig");
 pub const Backend = @import("Backend.zig").Backend;
 const signal = @import("../core/signal.zig");
 
-pub const PlatformEvent = signal.Signal(.{ desc.PlatformEvent });
+pub const PlatformEvent = signal.Signal(.{desc.PlatformEvent});
 
 const Platform = @This();
 backend: Backend,
@@ -14,7 +14,9 @@ dispatcher: signal.Dispatcher,
 platform_event: PlatformEvent,
 
 pub fn init(self: *Platform, allocator: std.mem.Allocator, b: Backend) !void {
-    switch (b) { inline else => |bk| bk.init() }
+    switch (b) {
+        inline else => |bk| bk.init(),
+    }
 
     self.backend = b;
     self.dispatcher = .init(allocator);
@@ -22,126 +24,182 @@ pub fn init(self: *Platform, allocator: std.mem.Allocator, b: Backend) !void {
 }
 
 pub fn deinit(self: *Platform) void {
-    switch (self.backend) { inline else => |*b| b.deinit() }
+    switch (self.backend) {
+        inline else => |*b| b.deinit(),
+    }
     self.platform_event.deinit();
     self.dispatcher.deinit();
 }
 
 pub fn createSurface(self: *Platform, d: desc.SurfaceDesc) !types.SurfaceHandle {
-    return switch (self.backend) { inline else => |*b| b.createSurface(d) };
+    return switch (self.backend) {
+        inline else => |*b| b.createSurface(d),
+    };
 }
 
 pub fn getSurfacePixelSize(self: *Platform, h: types.SurfaceHandle) ![2]u32 {
-    return switch (self.backend) { inline else => |*b| b.getSurfacePixelSize(h) };
+    return switch (self.backend) {
+        inline else => |*b| b.getSurfacePixelSize(h),
+    };
 }
 
 pub fn getSurfaceLogicalSize(self: *Platform, h: types.SurfaceHandle) ![2]u32 {
-    return switch (self.backend) { inline else => |*b| b.getSurfaceLogicalSize(h) };
+    return switch (self.backend) {
+        inline else => |*b| b.getSurfaceLogicalSize(h),
+    };
 }
 
 pub fn getSurfaceScale(self: *Platform, h: types.SurfaceHandle) !f32 {
-    return switch (self.backend) { inline else => |*b| try b.getSurfaceScale(h) };
+    return switch (self.backend) {
+        inline else => |*b| try b.getSurfaceScale(h),
+    };
 }
 
 pub fn setSurfaceSize(self: *Platform, h: types.SurfaceHandle, size: [2]u32) !void {
-    return switch (self.backend) { inline else => |*b| try b.setSurfaceSize(h, size) };
+    return switch (self.backend) {
+        inline else => |*b| try b.setSurfaceSize(h, size),
+    };
 }
 
 pub fn setSurfaceFullscreen(self: *Platform, h: types.SurfaceHandle, enabled: bool) !void {
-    switch (self.backend) { inline else => |*b| try b.setSurfaceFullscreen(h, enabled) }
+    switch (self.backend) {
+        inline else => |*b| try b.setSurfaceFullscreen(h, enabled),
+    }
 }
 
 pub fn maximizeSurface(self: *Platform, h: types.SurfaceHandle) !void {
-    switch (self.backend) { inline else => |*b| try b.maximizeSurface(h) }
+    switch (self.backend) {
+        inline else => |*b| try b.maximizeSurface(h),
+    }
 }
 
 pub fn minimizeSurface(self: *Platform, h: types.SurfaceHandle) !void {
-    switch (self.backend) { inline else => |*b| try b.minimizeSurface(h) }
+    switch (self.backend) {
+        inline else => |*b| try b.minimizeSurface(h),
+    }
 }
 
 pub fn restoreSurface(self: *Platform, h: types.SurfaceHandle) !void {
-    switch (self.backend) { inline else => |*b| try b.restoreSurface(h) }
+    switch (self.backend) {
+        inline else => |*b| try b.restoreSurface(h),
+    }
 }
 
 pub fn getSurfaceFocused(self: *Platform, h: types.SurfaceHandle) !bool {
-    return switch (self.backend) { inline else => |*b| b.getSurfaceFocused(h) };
+    return switch (self.backend) {
+        inline else => |*b| b.getSurfaceFocused(h),
+    };
 }
 
 pub fn focusSurface(self: *Platform, h: types.SurfaceHandle) !void {
-    switch (self.backend) { inline else => |*b| try b.focusSurface(h) }
+    switch (self.backend) {
+        inline else => |*b| try b.focusSurface(h),
+    }
 }
 
 pub fn destroySurface(self: *Platform, h: types.SurfaceHandle) void {
-    switch (self.backend) { inline else => |*b| b.destroySurface(h) }
+    switch (self.backend) {
+        inline else => |*b| b.destroySurface(h),
+    }
 }
 
 pub fn poll(self: *Platform) void {
-    while (switch (self.backend) { inline else => |*b| b.pollEvent() }) |e| {
-        self.platform_event.fire(.{ e });
+    while (switch (self.backend) {
+        inline else => |*b| b.pollEvent(),
+    }) |e| {
+        self.platform_event.fire(.{e});
     }
 
     self.dispatcher.flush();
 }
 
 pub fn showError(self: Platform, msg: [:0]const u8) void {
-    switch (self.backend) { inline else => |*b| b.showError(msg) }
+    switch (self.backend) {
+        inline else => |*b| b.showError(msg),
+    }
 }
 
 pub fn setCursorLocked(self: Platform, mode: bool) void {
-    switch (self.backend) { inline else => |*b| b.setCursorLocked(mode) }
+    switch (self.backend) {
+        inline else => |*b| b.setCursorLocked(mode),
+    }
 }
 
 pub fn getCursorLocked(self: Platform) bool {
-    return switch (self.backend) { inline else => |*b| b.getCursorLocked() };
+    return switch (self.backend) {
+        inline else => |*b| b.getCursorLocked(),
+    };
 }
 
 pub fn setCursorVisible(self: Platform, mode: bool) void {
-    switch (self.backend) { inline else => |*b| b.setCursorVisible(mode) }
+    switch (self.backend) {
+        inline else => |*b| b.setCursorVisible(mode),
+    }
 }
 
 pub fn getCursorVisible(self: Platform) bool {
-    return switch (self.backend) { inline else => |*b| b.getCursorVisible() };
+    return switch (self.backend) {
+        inline else => |*b| b.getCursorVisible(),
+    };
 }
 
 pub fn openAudioDevice(self: Platform, d: desc.AudioSpec) !types.AudioDeviceHandle {
-    return switch (self.backend) { inline else => |*b| b.openAudioDevice(d) };
+    return switch (self.backend) {
+        inline else => |*b| b.openAudioDevice(d),
+    };
 }
 
 pub fn closeAudioDevice(self: Platform, h: types.AudioDeviceHandle) void {
-    return switch (self.backend) { inline else => |*b| b.closeAudioDevice(h) };
+    return switch (self.backend) {
+        inline else => |*b| b.closeAudioDevice(h),
+    };
 }
 
 pub fn audioDeviceCreateStream(
-    self: Platform, 
-    h: types.AudioDeviceHandle, 
-    d: desc.AudioSpec, 
-    comptime Userdata: type, 
-    comptime callback: ?*const fn (?*Userdata, types.AudioStreamHandle, usize, usize) void, 
-    user_data: ?*Userdata
+    self: Platform,
+    h: types.AudioDeviceHandle,
+    d: desc.AudioSpec,
+    comptime Userdata: type,
+    comptime callback: ?*const fn (?*Userdata, types.AudioStreamHandle, usize, usize) void,
+    user_data: ?*Userdata,
 ) !types.AudioStreamHandle {
-    return switch (self.backend) { inline else => |*b| b.audioDeviceCreateStream(h, d, Userdata, callback, user_data) };
+    return switch (self.backend) {
+        inline else => |*b| b.audioDeviceCreateStream(h, d, Userdata, callback, user_data),
+    };
 }
 
 pub fn deinitStream(self: Platform, h: types.AudioStreamHandle) void {
-    switch (self.backend) { inline else => |*b| b.deinitStream(h) }
+    switch (self.backend) {
+        inline else => |*b| b.deinitStream(h),
+    }
 }
 
 pub fn pauseAudioStream(self: Platform, h: types.AudioStreamHandle) void {
-    return switch (self.backend) { inline else => |*b| b.pauseAudioStream(h) };
+    return switch (self.backend) {
+        inline else => |*b| b.pauseAudioStream(h),
+    };
 }
 
 pub fn resumeAudioStream(self: Platform, h: types.AudioStreamHandle) void {
-    return switch (self.backend) { inline else => |*b| b.resumeAudioStream(h) };
+    return switch (self.backend) {
+        inline else => |*b| b.resumeAudioStream(h),
+    };
 }
 
 pub fn setAudioStreamGain(self: Platform, h: types.AudioStreamHandle, gain: f32) void {
-    switch (self.backend) { inline else => |*b| b.setAudioStreamGain(h, gain) }
+    switch (self.backend) {
+        inline else => |*b| b.setAudioStreamGain(h, gain),
+    }
 }
 
 pub fn getAudioStreamGain(self: Platform, h: types.AudioStreamHandle) f32 {
-    return switch (self.backend) { inline else => |*b| b.getAudioStreamGain(h) };
+    return switch (self.backend) {
+        inline else => |*b| b.getAudioStreamGain(h),
+    };
 }
 
 pub fn putAudioStreamData(self: Platform, h: types.AudioStreamHandle, data: []const u8) !void {
-    switch (self.backend) { inline else => |*b| try b.putAudioStreamData(h, data) }
+    switch (self.backend) {
+        inline else => |*b| try b.putAudioStreamData(h, data),
+    }
 }

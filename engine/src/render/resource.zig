@@ -55,12 +55,15 @@ pub const ResourceTable = struct {
         .storage_buffer => gpu.types.BufferHandle,
         .sampler => gpu.types.SamplerHandle,
         .render_target => gpu.types.RenderTargetHandle,
-        .depth_target => gpu.types.DepthTargetHandle
+        .depth_target => gpu.types.DepthTargetHandle,
     } {
         const handle = self.map.get(ref.id) orelse return null;
         return switch (handle) {
             kind => |v| v,
-            else => blk: { std.log.err("invalid type", .{}); break :blk null; },
+            else => blk: {
+                std.log.err("invalid type", .{});
+                break :blk null;
+            },
         };
     }
 };

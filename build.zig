@@ -6,8 +6,8 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const sdk_path = b.option([]const u8, "sdk", "Path to macOS SDK (looks something like `MacOSX26.5.sdk`)")
-        orelse std.zig.system.darwin.getSdk(b.allocator, b.graph.io, &target.result);
+    const sdk_path = b.option([]const u8, "sdk", "Path to macOS SDK (looks something like `MacOSX26.5.sdk`)") orelse
+        std.zig.system.darwin.getSdk(b.allocator, b.graph.io, &target.result);
 
     const backend = b.option(enum { gl, d3d11, d3d12, vulkan }, "backend", "Backend to use\n(default: gl)") orelse .gl;
     const check_only = b.option(bool, "check_only", "Only build the `check` step (skips engine build)") orelse false;
@@ -48,16 +48,16 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
-            .{ .name = "engine", .module = dep_engine.module("engine") }
+            .{ .name = "engine", .module = dep_engine.module("engine") },
         },
-        .link_libc = true
+        .link_libc = true,
     });
 
     exe_mod.linkLibrary(dep_engine.artifact("engine"));
 
     const exe = b.addExecutable(.{
         .name = "summit",
-        .root_module = exe_mod
+        .root_module = exe_mod,
     });
     b.installArtifact(exe);
 
@@ -79,7 +79,7 @@ pub fn build(b: *std.Build) void {
     const run_cmd = b.addRunArtifact(exe);
     run_step.dependOn(&run_cmd.step);
     run_cmd.step.dependOn(b.getInstallStep());
-    
+
     const test_step = b.step("test", "Test the app");
     const test_cmd = b.addTest(.{ .root_module = exe_mod });
     test_step.dependOn(&test_cmd.step);

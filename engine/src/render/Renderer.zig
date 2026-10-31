@@ -87,8 +87,8 @@ pub fn init(allocator: std.mem.Allocator, gpu_device: *gpu.GpuDevice, skybox_cub
     try ui_graph.markExternal(resource.default_image);
     try ui_graph.compile();
 
-    return .{ 
-        .allocator = allocator, 
+    return .{
+        .allocator = allocator,
         .frame_allocator = .init(allocator),
         .render_views = .init(allocator),
         .gpu_device = gpu_device,
@@ -98,38 +98,36 @@ pub fn init(allocator: std.mem.Allocator, gpu_device: *gpu.GpuDevice, skybox_cub
         .windows = .init(allocator),
         .default_image = try gpu_device.createImage(.{
             .name = "Default image",
-            .width = 1, .height = 1,
+            .width = 1,
+            .height = 1,
             .format = .rgba8,
-            .data = &.{ 0xFF, 0xFF, 0xFF, 0xFF }
+            .data = &.{ 0xFF, 0xFF, 0xFF, 0xFF },
         }),
         .default_quad = .{
             .vertex_buffer = try gpu_device.createBuffer(.{
                 .name = "Default quad vertex buffer",
                 .data = std.mem.sliceAsBytes(([_]assets.types.Vertex{
-                    .{ .position = .{ -0.5,  0.5, 0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 0, 0 } },
-                    .{ .position = .{  0.5,  0.5, 0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 1, 0 } },
+                    .{ .position = .{ -0.5, 0.5, 0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 0, 0 } },
+                    .{ .position = .{ 0.5, 0.5, 0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 1, 0 } },
                     .{ .position = .{ -0.5, -0.5, 0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 0, 1 } },
-                    .{ .position = .{  0.5, -0.5, 0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 1, 1 } },
+                    .{ .position = .{ 0.5, -0.5, 0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 1, 1 } },
                 })[0..]),
                 .size = 4,
             }),
             .index_buffer = try gpu_device.createBuffer(.{
                 .name = "Default quad index buffer",
                 .type = .index,
-                .data = std.mem.sliceAsBytes(([_]u32{
-                    0, 2, 1,
-                    1, 2, 3
-                })[0..])
+                .data = std.mem.sliceAsBytes(([_]u32{ 0, 2, 1, 1, 2, 3 })[0..]),
             }),
             .vertex_count = 4,
-            .index_count = 6
+            .index_count = 6,
         },
         .lights_ssbo = try gpu_device.createBuffer(.{
             .name = "Lights storage buffer",
             .type = .storage,
             .usage = .default,
             .size = max_lights * @sizeOf(gpu.types.GpuLight),
-            .stride = @sizeOf(gpu.types.GpuLight)
+            .stride = @sizeOf(gpu.types.GpuLight),
         }),
     };
 }
@@ -139,7 +137,7 @@ pub fn deinit(self: *Renderer) void {
     while (win_iter.next()) |win| win.swapchain.deinit();
     var rv_iter = self.render_views.valueIterator();
     while (rv_iter.next()) |rv| rv.deinit();
-    
+
     self.windows.deinit();
     self.render_views.deinit();
     self.lights_ssbo.deinit();
@@ -173,7 +171,7 @@ pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: 
             .view = &req.frame,
             .scene = &req.scene,
             .resources = &self.scene_graph.resources,
-            .frame_allocator = self.frame_allocator.allocator()
+            .frame_allocator = self.frame_allocator.allocator(),
         };
 
         self.scene_graph.execute(ctx);
@@ -189,13 +187,13 @@ pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: 
         const scene: types.RenderScene = .{
             .ui_items = req.ui_items,
             .objects = &.{},
-            .lights = &.{}
+            .lights = &.{},
         };
         const frame: types.RenderFrame = .{
             .view_matrix = .identity,
             .proj_matrix = .identity,
             .viewport_size = win.pixel_size,
-            .scale = win.scale
+            .scale = win.scale,
         };
 
         self.ui_graph.resources.map.clearRetainingCapacity();
@@ -208,7 +206,7 @@ pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: 
             .view = &frame,
             .scene = &scene,
             .resources = &self.ui_graph.resources,
-            .frame_allocator = self.frame_allocator.allocator()
+            .frame_allocator = self.frame_allocator.allocator(),
         });
     }
 

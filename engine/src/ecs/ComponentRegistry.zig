@@ -15,12 +15,7 @@ infos: std.ArrayList(*const ComponentInfo),
 ids: std.StringHashMap(ComponentId),
 
 pub fn init(allocator: std.mem.Allocator) ComponentRegistry {
-    return .{ 
-        .allocator = allocator, 
-        .arena = .init(allocator), 
-        .infos = .empty, 
-        .ids = .init(allocator)
-    };
+    return .{ .allocator = allocator, .arena = .init(allocator), .infos = .empty, .ids = .init(allocator) };
 }
 
 pub fn deinit(self: *ComponentRegistry) void {
@@ -39,12 +34,12 @@ pub fn register(self: *ComponentRegistry, comptime T: type, name: []const u8) !C
 }
 
 pub fn registerRaw(
-    self: *ComponentRegistry, 
-    name: []const u8, 
-    type_name: []const u8, 
-    size: u32, 
-    alignment: u32, 
-    free_fn: ?ComponentInfo.FreeFn
+    self: *ComponentRegistry,
+    name: []const u8,
+    type_name: []const u8,
+    size: u32,
+    alignment: u32,
+    free_fn: ?ComponentInfo.FreeFn,
 ) !ComponentId {
     if (size > max_component_size or alignment > max_alignment) return error.ComponentTooLarge;
 

@@ -4,6 +4,4 @@ const std = @import("std");
 
 const Display = @This();
 
-pub const DisplayHandle = struct {
-    
-};
+pub const DisplayHandle = struct {};

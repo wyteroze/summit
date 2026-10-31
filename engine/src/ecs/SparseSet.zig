@@ -19,9 +19,14 @@ dense_data: std.array_list.Aligned(u8, .@"16"),
 const null_idx = std.math.maxInt(u32);
 
 pub fn init(allocator: std.mem.Allocator, info: *const ComponentInfo, component_id: ComponentId) SparseSet {
-    return .{ 
-        .allocator = allocator, .component_id = component_id, .info = info, .elem_size = info.size,
-        .sparse = .empty, .dense = .empty, .dense_data = .empty
+    return .{
+        .allocator = allocator,
+        .component_id = component_id,
+        .info = info,
+        .elem_size = info.size,
+        .sparse = .empty,
+        .dense = .empty,
+        .dense_data = .empty,
     };
 }
 

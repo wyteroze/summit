@@ -15,11 +15,11 @@ const purge_rate: std.Io.Duration = .fromMilliseconds(500);
 
 pub const UploadContext = struct {
     /// For images only
-    is_cubemap: bool = false
+    is_cubemap: bool = false,
 };
 
-pub const AssetHandle = struct { 
-    id: u64, 
+pub const AssetHandle = struct {
+    id: u64,
     assets: *Assets,
 
     pub fn hasCpuData(self: AssetHandle) bool {
@@ -39,12 +39,12 @@ pub const AssetHandle = struct {
         return self;
     }
 
-    pub fn cpuRelease(self: AssetHandle) void {        
+    pub fn cpuRelease(self: AssetHandle) void {
         self.assets.cpuDeref(self.id) catch {
             std.log.warn("attempt to release cpu data when none exists", .{});
         };
     }
-    
+
     pub fn gpuClone(self: AssetHandle) AssetHandle {
         self.assets.gpuRef(self.id) catch {
             std.log.warn("attempt to clone gpu data when none exists", .{});
@@ -63,11 +63,11 @@ pub const AssetHandle = struct {
         .image => types.Image,
         .script_source => types.ScriptSource,
         .font => types.Font,
-        .audio => types.AudioStream
+        .audio => types.AudioStream,
     } {
         const data = try self.assets.getCpuData(self.id);
         const a_type = @as(AssetData.AssetType, data);
-        if (a_type != asset_type) return error.WrongAssetKind; 
+        if (a_type != asset_type) return error.WrongAssetKind;
 
         return @field(data, @tagName(asset_type));
     }
@@ -76,11 +76,11 @@ pub const AssetHandle = struct {
         .mesh => types.GpuMesh,
         .image => types.GpuImage,
         .font => render.text.FontAtlas,
-        .script_source, .audio => unreachable
+        .script_source, .audio => unreachable,
     } {
         const data = try self.assets.getGpuData(self.id);
         const a_type = @as(AssetData.AssetType, data);
-        if (a_type != asset_type) return error.WrongAssetKind; 
+        if (a_type != asset_type) return error.WrongAssetKind;
         if (!a_type.uploadable()) return error.UnuploadableAssetKind;
 
         return @field(data, @tagName(asset_type));
@@ -90,7 +90,7 @@ pub const AssetHandle = struct {
         .mesh => types.GpuMesh,
         .image => types.GpuImage,
         .font => render.text.FontAtlas,
-        .script_source, .audio => unreachable
+        .script_source, .audio => unreachable,
     } {
         if (!self.hasGpuData()) try self.upload(upload_ctx);
         return self.gpuGet(asset_type);
@@ -111,7 +111,7 @@ pub const AssetHandle = struct {
         self: @This(),
         writer: *std.Io.Writer,
     ) std.Io.Writer.Error!void {
-        try writer.print("Asset {d}", .{ self.id });
+        try writer.print("Asset {d}", .{self.id});
     }
 };
 
@@ -163,7 +163,7 @@ pub fn init(allocator: std.mem.Allocator, io: std.Io, gpu_device: *gpu.GpuDevice
         .gpu_device = gpu_device,
         .slots = .init(allocator),
         .sources = sources,
-        .last_purge = .now(io, .awake)
+        .last_purge = .now(io, .awake),
     };
 }
 
@@ -182,7 +182,7 @@ pub fn load(self: *Assets, path: []const u8) !AssetHandle {
     defer uri.deinit(self.allocator);
 
     const source = self.sources.get(uri.scheme) orelse {
-        std.log.err("unknown scheme '{s}://'", .{ uri.scheme });
+        std.log.err("unknown scheme '{s}://'", .{uri.scheme});
         return error.UnknownScheme;
     };
     const id = std.hash.Wyhash.hash(hash_seed, path);
@@ -209,7 +209,7 @@ pub fn upload(self: *Assets, handle: AssetHandle, upload_ctx: UploadContext) !vo
     const asset_type = std.meta.activeTag(entry.cpu_data.?);
     if (!asset_type.uploadable()) return error.IncompatibleAssetType;
 
-    const gpu_data: AssetData.GpuAssetData = 
+    const gpu_data: AssetData.GpuAssetData =
         try .fromCpuData(entry.cpu_data.?, entry.path, self.allocator, self.gpu_device, upload_ctx);
 
     entry.gpu_data = gpu_data;
@@ -273,7 +273,7 @@ pub const api = bind.module("assets", .{
         bind.func("load", Assets.load),
         bind.handle(AssetHandle, .{
             .release = bind.func("release", AssetHandle.cpuRelease),
-            .ops = .{ .eq = .{ .member = bind.func("eq", AssetHandle.eql) }, .tostring = .auto }
-        })
-    }
+            .ops = .{ .eq = .{ .member = bind.func("eq", AssetHandle.eql) }, .tostring = .auto },
+        }),
+    },
 });

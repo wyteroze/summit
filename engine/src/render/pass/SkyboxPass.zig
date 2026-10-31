@@ -26,9 +26,9 @@ pub fn init(device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader, cubemap: gp
         .resources = &.{
             .{ .name = "vsParams", .visibility = .vertex_fragment, .kind = .uniform_buffer },
             .{ .name = "skyboxTexture", .visibility = .fragment, .kind = .texture },
-            .{ .name = "skyboxSampler", .visibility = .fragment, .kind = .sampler }
+            .{ .name = "skyboxSampler", .visibility = .fragment, .kind = .sampler },
         },
-        .index_type = .uint32
+        .index_type = .uint32,
     });
 
     return .{
@@ -39,9 +39,9 @@ pub fn init(device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader, cubemap: gp
             .name = "Skybox view uniforms",
             .type = .uniform,
             .usage = .dynamic,
-            .size = @sizeOf(math.Mat4)
+            .size = @sizeOf(math.Mat4),
         }),
-        .cubemap = cubemap
+        .cubemap = cubemap,
     };
 }
 
@@ -60,7 +60,7 @@ fn execute(self: *SkyboxPass, ctx: pass.PassContext) void {
         .width = ctx.view.viewport_size[0],
         .height = ctx.view.viewport_size[1],
         .depth_target = depth_handle,
-        .color_target = color_handle
+        .color_target = color_handle,
     });
 
     var rotation_only_view = ctx.view.view_matrix;
@@ -78,8 +78,8 @@ fn execute(self: *SkyboxPass, ctx: pass.PassContext) void {
         .resources = &.{
             .{ .name = "vsParams", .handle = .{ .uniform_buffer = self.view_ubo.handle } },
             .{ .name = "skyboxTexture", .handle = .{ .texture = self.cubemap.handle } },
-            .{ .name = "skyboxSampler", .handle = .{ .sampler = self.sampler.handle } }
-        }
+            .{ .name = "skyboxSampler", .handle = .{ .sampler = self.sampler.handle } },
+        },
     });
     self.pipeline.draw(0, 3, 1);
 }
@@ -99,6 +99,6 @@ pub fn node(self: *SkyboxPass) pass.PassNode {
             fn c(ptr: *anyopaque, allocator: std.mem.Allocator) void {
                 deinit(@ptrCast(@alignCast(ptr)), allocator);
             }
-        }.c
+        }.c,
     };
 }

@@ -53,6 +53,6 @@ pub fn runOne(self: *Stepper) void {
         .counter = &self.done,
         .priority = self.priority,
     });
-    
+
     sched.waitBlocking(&self.done);
 }

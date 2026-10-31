@@ -3,19 +3,9 @@
 const math = @import("../core/math/math.zig");
 const Display = @import("Display.zig");
 
-pub const WindowState = enum {
-    normal,
-    minimized,
-    maximized,
-    fullscreen
-};
+pub const WindowState = enum { normal, minimized, maximized, fullscreen };
 
-pub const WindowKind = enum {
-    normal,
-    utility,
-    tooltip,
-    popup
-};
+pub const WindowKind = enum { normal, utility, tooltip, popup };
 
 pub const WindowPosition = struct {
     /// Null = current primary display

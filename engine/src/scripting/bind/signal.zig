@@ -18,15 +18,15 @@ pub fn Handle(comptime Sig: type) type {
 pub const connection = bind.value(signal.Connection, .{
     .name = "SignalConnection",
     .methods = &.{
-        bind.func("Disconnect", signal.Connection.disconnect)
-    }
+        bind.func("Disconnect", signal.Connection.disconnect),
+    },
 });
 
 pub fn handle(comptime Sig: type, comptime Mar: type) types.Member {
     return bind.handle(Handle(Sig), .{
         .name = "Signal",
         .methods = &.{
-            bind.func("Connect", connectFn(Sig, Mar))
+            bind.func("Connect", connectFn(Sig, Mar)),
         },
     });
 }
@@ -49,7 +49,7 @@ fn callbackWrapper(comptime S: type, comptime Mar: type) fn (*LuaCallback, S.Arg
 
             l.protectedCall(.{ .args = args.len, .results = 0 }) catch {
                 const msg = l.toString(-1) catch "unknown error";
-                std.log.err("Signal callback failed: {s}", .{ msg });
+                std.log.err("Signal callback failed: {s}", .{msg});
                 l.pop(1);
             };
         }

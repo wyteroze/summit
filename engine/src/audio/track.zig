@@ -7,7 +7,7 @@ const Assets = @import("../assets/Assets.zig");
 const Audio = @import("Audio.zig");
 const Mixer = @import("mixer/Mixer.zig");
 
-pub const TrackEvent = signal.Signal(.{ TrackHandle });
+pub const TrackEvent = signal.Signal(.{TrackHandle});
 
 pub const Track = struct {
     asset: Assets.AssetHandle,
@@ -20,7 +20,7 @@ pub const Track = struct {
     owner: ?ecs.Entity = null,
     played: TrackEvent,
     stopped: TrackEvent,
-    looped: TrackEvent
+    looped: TrackEvent,
 };
 
 pub const TrackHandle = struct {
@@ -46,7 +46,7 @@ pub const sub_api = bind.handle(TrackHandle, .{
     .name = "AudioTrack",
     .alive = bind.func("isAlive", TrackHandle.isAlive),
     .methods = &.{
-        bind.func("Play", struct { 
+        bind.func("Play", struct {
             fn c(h: TrackHandle) !void {
                 const self = try h.require();
                 try h.audio.start(h, .{
@@ -56,16 +56,16 @@ pub const sub_api = bind.handle(TrackHandle, .{
                 });
             }
         }.c),
-        bind.func("Stop", struct { 
-            fn c(h: TrackHandle) !void { 
+        bind.func("Stop", struct {
+            fn c(h: TrackHandle) !void {
                 if (!h.isAlive()) return error.TrackDestroyed;
-                _ = h.audio.stop(h.id); 
-            } 
+                _ = h.audio.stop(h.id);
+            }
         }.c),
-        bind.func("Destroy", struct { 
-            fn c(h: TrackHandle) void { 
-                if (h.isAlive()) h.audio.destroy(h.id); 
-            } 
+        bind.func("Destroy", struct {
+            fn c(h: TrackHandle) void {
+                if (h.isAlive()) h.audio.destroy(h.id);
+            }
         }.c),
     },
     .signals = &.{
@@ -83,6 +83,6 @@ pub const sub_api = bind.handle(TrackHandle, .{
             fn c(self: TrackHandle) !*TrackEvent {
                 return &(try self.require()).stopped;
             }
-        }.c)
-    }
+        }.c),
+    },
 });

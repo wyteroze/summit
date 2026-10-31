@@ -8,11 +8,10 @@ scheme: []const u8,
 path: []const u8,
 
 pub fn parse(allocator: std.mem.Allocator, uri: []const u8) !AssetUri {
-    const idx = std.mem.find(u8, uri, uri_sep)
-        orelse return error.InvalidUri;
+    const idx = std.mem.find(u8, uri, uri_sep) orelse return error.InvalidUri;
 
     const scheme = try allocator.dupe(u8, uri[0..idx]);
-    const path = try allocator.dupe(u8, uri[idx+3..]);
+    const path = try allocator.dupe(u8, uri[idx + 3 ..]);
 
     return .{ .scheme = scheme, .path = path };
 }

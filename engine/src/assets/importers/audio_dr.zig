@@ -10,7 +10,7 @@ const stream_threshhold_seconds = 5.0;
 
 pub const ImportOptions = struct {
     format: types.AudioFormat,
-    mode: enum { auto, decode, stream } = .auto
+    mode: enum { auto, decode, stream } = .auto,
 };
 
 const Info = struct {
@@ -29,7 +29,7 @@ fn getAudioInfo(bytes: []const u8, format: types.AudioFormat) !Info {
             var mp3: audio_dr.drmp3 = undefined;
             if (audio_dr.drmp3_init_memory(&mp3, bytes.ptr, bytes.len, null) == 0) return error.Mp3AudioDecodeFailed;
             defer audio_dr.drmp3_uninit(&mp3);
-            
+
             return .{
                 .frames = audio_dr.drmp3_get_pcm_frame_count(&mp3),
                 .sample_rate = @intCast(mp3.sampleRate),
@@ -40,7 +40,7 @@ fn getAudioInfo(bytes: []const u8, format: types.AudioFormat) !Info {
             var wav: audio_dr.drwav = undefined;
             if (audio_dr.drwav_init_memory(&wav, bytes.ptr, bytes.len, null) == 0) return error.WavAudioDecodeFailed;
             defer _ = audio_dr.drwav_uninit(&wav);
-            
+
             return .{
                 .frames = wav.totalPCMFrameCount,
                 .sample_rate = @intCast(wav.sampleRate),
@@ -64,10 +64,10 @@ pub fn decodeFull(allocator: std.mem.Allocator, location: ImportLocation, option
             const sample_data = switch (location) {
                 .bytes => |b| audio_dr.drmp3_open_memory_and_read_pcm_frames_f32(b.ptr, b.len, &config, &frame_count, null),
                 .path => |p| blk: {
-                    const path_z = try allocator.dupeSentinel(u8, p, 0); 
+                    const path_z = try allocator.dupeSentinel(u8, p, 0);
                     defer allocator.free(path_z);
                     break :blk audio_dr.drmp3_open_file_and_read_pcm_frames_f32(path_z.ptr, &config, &frame_count, null);
-                }
+                },
             } orelse return error.Mp3AudioDecodeFailed;
             defer audio_dr.drmp3_free(sample_data, null);
 
@@ -82,11 +82,11 @@ pub fn decodeFull(allocator: std.mem.Allocator, location: ImportLocation, option
 
             const ok = switch (location) {
                 .bytes => |b| audio_dr.drwav_init_memory(&wav, b.ptr, b.len, null),
-                .path => |p| blk: { 
-                    const path_z = try allocator.dupeSentinel(u8, p, 0); 
+                .path => |p| blk: {
+                    const path_z = try allocator.dupeSentinel(u8, p, 0);
                     defer allocator.free(path_z);
                     break :blk audio_dr.drwav_init_file(&wav, path_z.ptr, null);
-                }
+                },
             };
             if (ok == 0) return error.WavAudioDecodeFailed;
             defer _ = audio_dr.drwav_uninit(&wav);
@@ -102,7 +102,7 @@ pub fn decodeFull(allocator: std.mem.Allocator, location: ImportLocation, option
             sample_rate = @intCast(wav.sampleRate);
             channels = @intCast(wav.channels);
             num_frames = @intCast(wav.totalPCMFrameCount);
-        }
+        },
     }
 
     return .{
@@ -123,7 +123,7 @@ pub fn importAudio(allocator: std.mem.Allocator, location: ImportLocation, optio
     const should_stream = switch (options.mode) {
         .decode => false,
         .stream => true,
-        .auto => info.duration() > stream_threshhold_seconds
+        .auto => info.duration() > stream_threshhold_seconds,
     };
     if (!should_stream) return decodeFull(allocator, location, options);
 
@@ -131,10 +131,10 @@ pub fn importAudio(allocator: std.mem.Allocator, location: ImportLocation, optio
         .source = .{ .streamed = .{
             .format = options.format,
             .bytes = try allocator.dupe(u8, bytes),
-            .total_frames = info.frames
+            .total_frames = info.frames,
         } },
         .sample_rate = info.sample_rate,
         .channels = info.channels,
-        .duration = info.duration()
+        .duration = info.duration(),
     };
 }

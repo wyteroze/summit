@@ -12,11 +12,11 @@ const GridDims = struct { cols: usize, rows: usize };
 const GridCell = struct { col: usize, row: usize };
 
 pub fn reflowUi(
-    world: *ecs.World, 
-    ids: ComponentIds, 
-    changed: []const ecs.Entity, 
+    world: *ecs.World,
+    ids: ComponentIds,
+    changed: []const ecs.Entity,
     allocator: std.mem.Allocator,
-    frame_allocator: std.mem.Allocator
+    frame_allocator: std.mem.Allocator,
 ) void {
     var dirty: std.AutoHashMap(ecs.Entity, void) = .init(frame_allocator);
 
@@ -30,11 +30,11 @@ pub fn reflowUi(
                 continue;
             };
             // Fill and hug depend on *something* else, so it can't be resolved
-            // right now. We only know the size of Fixed 
+            // right now. We only know the size of Fixed
             if (mode.width == .fixed and mode.height == .fixed) break;
             cur = p;
         }
-        
+
         dirty.put(cur, {}) catch @panic("Out of memory");
     }
 
@@ -119,7 +119,7 @@ fn measure(entity: ecs.Entity, world: *ecs.World, ids: ComponentIds, cache: *Mea
                     const child_size = if (pre and size_mode.width != .fill) cache.get(c).? // We just measured it above
                         else measure(c, world, ids, cache, child_w);
                     cache.put(c, child_size) catch @panic("Out of memory");
-                    
+
                     const main = if (l.direction == .horizontal) child_size.x else child_size.y;
                     const cross = if (l.direction == .horizontal) child_size.y else child_size.x;
 
@@ -138,15 +138,15 @@ fn measure(entity: ecs.Entity, world: *ecs.World, ids: ComponentIds, cache: *Mea
             },
             .grid => |l| {
                 const dims = gridDims(l, children.len);
-                // Sorry
-                const child_w: ?f32 = if (own_w) |w| @max(0, (w - l.padding.left - l.padding.right - l.column_gap * @as(f32, @floatFromInt(dims.cols -| 1))) / @as(f32, @floatFromInt(dims.cols)))
-                    else null;
-                    
+                const child_w: ?f32 = if (own_w) |w|
+                    @max(0, (w - l.padding.left - l.padding.right - l.column_gap * @as(f32, @floatFromInt(dims.cols -| 1))) / @as(f32, @floatFromInt(dims.cols)))
+                else
+                    null;
+
                 for (children) |c| {
                     const sz = measure(c, world, ids, cache, child_w);
                     cache.put(c, sz) catch @panic("Out of memory");
                 }
-
 
                 var col_widest: f32 = 0;
                 for (children) |c| {
@@ -169,14 +169,16 @@ fn measure(entity: ecs.Entity, world: *ecs.World, ids: ComponentIds, cache: *Mea
                     rows_height += row_h;
                 }
 
-                if (dims.rows > 1) rows_height += l.row_gap * @as(f32, @floatFromInt(dims.rows-1));
+                if (dims.rows > 1) rows_height += l.row_gap * @as(f32, @floatFromInt(dims.rows - 1));
 
+                // zig fmt: off
                 const hug_w = col_widest * @as(f32, @floatFromInt(dims.cols))
                     + l.column_gap * @as(f32, @floatFromInt(dims.cols -| 1))
                     + l.padding.left + l.padding.right;
+                // zig fmt: on
                 const hug_h = rows_height + l.padding.top + l.padding.bottom;
                 intr = intr.add(.new(hug_w, hug_h));
-            }
+            },
         }
     } else if (children.len > 0) {
         var extent: math.Vec2 = .zero;
@@ -190,28 +192,25 @@ fn measure(entity: ecs.Entity, world: *ecs.World, ids: ComponentIds, cache: *Mea
         intr = intr.add(extent);
     }
 
-    return .new(
-        axis(mode.width, intr.x),
-        axis(mode.height, intr.y)
-    );
+    return .new(axis(mode.width, intr.x), axis(mode.height, intr.y));
 }
 
 fn axis(a: types.SizeAxis, hug_val: f32) f32 {
     return switch (a) {
         .fixed => |v| v,
         .hug => hug_val,
-        .fill => 0
+        .fill => 0,
     };
 }
 
 fn arrange(
-    entity: ecs.Entity, 
-    final: math.Vec2, 
-    origin: math.Vec2, 
-    world: *ecs.World, 
-    ids: ComponentIds, 
-    cache: *MeasureCache, 
-    allocator: std.mem.Allocator
+    entity: ecs.Entity,
+    final: math.Vec2,
+    origin: math.Vec2,
+    world: *ecs.World,
+    ids: ComponentIds,
+    cache: *MeasureCache,
+    allocator: std.mem.Allocator,
 ) void {
     if (!world.hasComponent(entity, ids.computed_position)) world.set(entity, ids.computed_position, math.Vec2, .zero) catch {};
     if (!world.hasComponent(entity, ids.computed_size)) world.set(entity, ids.computed_size, math.Vec2, .zero) catch {};
@@ -231,12 +230,11 @@ fn arrange(
     const layout = layout_ptr.*;
     const children = entity.getChildren();
 
-    const pad = switch (layout) { inline else => |l| l.padding };
-    const content_size: math.Vec2 = .new(
-        final.x - pad.left - pad.right,
-        final.y - pad.top - pad.bottom
-    );
-    
+    const pad = switch (layout) {
+        inline else => |l| l.padding,
+    };
+    const content_size: math.Vec2 = .new(final.x - pad.left - pad.right, final.y - pad.top - pad.bottom);
+
     switch (layout) {
         .generic => |l| arrangeFlex(l, children, content_size, origin, pad, world, ids, cache, allocator),
         .grid => |l| arrangeGrid(l, children, content_size, origin, pad, world, ids, cache, allocator),
@@ -252,7 +250,7 @@ fn arrangeFlex(
     world: *ecs.World,
     ids: ComponentIds,
     cache: *MeasureCache,
-    allocator: std.mem.Allocator
+    allocator: std.mem.Allocator,
 ) void {
     var main_sum: f32 = 0;
     var fill_count: u32 = 0;
@@ -280,11 +278,12 @@ fn arrangeFlex(
         .start => 0,
         .center => (content_main - used) / 2,
         .end => content_main - used,
-        .space_between => 0
+        .space_between => 0,
     };
     const extra = if (layout.justify == .space_between and children.len > 1)
-        remaining / @as(f32, @floatFromInt(children.len-1))
-    else 0;
+        remaining / @as(f32, @floatFromInt(children.len - 1))
+    else
+        0;
 
     for (children, 0..) |c, i| {
         const mode: types.SizeMode = if (c.getComponent(ids.size, types.SizeMode)) |m| m.* else .{};
@@ -300,7 +299,7 @@ fn arrangeFlex(
         const cross_offset = switch (layout.align_items) {
             .start => 0,
             .center => (cross_available - cross_size) / 2,
-            .end => cross_available - cross_size
+            .end => cross_available - cross_size,
         };
 
         const child_size: math.Vec2 = if (layout.direction == .horizontal) .new(main_size, cross_size) else .new(cross_size, main_size);
@@ -310,8 +309,8 @@ fn arrangeFlex(
             origin.add(.new(pad.left + cross_offset, pad.top + cursor));
 
         arrange(c, child_size, child_origin, world, ids, cache, allocator);
-        
-        cursor += main_size + layout.gap + (if (layout.justify == .space_between and i < children.len-1) extra else 0);
+
+        cursor += main_size + layout.gap + (if (layout.justify == .space_between and i < children.len - 1) extra else 0);
     }
 }
 
@@ -324,7 +323,7 @@ fn arrangeGrid(
     world: *ecs.World,
     ids: ComponentIds,
     cache: *MeasureCache,
-    allocator: std.mem.Allocator
+    allocator: std.mem.Allocator,
 ) void {
     if (children.len == 0) return;
 
@@ -405,25 +404,25 @@ fn arrangeGrid(
 fn gridDims(g: types.GridLayout, child_count: usize) GridDims {
     const ax = switch (g.flow) {
         .column => g.columns,
-        .row => g.rows
+        .row => g.rows,
     };
 
     const driving = switch (ax) {
         .fixed => |c| @max(1, c),
-        .auto => @max(1, child_count)
+        .auto => @max(1, child_count),
     };
     const cross = if (driving == 0) 0 else (child_count + driving - 1) / driving;
 
     return switch (g.flow) {
         .column => .{ .cols = driving, .rows = cross },
-        .row => .{ .cols = cross, .rows = driving }
+        .row => .{ .cols = cross, .rows = driving },
     };
 }
 
 fn gridCell(g: types.GridLayout, idx: usize, dims: GridDims) GridCell {
     return switch (g.flow) {
         .column => .{ .col = idx % dims.cols, .row = idx / dims.cols },
-        .row => .{ .col = idx / dims.rows, .row = idx % dims.rows }
+        .row => .{ .col = idx / dims.rows, .row = idx % dims.rows },
     };
 }
 

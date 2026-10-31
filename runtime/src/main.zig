@@ -10,6 +10,6 @@ pub fn main(init: std.process.Init) !void {
     var summit: Summit = undefined;
     try summit.init(init);
     defer summit.deinit();
-    
+
     while (summit.running) summit.update();
 }

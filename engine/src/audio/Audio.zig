@@ -33,7 +33,7 @@ const SlotState = enum(u8) {
     /// Mixer owns a slot for this voice.
     active,
     /// Destroyed, waiting for the mixer's ack
-    dying
+    dying,
 };
 
 const Audio = @This();
@@ -73,7 +73,7 @@ pub fn init(self: *Audio, io: std.Io, allocator: std.mem.Allocator, platform: *P
         .free = undefined,
         .free_len = max_voices,
     };
-    for (0..max_voices) |i| self.free[i] = @intCast(max_voices-1-i);
+    for (0..max_voices) |i| self.free[i] = @intCast(max_voices - 1 - i);
 
     self.device = try platform.openAudioDevice(spec);
     errdefer platform.closeAudioDevice(self.device);
@@ -119,7 +119,7 @@ pub fn start(self: *Audio, h: track.TrackHandle, params: Mixer.Voice.VoiceParams
     const audio = try t.asset.cpuGet(.audio);
     const decoder: ?*streaming.StreamDecoder = switch (audio.source) {
         .decoded => null,
-        .streamed => try .init(self.allocator, audio, params.loops)
+        .streamed => try .init(self.allocator, audio, params.loops),
     };
     errdefer if (decoder) |d| d.deinit(self.allocator);
     if (decoder) |d| d.fill(pre_frames);
@@ -128,7 +128,7 @@ pub fn start(self: *Audio, h: track.TrackHandle, params: Mixer.Voice.VoiceParams
         .voice = h.id,
         .asset = t.asset.cpuClone(),
         .params = params,
-        .decoder = decoder
+        .decoder = decoder,
     } })) return error.MixerQueueFull;
 
     if (decoder) |d| self.decoder_thread.add(h.id.index, d);
@@ -178,7 +178,7 @@ pub fn stop(self: *Audio, id: Mixer.Voice.VoiceId) bool {
 }
 
 pub fn setListener(self: *Audio, l: types.AudioListener) void {
-    if (!self.mixer.mixer_commands.push(.{ .set_listener = l })) 
+    if (!self.mixer.mixer_commands.push(.{ .set_listener = l }))
         std.log.err("Tried to set listener, but the mixer queue is full.", .{});
 }
 
@@ -243,6 +243,6 @@ pub const api = bind.module("audio", .{
     .members = &.{
         track.sub_api,
         Speaker.sub_api,
-        Speaker.SpeakerHandle.sub_api
-    }
+        Speaker.SpeakerHandle.sub_api,
+    },
 });

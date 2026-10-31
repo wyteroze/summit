@@ -109,11 +109,11 @@ pub const sub_api = bind.handle(Entity, .{
             fn c(self: Entity) lua_components.Components {
                 return .{ .entity = self };
             }
-        }.c)
+        }.c),
     },
     .signals = &.{
         bind.signal("Updated", Entity.updated),
         bind.signal("Destroyed", Entity.destroyed),
     },
-    .ops = .{ .eq = .{ .member = bind.func("eq", Entity.eql) }, .tostring = .auto }
+    .ops = .{ .eq = .{ .member = bind.func("eq", Entity.eql) }, .tostring = .auto },
 });

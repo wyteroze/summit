@@ -15,13 +15,7 @@ key_released: KeyEvent,
 id: usize,
 
 pub fn init(dispatcher: *signal.Dispatcher, allocator: std.mem.Allocator, id: usize) KeyboardDevice {
-    return .{ 
-        .allocator = allocator, 
-        .keys_pressed = .init(allocator),
-        .key_pressed = .init(allocator, dispatcher),
-        .key_released = .init(allocator, dispatcher),
-        .id = id
-    };
+    return .{ .allocator = allocator, .keys_pressed = .init(allocator), .key_pressed = .init(allocator, dispatcher), .key_released = .init(allocator, dispatcher), .id = id };
 }
 
 pub fn deinit(self: *KeyboardDevice) void {
@@ -37,8 +31,8 @@ pub fn keyPressed(self: *KeyboardDevice, event: Platform.desc.KeyboardEvent, win
 
 pub fn keyReleased(self: *KeyboardDevice, event: Platform.desc.KeyboardEvent, win: *Windowing.Window) void {
     self.key_released.fire(.{ event.keycode, false, win.getHandle() });
-    if (!self.keys_pressed.remove(event.keycode)) 
-        std.log.warn("keyReleased() called on KeyboardDevice {d} for a key that isn't pressed", .{ self.id });
+    if (!self.keys_pressed.remove(event.keycode))
+        std.log.warn("keyReleased() called on KeyboardDevice {d} for a key that isn't pressed", .{self.id});
 }
 
 pub fn isKeyPressed(self: *KeyboardDevice, key: Platform.desc.Keycode) bool {
@@ -49,5 +43,5 @@ pub fn format(
     self: @This(),
     writer: *std.Io.Writer,
 ) std.Io.Writer.Error!void {
-    try writer.print("KeyboardDevice {d}", .{ self.id });
+    try writer.print("KeyboardDevice {d}", .{self.id});
 }

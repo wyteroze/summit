@@ -7,5 +7,5 @@ pub const audio_dr = @import("audio_dr.zig");
 
 pub const ImportLocation = union(enum) {
     path: []const u8,
-    bytes: []const u8
+    bytes: []const u8,
 };

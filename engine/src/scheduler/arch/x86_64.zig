@@ -5,14 +5,18 @@ const Fiber = @import("../Fiber.zig");
 
 pub const Registers = extern struct {
     sp: usize = 0,
-    rbx: usize = 0, rbp: usize = 0,
-    r12: usize = 0, r13: usize = 0, r14: usize = 0, r15: usize = 0,
-    ip: usize = 0
+    rbx: usize = 0,
+    rbp: usize = 0,
+    r12: usize = 0,
+    r13: usize = 0,
+    r14: usize = 0,
+    r15: usize = 0,
+    ip: usize = 0,
 };
 
 pub fn swap(_: *Registers, _: *Registers) callconv(.naked) void {
     asm volatile (
-        // rdi = from, rsi = to
+    // rdi = from, rsi = to
         \\ mov %%rsp, 0x00(%%rdi)
         \\ mov %%rbx, 0x08(%%rdi)
         \\ mov %%rbp, 0x10(%%rdi)
@@ -31,21 +35,27 @@ pub fn swap(_: *Registers, _: *Registers) callconv(.naked) void {
         \\ mov 0x30(%%rsi), %%r15
         \\ mov 0x00(%%rsi), %%rsp
         \\ jmp *0x38(%%rsi)
-    );  
+    );
 }
 
 pub fn doSwap(from: *Registers, to: *Registers) void {
     const sym = comptime if (builtin.target.os.tag.isDarwin()) "call _swap" else "call swap";
     asm volatile (sym
         :
-        : [from] "{rdi}" (from), [to] "{rsi}" (to)
+        : [from] "{rdi}" (from),
+          [to] "{rsi}" (to),
         : .{
-            .rax = true, .rdi = true, .rsi = true,
-            .rbx = true, .rbp = true,
-            .r12 = true, .r13 = true, .r14 = true, .r15 = true,
-            .memory = true
-        }
-    );
+          .rax = true,
+          .rdi = true,
+          .rsi = true,
+          .rbx = true,
+          .rbp = true,
+          .r12 = true,
+          .r13 = true,
+          .r14 = true,
+          .r15 = true,
+          .memory = true,
+        });
 }
 
 pub fn trampoline() callconv(.naked) noreturn {
@@ -53,14 +63,10 @@ pub fn trampoline() callconv(.naked) noreturn {
         \\ mov %%rbx, %%rdi
         \\ jmp *%[land]
         :
-        : [land] "X" (&Fiber.trampolineLand)
+        : [land] "X" (&Fiber.trampolineLand),
     );
 }
 
 pub fn initRegs(sp: usize, self: *anyopaque) Registers {
-    return .{
-        .sp = sp,
-        .ip = @intFromPtr(&trampoline),
-        .rbx = @intFromPtr(self)
-    };
+    return .{ .sp = sp, .ip = @intFromPtr(&trampoline), .rbx = @intFromPtr(self) };
 }

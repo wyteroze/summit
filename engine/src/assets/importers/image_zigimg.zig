@@ -9,7 +9,7 @@ pub fn importImage(allocator: std.mem.Allocator, io: std.Io, location: ImportLoc
     var read_buf: [zigimg.io.DEFAULT_BUFFER_SIZE]u8 = undefined;
     var image: zigimg.Image = switch (location) {
         .bytes => |b| try .fromMemory(allocator, b),
-        .path => |p| try .fromFilePath(allocator, io, p, read_buf[0..])
+        .path => |p| try .fromFilePath(allocator, io, p, read_buf[0..]),
     };
     defer image.deinit(allocator);
 
@@ -22,9 +22,9 @@ pub fn importImage(allocator: std.mem.Allocator, io: std.Io, location: ImportLoc
     const data = try allocator.dupe(u8, image.pixels.asBytes());
 
     return .{
-        .width = image.width, 
+        .width = image.width,
         .height = image.height,
         .data = data,
-        .format = .rgba8
+        .format = .rgba8,
     };
 }

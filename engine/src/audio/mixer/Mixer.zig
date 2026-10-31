@@ -13,7 +13,7 @@ pub const Command = union(enum) {
     stop: Voice.VoiceId,
     destroy: Voice.VoiceId,
     set_params: struct { voice: Voice.VoiceId, params: Voice.VoiceParams },
-    set_listener: Audio.types.AudioListener
+    set_listener: Audio.types.AudioListener,
 };
 pub const MixerCommands = RingBuffer(Command, 1024);
 pub const AudioEvents = Audio.AudioEvents;
@@ -35,7 +35,7 @@ pub fn deinit(self: *Mixer) void {
 }
 
 pub fn streamCallback(ctx: ?*Mixer, stream: Platform.types.AudioStreamHandle, needed: usize, _: usize) void {
-    const self = ctx.?; 
+    const self = ctx.?;
     while (self.mixer_commands.pop()) |c| self.doCommand(c);
 
     const bytes_per_frame = Audio.channels * @sizeOf(f32);
@@ -43,7 +43,7 @@ pub fn streamCallback(ctx: ?*Mixer, stream: Platform.types.AudioStreamHandle, ne
 
     while (frames_left > 0) {
         const n: usize = @min(frames_left, Audio.chunk_frames);
-        const out = self.temp_storage[0..n * Audio.channels];
+        const out = self.temp_storage[0 .. n * Audio.channels];
         @memset(out, 0);
 
         for (&self.voices) |*v| {

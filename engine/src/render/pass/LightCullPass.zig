@@ -16,7 +16,7 @@ const CullParams = extern struct {
     screen_size: [2]u32,
     tile_count: [2]u32,
     light_count: u32,
-    _pad: [3]u32 = undefined
+    _pad: [3]u32 = undefined,
 };
 
 const LightCullPass = @This();
@@ -33,14 +33,14 @@ pub fn init(gpu_device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader) !LightC
                 .{ .name = "depthTexture", .kind = .texture, .visibility = .compute },
                 .{ .name = "lights", .kind = .storage_buffer, .visibility = .compute },
                 .{ .name = "lightGrid", .kind = .storage_buffer_rw, .visibility = .compute },
-                .{ .name = "lightIndexList", .kind = .storage_buffer_rw, .visibility = .compute }
-            }
+                .{ .name = "lightIndexList", .kind = .storage_buffer_rw, .visibility = .compute },
+            },
         }),
         .cull_ubuf = try gpu_device.createBuffer(.{
             .name = "Light cull params ubuf",
             .type = .uniform,
             .usage = .dynamic,
-            .size = @sizeOf(CullParams)
+            .size = @sizeOf(CullParams),
         }),
     };
 }
@@ -61,7 +61,7 @@ pub fn execute(self: *LightCullPass, ctx: pass.PassContext) void {
         .view = ctx.view.view_matrix.m,
         .screen_size = ctx.view.viewport_size,
         .tile_count = tile_count,
-        .light_count = @intCast(ctx.scene.lights.len)
+        .light_count = @intCast(ctx.scene.lights.len),
     };
     self.cull_ubuf.update(std.mem.asBytes(&cull_params));
 
@@ -73,7 +73,7 @@ pub fn execute(self: *LightCullPass, ctx: pass.PassContext) void {
             .{ .name = "lights", .handle = .{ .storage_buffer = lights_handle } },
             .{ .name = "lightGrid", .handle = .{ .storage_buffer_rw = grid } },
             .{ .name = "lightIndexList", .handle = .{ .storage_buffer_rw = index_list } },
-        }
+        },
     });
     self.compute_pipeline.dispatch(tile_count[0], tile_count[1], 1);
 }
@@ -99,6 +99,6 @@ pub fn node(self: *LightCullPass) pass.PassNode {
             fn c(ptr: *anyopaque, allocator: std.mem.Allocator) void {
                 deinit(@ptrCast(@alignCast(ptr)), allocator);
             }
-        }.c
+        }.c,
     };
 }

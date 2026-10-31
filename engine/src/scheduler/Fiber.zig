@@ -10,25 +10,25 @@ const arch = @import("arch/arch.zig");
 const Registers = switch (builtin.cpu.arch) {
     .aarch64 => arch.aarch64.Registers,
     .x86_64 => arch.x86_64.Registers,
-    else => @compileError("unsupported arch " ++ @tagName(builtin.cpu.arch))
+    else => @compileError("unsupported arch " ++ @tagName(builtin.cpu.arch)),
 };
 
 const swap = switch (builtin.cpu.arch) {
     .aarch64 => arch.aarch64.swap,
     .x86_64 => arch.x86_64.swap,
-    else => unreachable
+    else => unreachable,
 };
 
 const doSwap = switch (builtin.cpu.arch) {
     .aarch64 => arch.aarch64.doSwap,
     .x86_64 => arch.x86_64.doSwap,
-    else => unreachable
+    else => unreachable,
 };
 
 const initRegs = switch (builtin.cpu.arch) {
     .aarch64 => arch.aarch64.initRegs,
     .x86_64 => arch.x86_64.initRegs,
-    else => unreachable
+    else => unreachable,
 };
 
 comptime {

@@ -40,8 +40,11 @@ pub fn init(self: *Scheduler, allocator: std.mem.Allocator, io: std.Io, os: *con
 
     const core_count = topology.cores.len;
 
-    var fibers: std.ArrayList(Fiber) = try .initCapacity(allocator, fiber_pool_size); 
-    errdefer { for (fibers.items) |*f| f.deinit(allocator); fibers.deinit(allocator); }
+    var fibers: std.ArrayList(Fiber) = try .initCapacity(allocator, fiber_pool_size);
+    errdefer {
+        for (fibers.items) |*f| f.deinit(allocator);
+        fibers.deinit(allocator);
+    }
     for (0..fiber_pool_size) |_| {
         fibers.appendAssumeCapacity(try .init(allocator, fiber_stack_size));
     }
@@ -56,14 +59,18 @@ pub fn init(self: *Scheduler, allocator: std.mem.Allocator, io: std.Io, os: *con
     var home_fibers: std.ArrayList(Fiber) = try .initCapacity(allocator, core_count);
     errdefer home_fibers.deinit(allocator);
     home_fibers.appendNTimesAssumeCapacity(.{ .stack = &.{} }, core_count);
-    
+
     // For fibers that have been woken, but not resumed. These are processed before jobs.
     var ready_fibers: std.ArrayList(core.threading.Deque(*Fiber)) = try .initCapacity(allocator, core_count);
-    errdefer { for (ready_fibers.items) |*dq| dq.deinit(allocator);  }
+    errdefer for (ready_fibers.items) |*dq| dq.deinit(allocator);
+
     for (0..core_count) |_| ready_fibers.appendAssumeCapacity(try .init(allocator, 4096));
 
     var deques: [Job.JobPriority.priority_count][]core.threading.Deque(Job) = undefined;
-    errdefer { for (deques) |dq| { for (dq) |*d| d.deinit(allocator); allocator.free(dq); } }
+    errdefer for (deques) |dq| {
+        for (dq) |*d| d.deinit(allocator);
+        allocator.free(dq);
+    };
 
     for (&deques) |*dq| {
         var list: std.ArrayList(core.threading.Deque(Job)) = try .initCapacity(allocator, core_count);
@@ -81,7 +88,7 @@ pub fn init(self: *Scheduler, allocator: std.mem.Allocator, io: std.Io, os: *con
         .ready_fibers = try ready_fibers.toOwnedSlice(allocator),
         .home_fibers = try home_fibers.toOwnedSlice(allocator),
         .workers = try allocator.alloc(std.Thread, core_count), // set below
-        .deques = deques
+        .deques = deques,
     };
 
     for (0..core_count) |i| {
@@ -152,15 +159,14 @@ fn workerMain(self: *Scheduler, parent_core: Os.Scheduling.Core) void {
 
 fn resolveRunnable(self: *Scheduler, runnable: Runnable) *Fiber {
     return switch (runnable) {
-        .fiber => |f| { return f; },
+        .fiber => |f| return f,
         .job => |j| blk: {
-            const f = self.free_fibers.pop() 
-                orelse std.debug.panic("Fiber pool exhausted. Increase the `fiber_pool_size` or reduce wait-chain depth", .{});
+            const f = self.free_fibers.pop() orelse std.debug.panic("Fiber pool exhausted. Increase the `fiber_pool_size` or reduce wait-chain depth", .{});
             //std.log.debug("resolveRunnable: Retrieved free fiber {*}", .{ f });
 
             self.attachJob(f, j);
             break :blk f;
-        }
+        },
     };
 }
 
@@ -171,17 +177,15 @@ fn attachJob(self: *Scheduler, fiber: *Fiber, job: Job) void {
 }
 
 pub fn submit(self: *Scheduler, job: Job) void {
-    const target = if (job.affinity == .main) self.main_worker_id
-        else if (tls_self == self) worker_id
-        else next_submit_worker.fetchAdd(1, .monotonic) % self.workers.len;
+    const target = if (job.affinity == .main) self.main_worker_id else if (tls_self == self) worker_id else next_submit_worker.fetchAdd(1, .monotonic) % self.workers.len;
 
-    self.deques[@intFromEnum(job.priority)][target].pushToBottom(job);
+    self.deques[@backingInt(job.priority)][target].pushToBottom(job);
 }
 
 fn popNextRunnable(self: *Scheduler) ?Runnable {
     // highest priority: ready fibers
     if (self.ready_fibers[worker_id].popFromBottom()) |fiber| return .{ .fiber = fiber };
-    
+
     // then, check our own deques
     for (self.deques) |dq| {
         if (dq[worker_id].popFromBottom()) |job| return .{ .job = job };
@@ -218,7 +222,7 @@ pub fn publishPendingPark(self: *Scheduler) void {
         self.makeRunnable(p.fiber);
         return;
     }
-    
+
     p.counter.waiters.append(self.allocator, p.fiber) catch std.debug.panic("Out of memory", .{});
     p.counter.lock.unlock(self.io);
 }

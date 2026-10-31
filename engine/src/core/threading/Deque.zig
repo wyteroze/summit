@@ -16,7 +16,7 @@ pub fn Deque(comptime T: type) type {
 
             return .{
                 .buffer = try allocator.alloc(T, size),
-                .mask = size-1,
+                .mask = size - 1,
             };
         }
 
@@ -28,28 +28,28 @@ pub fn Deque(comptime T: type) type {
         pub fn pushToBottom(self: *Self, item: T) void {
             const b = self.bottom.load(.monotonic);
             self.buffer[@intCast(b & @as(i64, @intCast(self.mask)))] = item;
-            self.bottom.store(b+1, .release);
+            self.bottom.store(b + 1, .release);
         }
 
-        /// Should only be called on the owner thread        
+        /// Should only be called on the owner thread
         pub fn popFromBottom(self: *Self) ?T {
-            const b = self.bottom.load(.monotonic)-1;
+            const b = self.bottom.load(.monotonic) - 1;
             self.bottom.store(b, .monotonic);
-            
+
             const t = self.top.load(.monotonic);
             if (t > b) { // empty
-                self.bottom.store(b+1, .monotonic);
+                self.bottom.store(b + 1, .monotonic);
                 return null;
             }
 
             const item = self.buffer[@intCast(b & @as(i64, @intCast(self.mask)))];
             if (t == b) { // last item, contention against stealer. only time CAS is needed
-                if (self.top.cmpxchgStrong(t, t+1, .acq_rel, .monotonic) == null) {
-                    self.bottom.store(b+1, .monotonic);
+                if (self.top.cmpxchgStrong(t, t + 1, .acq_rel, .monotonic) == null) {
+                    self.bottom.store(b + 1, .monotonic);
                     return item;
                 }
 
-                self.bottom.store(b+1, .monotonic);
+                self.bottom.store(b + 1, .monotonic);
                 return null; // stealer won the race
             }
 

@@ -2,7 +2,6 @@
 ///! This returns a new allocator that tracks
 ///! the bytes allocated and freed via `alloc` and `free`
 ///! Get the current memory usage in bytes with `.currentUsage()`
-
 const std = @import("std");
 const SizeFormatter = @import("SizeFormatter.zig");
 
@@ -25,7 +24,7 @@ pub fn allocator(self: *TrackedAllocator) std.mem.Allocator {
             .free = free,
             .resize = resize,
             .remap = remap,
-        }
+        },
     };
 }
 
@@ -47,8 +46,7 @@ fn resize(ctx: *anyopaque, buf: []u8, alignment: std.mem.Alignment, new_len: usi
     const self: *TrackedAllocator = @ptrCast(@alignCast(ctx));
     const ok = self.child.rawResize(buf, alignment, new_len, ret_addr);
     if (ok) {
-        if (new_len > buf.len) self.bytes_allocated += new_len - buf.len
-        else self.bytes_freed += buf.len - new_len;
+        if (new_len > buf.len) self.bytes_allocated += new_len - buf.len else self.bytes_freed += buf.len - new_len;
     }
 
     return ok;
@@ -58,8 +56,7 @@ fn remap(ctx: *anyopaque, buf: []u8, alignment: std.mem.Alignment, new_len: usiz
     const self: *TrackedAllocator = @ptrCast(@alignCast(ctx));
     const result = self.child.rawRemap(buf, alignment, new_len, ret_addr);
     if (result != null) {
-        if (new_len > buf.len) self.bytes_allocated += new_len - buf.len
-        else self.bytes_freed += buf.len - new_len;
+        if (new_len > buf.len) self.bytes_allocated += new_len - buf.len else self.bytes_freed += buf.len - new_len;
     }
 
     return result;
@@ -75,12 +72,11 @@ pub fn format(
     writer: *std.Io.Writer,
 ) std.Io.Writer.Error!void {
     try writer.writeAll("[");
-    if (self.name) |nm| try writer.print("{s}", .{nm}) 
-        else try writer.print("TrackedAllocator {x}", .{@intFromPtr(&self)});
-        
-    try writer.print("]: {f} (+{f}, -{f})", .{ 
-        SizeFormatter.fmtSize(self.bytes_allocated - self.bytes_freed), 
-        SizeFormatter.fmtSize(self.bytes_allocated), 
-        SizeFormatter.fmtSize(self.bytes_freed) 
+    if (self.name) |nm| try writer.print("{s}", .{nm}) else try writer.print("TrackedAllocator {x}", .{@intFromPtr(&self)});
+
+    try writer.print("]: {f} (+{f}, -{f})", .{
+        SizeFormatter.fmtSize(self.bytes_allocated - self.bytes_freed),
+        SizeFormatter.fmtSize(self.bytes_allocated),
+        SizeFormatter.fmtSize(self.bytes_freed),
     });
 }

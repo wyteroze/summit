@@ -27,7 +27,7 @@ const GpuUiParams = extern struct {
     _pad: [2]f32 = undefined,
     corner_radii: [4]f32,
     border_widths: [4]f32,
-    border_color: [4]f32
+    border_color: [4]f32,
 };
 
 const GpuPainterParams = extern struct {
@@ -39,7 +39,9 @@ const GpuPainterParams = extern struct {
     antialiased: u32,
     _pad: u32 = 0,
 
-    comptime { std.debug.assert(@sizeOf(GpuPainterParams) == 96); }
+    comptime {
+        std.debug.assert(@sizeOf(GpuPainterParams) == 96);
+    }
 };
 
 const UiPass = @This();
@@ -71,9 +73,9 @@ pub fn init(device: *gpu.GpuDevice, ui_shader: gpu.GpuDevice.GpuShader, painter_
         .resources = &.{
             .{ .name = "vsParams", .visibility = .vertex_fragment, .kind = .uniform_buffer },
             .{ .name = "atlasTexture", .visibility = .fragment, .kind = .texture },
-            .{ .name = "atlasSampler", .visibility = .fragment, .kind = .sampler }
+            .{ .name = "atlasSampler", .visibility = .fragment, .kind = .sampler },
         },
-        .index_type = .uint32
+        .index_type = .uint32,
     });
     const painter_pipeline = try device.createPipeline(.{
         .name = "Ui painter pipeline",
@@ -83,8 +85,8 @@ pub fn init(device: *gpu.GpuDevice, ui_shader: gpu.GpuDevice.GpuShader, painter_
         .depth_write = false,
         .alpha_blend_enabled = true,
         .layout = &.{
-            .{ .offset = 0,  .format = .float2 }, // pos
-            .{ .offset = 8,  .format = .float2 }, // uv
+            .{ .offset = 0, .format = .float2 }, // pos
+            .{ .offset = 8, .format = .float2 }, // uv
             .{ .offset = 16, .format = .float4 }, // color
         },
         .resources = &.{
@@ -97,33 +99,30 @@ pub fn init(device: *gpu.GpuDevice, ui_shader: gpu.GpuDevice.GpuShader, painter_
         .ui_pipeline = ui_pipeline,
         .ui_shader = ui_shader,
         .ui_sampler = try device.createSampler(.{}),
-        .ui_vs_ubuf = try device.createBuffer(.{ 
-            .name = "Ui vs ubuf", 
-            .type = .uniform, 
-            .usage = .dynamic, 
-            .size = @sizeOf(GpuUiParams)
+        .ui_vs_ubuf = try device.createBuffer(.{
+            .name = "Ui vs ubuf",
+            .type = .uniform,
+            .usage = .dynamic,
+            .size = @sizeOf(GpuUiParams),
         }),
         .ui_quad = .{
             .vertex_buffer = try device.createBuffer(.{
                 .name = "Ui quad vertex buffer",
                 .data = std.mem.sliceAsBytes(([_]Assets.types.Vertex{
-                    .{ .position = .{  0.0,  0.0,  0.0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 0, 0 } },
-                    .{ .position = .{  1.0,  0.0,  0.0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 1, 0 } },
-                    .{ .position = .{  0.0,  1.0,  0.0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 0, 1 } },
-                    .{ .position = .{  1.0,  1.0,  0.0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 1, 1 } },
+                    .{ .position = .{ 0.0, 0.0, 0.0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 0, 0 } },
+                    .{ .position = .{ 1.0, 0.0, 0.0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 1, 0 } },
+                    .{ .position = .{ 0.0, 1.0, 0.0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 0, 1 } },
+                    .{ .position = .{ 1.0, 1.0, 0.0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 1, 1 } },
                 })[0..]),
                 .size = 4,
             }),
             .index_buffer = try device.createBuffer(.{
                 .name = "Ui quad index buffer",
                 .type = .index,
-                .data = std.mem.sliceAsBytes(([_]u32{
-                    0, 2, 1,
-                    1, 2, 3
-                })[0..])
+                .data = std.mem.sliceAsBytes(([_]u32{ 0, 2, 1, 1, 2, 3 })[0..]),
             }),
             .vertex_count = 4,
-            .index_count = 6
+            .index_count = 6,
         },
         .painter_pipeline = painter_pipeline,
         .painter_shader = painter_shader,
@@ -131,7 +130,7 @@ pub fn init(device: *gpu.GpuDevice, ui_shader: gpu.GpuDevice.GpuShader, painter_
             .name = "Painter vs ubuf",
             .type = .uniform,
             .usage = .dynamic,
-            .size = @sizeOf(GpuPainterParams)
+            .size = @sizeOf(GpuPainterParams),
         }),
         .painter_vbuf = try device.createBuffer(.{ .name = "Painter vertex buffer", .usage = .dynamic, .size = initial_vertex_bytes }),
         .painter_ibuf = try device.createBuffer(.{ .name = "Painter index buffer", .type = .index, .usage = .dynamic, .size = initial_index_bytes }),
@@ -165,14 +164,17 @@ fn execute(self: *UiPass, ctx: pass.PassContext) void {
         var vert_count: usize = 0;
         var idx_count: usize = 0;
         for (items) |itm| switch (itm) {
-            .painter => |p| { vert_count += p.vertices.len; idx_count += p.indices.len; },
-            else => {}
+            .painter => |p| {
+                vert_count += p.vertices.len;
+                idx_count += p.indices.len;
+            },
+            else => {},
         };
 
         if (idx_count > 0) {
             const verts = ctx.frame_allocator.alloc(render_types.PainterVertex, vert_count) catch @panic("Out of memory");
             const idxs = ctx.frame_allocator.alloc(u32, idx_count) catch @panic("Out of memory");
-            
+
             var v: usize = 0;
             var n: usize = 0;
             for (items, 0..) |item, i| switch (item) {
@@ -198,7 +200,8 @@ fn execute(self: *UiPass, ctx: pass.PassContext) void {
     ctx.device.beginPass(.{
         .clear_color = ctx.scene.clear_color,
         .color_target = ctx.resources.get(resource.color_target, .render_target),
-        .width = size[0], .height = size[1]
+        .width = size[0],
+        .height = size[1],
     });
 
     const default_image_handle = ctx.resources.get(resource.default_image, .image) orelse @panic("default_image resource missing!");
@@ -208,7 +211,10 @@ fn execute(self: *UiPass, ctx: pass.PassContext) void {
 
     for (items, 0..) |item, i| switch (item) {
         .quad => |obj| {
-            if (active != .ui) { self.ui_pipeline.apply(); active = .ui; } 
+            if (active != .ui) {
+                self.ui_pipeline.apply();
+                active = .ui;
+            }
 
             const is_rounded = blk: {
                 for (obj.corners) |c| {
@@ -235,7 +241,7 @@ fn execute(self: *UiPass, ctx: pass.PassContext) void {
                     const vec: @Vector(4, f32) = obj.borders;
                     break :blk vec * @as(@Vector(4, f32), @splat(scale));
                 },
-                .border_color = obj.border_color.toArr()
+                .border_color = obj.border_color.toArr(),
             };
 
             self.ui_vs_ubuf.update(std.mem.asBytes(&vs_params));
@@ -249,14 +255,17 @@ fn execute(self: *UiPass, ctx: pass.PassContext) void {
                 .resources = &.{
                     .{ .name = "vsParams", .handle = .{ .uniform_buffer = self.ui_vs_ubuf.handle } },
                     .{ .name = "atlasTexture", .handle = .{ .texture = texture_handle } },
-                    .{ .name = "atlasSampler", .handle = .{ .sampler = sampler_handle } }
-                }
+                    .{ .name = "atlasSampler", .handle = .{ .sampler = sampler_handle } },
+                },
             });
             self.ui_pipeline.draw(0, self.ui_quad.index_count, 1);
         },
         .painter => |p| {
             if (p.indices.len == 0) continue;
-            if (active != .painter) { self.painter_pipeline.apply(); active = .painter; }
+            if (active != .painter) {
+                self.painter_pipeline.apply();
+                active = .painter;
+            }
 
             const params: GpuPainterParams = .{
                 .ortho = ortho.m,
@@ -273,10 +282,10 @@ fn execute(self: *UiPass, ctx: pass.PassContext) void {
                 .index_buffer = self.painter_ibuf.handle,
                 .resources = &.{
                     .{ .name = "vsParams", .handle = .{ .uniform_buffer = self.painter_vs_ubuf.handle } },
-                }
+                },
             });
             self.painter_pipeline.draw(first_idx[i], @intCast(p.indices.len), 1);
-        }
+        },
     };
 }
 
@@ -285,7 +294,7 @@ pub fn node(self: *UiPass) pass.PassNode {
         .name = "UiPass",
         .reads = &.{ resource.default_sampler, resource.default_image, resource.color_target },
         .writes = &.{},
-        .after = &.{ },
+        .after = &.{},
         .ptr = self,
         .execute_fn = struct {
             fn c(ptr: *anyopaque, ctx: pass.PassContext) void {
@@ -296,6 +305,6 @@ pub fn node(self: *UiPass) pass.PassNode {
             fn c(ptr: *anyopaque, allocator: std.mem.Allocator) void {
                 deinit(@ptrCast(@alignCast(ptr)), allocator);
             }
-        }.c
+        }.c,
     };
 }

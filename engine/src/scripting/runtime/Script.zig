@@ -16,31 +16,39 @@ state: *Lua,
 thread_ref: i32,
 ref: i32,
 binder: bind.Binder(bind.api),
-on_deinit: core.signal.Signal(.{ *Script }),
+on_deinit: core.signal.Signal(.{*Script}),
 
-pub fn init(dispatcher: *core.signal.Dispatcher, name: ?[:0]const u8, main: *Lua, state: *Lua, thread_ref: i32, source: types.ScriptSource, binder: bind.Binder(bind.api)) !Script {
+pub fn init(
+    dispatcher: *core.signal.Dispatcher,
+    name: ?[:0]const u8,
+    main: *Lua,
+    state: *Lua,
+    thread_ref: i32,
+    source: types.ScriptSource,
+    binder: bind.Binder(bind.api),
+) !Script {
     // compile and run script
     const bytecode = switch (source.type) {
         .text => try zlua.compile(state.allocator(), source.data, .{}),
-        .bytecode => source.data
+        .bytecode => source.data,
     };
     defer if (source.type == .text) state.allocator().free(bytecode);
 
     if (bytecode.len > 0 and bytecode[0] == 0) {
-        std.log.err("Script compilation failed: {s}", .{ bytecode[1..] });
+        std.log.err("Script compilation failed: {s}", .{bytecode[1..]});
         return error.ScriptCompilationFailed;
     }
 
     try state.loadBytecode(name orelse "Unnamed script", bytecode);
     state.protectedCall(.{ .args = 0, .results = 1 }) catch {
-        std.log.err("Failed to initialize script: {s}", .{ state.toString(-1) catch unreachable });
+        std.log.err("Failed to initialize script: {s}", .{state.toString(-1) catch unreachable});
         state.pop(1);
 
         return error.ScriptInitFailed;
     };
 
     if (!state.isTable(-1)) {
-        std.log.err("Script must return a table; got {t} instead", .{ state.typeOf(-1) });
+        std.log.err("Script must return a table; got {t} instead", .{state.typeOf(-1)});
         return error.ScriptMustReturnTable;
     }
 
@@ -55,7 +63,7 @@ pub fn init(dispatcher: *core.signal.Dispatcher, name: ?[:0]const u8, main: *Lua
         .thread_ref = thread_ref,
         .ref = ref,
         .binder = binder,
-        .on_deinit = .init(state.allocator(), dispatcher)
+        .on_deinit = .init(state.allocator(), dispatcher),
     };
 }
 
@@ -91,9 +99,11 @@ fn callFunctionAtIndex(self: *const Script, idx: i32, comptime ResultTypes: []co
     l.pushValue(abs_index);
 
     inline for (args) |a| self.binder.pushValue(self.state, a);
-    
-    self.state.protectedCall(.{ .args = args.len, .results = ResultTypes.len, .msg_handler = handler_idx }) 
-        catch { self.luaErr(); return error.FunctionCallFailed; };
+
+    self.state.protectedCall(.{ .args = args.len, .results = ResultTypes.len, .msg_handler = handler_idx }) catch {
+        self.luaErr();
+        return error.FunctionCallFailed;
+    };
 
     var results: @Tuple(ResultTypes) = undefined;
     inline for (ResultTypes, 0..) |R, i| {
@@ -122,7 +132,6 @@ pub fn instantiateSystem(self: *Script, world: *ecs.World) !ecs.SystemRegistry.S
     l.pushNil();
     while (l.next(-2)) {
         const component_name = l.checkString(-1);
-        std.log.debug("component_id = {s}", .{ component_name });
         if (world.components.id(component_name)) |id| try ids.append(alloc, id);
 
         l.pop(1);
@@ -131,23 +140,32 @@ pub fn instantiateSystem(self: *Script, world: *ecs.World) !ecs.SystemRegistry.S
 
     const init_type = l.getField(-1, "init");
     const deinit_type = l.getField(-2, "deinit");
-    l.pop(2);    
+    l.pop(2);
 
     return try world.registerSystem(
         try ids.toOwnedSlice(alloc),
-        if (init_type == .function) struct { fn init(_: *ecs.World, ctx: *anyopaque) void { 
-            const slf: *Script = @ptrCast(@alignCast(ctx));
-            _ = slf.callFunction("init", &.{}, .{ }) catch {}; 
-        } }.init else null,
-        struct { fn update(e: ecs.Entity, dt: f32, ctx: *anyopaque) void {
-            const slf: *Script = @ptrCast(@alignCast(ctx));
-            _ = slf.callFunction("update", &.{}, .{ e, dt }) catch {};
-        } }.update,
-        if (deinit_type == .function) struct { fn deinit(ctx: *anyopaque) void {
-            const slf: *Script = @ptrCast(@alignCast(ctx));
-            _ = slf.callFunction("deinit", &.{}, .{}) catch {};
-        } }.deinit else null,
-        self
+        // Init function
+        if (init_type == .function) struct {
+            fn init(_: *ecs.World, ctx: *anyopaque) void {
+                const slf: *Script = @ptrCast(@alignCast(ctx));
+                _ = slf.callFunction("init", &.{}, .{}) catch {};
+            }
+        }.init else null,
+        // Update function
+        struct {
+            fn update(e: ecs.Entity, dt: f32, ctx: *anyopaque) void {
+                const slf: *Script = @ptrCast(@alignCast(ctx));
+                _ = slf.callFunction("update", &.{}, .{ e, dt }) catch {};
+            }
+        }.update,
+        // Deinit function
+        if (deinit_type == .function) struct {
+            fn deinit(ctx: *anyopaque) void {
+                const slf: *Script = @ptrCast(@alignCast(ctx));
+                _ = slf.callFunction("deinit", &.{}, .{}) catch {};
+            }
+        }.deinit else null,
+        self,
     );
 }
 
@@ -158,28 +176,8 @@ pub fn instantiateEntity(self: *Script, entity: ecs.Entity) !void {
     const top = l.getTop();
     defer l.setTop(top);
 
-    _ = try self.callFunction("init", &.{}, .{ entity });
+    _ = try self.callFunction("init", &.{}, .{entity});
 }
-
-// /// Param is the first value passed to the .new function.
-// pub fn instantiate(self: *Script, param: anytype) !void {
-//     if (self.ref == 0) return error.NoInstanceTable;
-//     const top = self.state.getTop();
-//     defer self.state.setTop(top);
-
-//     const handler_idx = self.pushMsgHandler();
-//     _ = self.state.getIndexRaw(zlua.registry_index, self.ref);
-//     _ = self.state.getField(-1, "new");
-//     self.state.remove(-2);
-
-//     self.binder.pushValue(self.state, param);
-//     self.state.protectedCall(.{ .args = 1, .results = 1, .msg_handler = handler_idx }) catch {
-//         self.luaErr();
-//         return error.InstantiateFailed;
-//     };
-
-//     self.table_ref = self.state.ref(-1);
-// }
 
 fn pushMsgHandler(self: *const Script) i32 {
     self.state.pushFunction(zlua.wrap(struct {
@@ -201,7 +199,7 @@ fn luaErr(self: *const Script) void {
     if (std.mem.indexOf(u8, msg, ": ")) |msg_sep| {
         // search backwards in order to find the separator of file and line
         if (std.mem.findScalarLast(u8, msg[0..msg_sep], ':')) |line_sep| {
-            const line = msg[line_sep+1 .. msg_sep];
+            const line = msg[line_sep + 1 .. msg_sep];
             const err_msg = msg[msg_sep + 2 ..]; // skip ":"
 
             // todo: change second format arg to script path, I removed it without
@@ -211,9 +209,6 @@ fn luaErr(self: *const Script) void {
         }
     }
 
-    if (!formatted) {
-        std.log.err("{s}", .{ msg });
-    }
-
+    if (!formatted) std.log.err("{s}", .{msg});
     self.state.pop(1);
 }

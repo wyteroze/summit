@@ -14,7 +14,7 @@ pub fn setupPanic() void {
     std.debug.updateSegfaultHandler(&.{
         .handler = .{ .sigaction = posixFault },
         .mask = std.posix.sigemptyset(),
-        .flags = std.posix.SA.SIGINFO |  std.posix.SA.NODEFER
+        .flags = std.posix.SA.SIGINFO | std.posix.SA.NODEFER,
     });
 }
 
@@ -26,7 +26,7 @@ fn posixFault(sig: std.posix.SIG, _: *const std.posix.siginfo_t, ctx: ?*anyopaqu
         .BUS => "Bus error",
         .FPE => "Floating point exception",
         .ILL => "Illegal instruction",
-        else => "Unhandled fault"
+        else => "Unhandled fault",
     };
 
     fault_ctx = ctx;
@@ -52,12 +52,12 @@ fn panicFn(msg: []const u8, _: ?usize) noreturn {
     trace: {
         stderr.setColor(.bright_red) catch {};
         stderr.setColor(.bold) catch {};
-        writer.print("{s} ", .{ msg }) catch {};
+        writer.print("{s} ", .{msg}) catch {};
         stderr.setColor(.reset) catch {};
 
         stderr.setColor(.bright_red) catch {};
         stderr.setColor(.dim) catch {};
-        writer.print("(thread {d})", .{ std.Thread.getCurrentId() }) catch {};
+        writer.print("(thread {d})", .{std.Thread.getCurrentId()}) catch {};
         stderr.setColor(.reset) catch {};
 
         if (@errorReturnTrace()) |t| if (t.index > 0) {
@@ -65,21 +65,17 @@ fn panicFn(msg: []const u8, _: ?usize) noreturn {
             std.debug.writeErrorReturnTrace(t, stderr) catch break :trace;
         };
 
-        const native_ctx: ?std.debug.cpu_context.Native = 
-            if (fault_ctx) |ctx| std.debug.cpu_context.fromPosixSignalContext(ctx) 
-            else null;
+        const native_ctx: ?std.debug.cpu_context.Native =
+            if (fault_ctx) |ctx| std.debug.cpu_context.fromPosixSignalContext(ctx) else null;
 
         stderr.setColor(.bright_red) catch {};
         writer.print("\nStack trace:\n", .{}) catch break :trace;
         stderr.setColor(.reset) catch {};
 
         if (native_ctx) |c| {
-            std.debug.writeCurrentStackTrace(.{
-                .context = &c,
-                .allow_unsafe_unwind = true
-            }, stderr) catch break :trace;
+            std.debug.writeCurrentStackTrace(.{ .context = &c, .allow_unsafe_unwind = true }, stderr) catch break :trace;
         } else {
-            std.debug.dumpCurrentStackTrace(.{ 
+            std.debug.dumpCurrentStackTrace(.{
                 .first_address = @returnAddress(),
                 .allow_unsafe_unwind = true,
             });
@@ -91,7 +87,7 @@ fn panicFn(msg: []const u8, _: ?usize) noreturn {
         stderr.setColor(.bright_red) catch {};
         writer.writeAll("Lua trace:\n") catch break :trace;
         stderr.setColor(.reset) catch {};
-        writer.print("{s:0}", .{ lua_traceback }) catch break :trace;
+        writer.print("{s:0}", .{lua_traceback}) catch break :trace;
     }
 
     stderr.setColor(.reset) catch {};
