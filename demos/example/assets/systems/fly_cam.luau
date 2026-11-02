@@ -5,7 +5,7 @@ local windowing = require("@windowing")
 
 local speed = 1
 local flyCam: System = {}
-flyCam.query = { "AudioListener" }
+flyCam.query = { "FlyCam" }
 
 -- Bool to number
 local function btn(bool)
@@ -51,6 +51,8 @@ local function rotToForwardVector(rot: Vec3): Vec3
 end
 
 function flyCam.init(world: World)
+    world:registerComponent("FlyCam")
+
     input.keyboards.keyPressed:connect(function(key, consumed, win)
         if consumed or win ~= windowing.mainWindow then return end
         if key == "Escape" then
@@ -73,19 +75,20 @@ function flyCam.init(world: World)
 end
 
 function flyCam.update(entity: Entity, dt: number)
+    -- TODO: Why the hell does this work correctly when the `not` is missing??? Fix it.
     if windowing.mainWindow.focused then return end
 
+    -- Big TODO: Make engine APIs not OOP-based.
     local kb = input.getKeyboard(1) :: Keyboard
     local ms = input.getMouse(1) :: Mouse
 
     -- TODO: Allow vec * (or /) number 
     
-    -- 5 m/s
     local moveX = (btn(kb:isKeyPressed("D"))-btn(kb:isKeyPressed("A")))*dt*speed
     local moveY = (btn(kb:isKeyPressed("Space"))-btn(kb:isKeyPressed("LeftShift")))*dt*speed
     local moveZ = (btn(kb:isKeyPressed("W"))-btn(kb:isKeyPressed("S")))*dt*speed
 
-    local msDelta = if input.isCursorLocked() then ms:getMoveDelta() else Vec2.new(0, 0)
+    local msDelta = if input.isCursorLocked() then ms:getMoveDelta() else Vec2.zero
     local rot = entity.components.Rotation
         + Vec3.new(msDelta.y, msDelta.x, 0)
 

@@ -2,11 +2,18 @@
 
 const std = @import("std");
 const zlua = @import("zlua");
+const Host = @import("../bind/bind.zig").Host;
 const core = @import("../../core/core.zig");
 const Ecs = @import("../../ecs/Ecs.zig");
 const bind = @import("../bind/bind.zig");
 const types = @import("../../assets/types.zig");
 const Lua = zlua.Lua;
+
+const FnRefs = struct {
+    init: ?i32 = null,
+    update: ?i32 = null,
+    deinit: ?i32 = null,
+};
 
 const Script = @This();
 source: types.ScriptSource,
@@ -16,10 +23,9 @@ state: *Lua,
 thread_ref: i32,
 ref: i32,
 binder: bind.Binder(bind.api),
-on_deinit: core.signal.Signal(.{*Script}),
+fn_refs: FnRefs = .{},
 
 pub fn init(
-    dispatcher: *core.signal.Dispatcher,
     name: ?[:0]const u8,
     main: *Lua,
     state: *Lua,
@@ -68,14 +74,16 @@ pub fn init(
         .thread_ref = thread_ref,
         .ref = ref,
         .binder = binder,
-        .on_deinit = .init(state.allocator(), dispatcher),
     };
 }
 
 pub fn deinit(self: *Script) void {
+    inline for (@typeInfo(FnRefs).@"struct".field_names) |nm| {
+        if (@field(self.fn_refs, nm)) |ref| self.state.unref(ref);
+    }
+
     self.state.unref(self.ref);
     self.main.unref(self.thread_ref);
-    self.on_deinit.deinit();
     self.arena.deinit();
 }
 
@@ -122,55 +130,74 @@ fn callFunctionAtIndex(self: *const Script, idx: i32, comptime ResultTypes: []co
 pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.SystemHandle {
     if (self.ref == 0) return error.NoInstanceTable;
     const l = self.state;
-
     const top = l.getTop();
     defer l.setTop(top);
+
+    _ = l.getIndexRaw(zlua.registry_index, self.ref);
+
+    const init_type = l.getField(-1, "init");
+    if (init_type != .function and init_type != .nil) return error.InitMustBeFunctionOrNil;
+    const update_type = l.getField(-2, "update");
+    if (update_type != .function and update_type != .nil) return error.UpdateMustBeFunctionOrNil;
+    const deinit_type = l.getField(-3, "deinit");
+    if (deinit_type != .function and deinit_type != .nil) return error.DeinitMustBeFunctionOrNil;
+    self.fn_refs.init = l.ref(-3);
+    self.fn_refs.update = l.ref(-2);
+    self.fn_refs.deinit = l.ref(-1);
+    l.pop(3);
+
+    // Run it before processing the query so the system may create any components it needs to use.
+    if (init_type == .function) {
+        const t = l.getTop();
+        defer l.setTop(t);
+        const h = Host.fromState(l);
+        _ = l.getIndexRaw(zlua.registry_index, self.fn_refs.init.?);
+        _ = self.callFunctionAtIndex(-1, &.{}, .{h.ecs.worldAsHandle(world)}) catch
+            return error.SystemInitFailed;
+    }
 
     const alloc = self.allocator();
     // Duped by `registerSystem`
     var ids: std.ArrayList(Ecs.ComponentId) = .empty;
     defer ids.deinit(alloc);
 
-    _ = l.getIndexRaw(zlua.registry_index, self.ref);
     if (l.getField(-1, "query") != .table) {
-        std.log.err("Systems must have a `query` table containing component names.", .{});
+        std.log.err("Systems must have a `query` table containing component names, even if empty.", .{});
         return error.InvalidOrNoQuery;
     }
 
     l.pushNil();
     while (l.next(-2)) {
-        const component_name = l.checkString(-1);
-        if (world.components.id(component_name)) |id| try ids.append(alloc, id);
-
+        const name = l.checkString(-1);
+        const id = world.components.id(name) orelse {
+            std.log.err("Unknown component '{s}' in system query", .{name});
+            return error.UnknownComponentInQuery;
+        };
+        try ids.append(alloc, id);
         l.pop(1);
     }
     l.pop(1);
 
-    const init_type = l.getField(-1, "init");
-    const deinit_type = l.getField(-2, "deinit");
-    l.pop(2);
-
     return try world.registerSystem(
         ids.items,
-        // Init function
-        if (init_type == .function) struct {
-            fn init(_: *Ecs.World, ctx: *anyopaque) void {
-                const slf: *Script = @ptrCast(@alignCast(ctx));
-                _ = slf.callFunction("init", &.{}, .{}) catch {};
-            }
-        }.init else null,
+        // No need for init fn, we just called it
+        null,
         // Update function
-        struct {
+        if (update_type == .function) struct {
             fn update(e: Ecs.Entity, dt: f32, ctx: *anyopaque) void {
-                const slf: *Script = @ptrCast(@alignCast(ctx));
-                _ = slf.callFunction("update", &.{}, .{ e, dt }) catch {};
+                const s: *Script = @ptrCast(@alignCast(ctx));
+                const lua = s.state;
+                _ = lua.getIndexRaw(zlua.registry_index, s.fn_refs.update.?);
+                _ = s.callFunctionAtIndex(-1, &.{}, .{ e, dt }) catch {};
             }
-        }.update,
+        }.update else null,
         // Deinit function
         if (deinit_type == .function) struct {
             fn deinit(ctx: *anyopaque) void {
-                const slf: *Script = @ptrCast(@alignCast(ctx));
-                _ = slf.callFunction("deinit", &.{}, .{}) catch {};
+                const s: *Script = @ptrCast(@alignCast(ctx));
+                const lua = s.state;
+                _ = lua.getIndexRaw(zlua.registry_index, s.fn_refs.deinit.?);
+                _ = s.callFunctionAtIndex(-1, &.{}, .{}) catch {};
             }
         }.deinit else null,
         self,

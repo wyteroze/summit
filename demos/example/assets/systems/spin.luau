@@ -1,10 +1,10 @@
 -- Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 local spin: System = {}
-spin.query = { "Speaker" }
+spin.query = { "Spin" }
 
 function spin.init(world: World)
-    -- world:RegisterComponent("Spin", "Vec3")
+    world:registerComponent("Spin")
 end
 
 function spin.update(entity: Entity, dt: number)

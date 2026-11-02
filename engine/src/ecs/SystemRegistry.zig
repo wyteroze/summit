@@ -21,7 +21,7 @@ pub const SystemEntry = struct {
     ctx: *anyopaque,
     query: []const Ecs.ComponentId,
     init: ?SystemInitFn,
-    update: SystemUpdateFn,
+    update: ?SystemUpdateFn,
     deinit: ?SystemDeinitFn,
 };
 
@@ -51,7 +51,7 @@ pub fn register(
     world: *World,
     query: []const Ecs.ComponentId,
     init_fn: ?SystemInitFn,
-    update_fn: SystemUpdateFn,
+    update_fn: ?SystemUpdateFn,
     deinit_fn: ?SystemDeinitFn,
     ctx: *anyopaque,
 ) !SystemHandle {
@@ -81,10 +81,10 @@ pub fn unregister(self: *SystemRegistry, handle: SystemHandle) !void {
 
 pub fn runAll(self: *SystemRegistry, world: *World, dt: f32) void {
     var iter = self.systems.valueIterator();
-    while (iter.next()) |s| {
+    while (iter.next()) |s| if (s.update) |update| {
         // TODO: Cache queries instead of doing them every frame
         // Queries are validated by World before registering systems
         var q_iter = world.queryUnchecked(s.query).iterator();
-        while (q_iter.next()) |e| s.update(e, dt, s.ctx);
-    }
+        while (q_iter.next()) |e| update(e, dt, s.ctx);
+    };
 }
