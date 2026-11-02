@@ -3925,6 +3925,8 @@ pub const Lua = opaque {
         return if (ar == -1) null else ar;
     }
 
+    // Stock ziglua
+
     /// Ensures that the value `t[field]`, where `t` is the value at `index`, is a table, and pushes that table onto the stack.
     /// Returns true if it finds a previous table there and false if it creates a new table.
     ///

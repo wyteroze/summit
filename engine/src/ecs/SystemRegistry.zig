@@ -1,9 +1,9 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const ecs = @import("Ecs.zig");
-const World = ecs.World;
-const Entity = ecs.Entity;
+const Ecs = @import("Ecs.zig");
+const World = Ecs.World;
+const Entity = Ecs.Entity;
 
 pub const SystemInitFn = *const fn (world: *World, ctx: *anyopaque) void;
 pub const SystemUpdateFn = *const fn (entity: Entity, dt: f32, ctx: *anyopaque) void;
@@ -12,14 +12,14 @@ pub const SystemHandle = struct {
     registry: *SystemRegistry,
     id: u64,
 
-    pub fn unregister(self: SystemHandle) void {
-        self.registry.unregister(self);
+    pub fn unregister(self: SystemHandle) !void {
+        try self.registry.unregister(self);
     }
 };
 
 pub const SystemEntry = struct {
     ctx: *anyopaque,
-    query: []const ecs.ComponentId,
+    query: []const Ecs.ComponentId,
     init: ?SystemInitFn,
     update: SystemUpdateFn,
     deinit: ?SystemDeinitFn,
@@ -39,14 +39,17 @@ pub fn init(allocator: std.mem.Allocator) SystemRegistry {
 
 pub fn deinit(self: *SystemRegistry) void {
     var iter = self.systems.valueIterator();
-    while (iter.next()) |s| if (s.deinit) |d| d(s.ctx);
+    while (iter.next()) |s| {
+        if (s.deinit) |d| d(s.ctx);
+        self.allocator.free(s.query);
+    }
     self.systems.deinit();
 }
 
 pub fn register(
     self: *SystemRegistry,
     world: *World,
-    query: []const ecs.ComponentId,
+    query: []const Ecs.ComponentId,
     init_fn: ?SystemInitFn,
     update_fn: SystemUpdateFn,
     deinit_fn: ?SystemDeinitFn,
@@ -55,9 +58,10 @@ pub fn register(
     const id = self.next_id;
     self.next_id +%= 1;
 
+    const query_dupe = try self.allocator.dupe(Ecs.ComponentId, query);
     try self.systems.put(id, .{
         .ctx = ctx,
-        .query = query,
+        .query = query_dupe,
         .init = init_fn,
         .update = update_fn,
         .deinit = deinit_fn,
@@ -71,6 +75,7 @@ pub fn unregister(self: *SystemRegistry, handle: SystemHandle) !void {
     if (self.systems.fetchRemove(handle.id)) |entry| {
         const sys = &entry.value;
         if (sys.deinit) |d| d(sys.ctx);
+        self.allocator.free(sys.query);
     } else return error.SystemNotRegistered;
 }
 
@@ -78,7 +83,8 @@ pub fn runAll(self: *SystemRegistry, world: *World, dt: f32) void {
     var iter = self.systems.valueIterator();
     while (iter.next()) |s| {
         // TODO: Cache queries instead of doing them every frame
-        var q_iter = world.query(s.query).iterator();
+        // Queries are validated by World before registering systems
+        var q_iter = world.queryUnchecked(s.query).iterator();
         while (q_iter.next()) |e| s.update(e, dt, s.ctx);
     }
 }

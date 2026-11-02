@@ -1,7 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const ecs = @import("../ecs/Ecs.zig");
+const Ecs = @import("../ecs/Ecs.zig");
 const signal = @import("../core/signal.zig");
 const Assets = @import("../assets/Assets.zig");
 const Platform = @import("../platform/Platform.zig");
@@ -95,7 +95,7 @@ pub fn deinit(self: *Audio) void {
     self.dispatcher.deinit();
 }
 
-pub fn create(self: *Audio, asset: Assets.AssetHandle, owner: ?ecs.Entity) !track.TrackHandle {
+pub fn create(self: *Audio, asset: Assets.AssetHandle, owner: ?Ecs.Entity) !track.TrackHandle {
     if (self.free_len == 0) return error.TooManyVoices;
     self.free_len -= 1;
     const index = self.free[self.free_len];

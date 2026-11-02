@@ -1,8 +1,8 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const Entity = @import("Entity.zig");
-const ComponentId = @import("ComponentId.zig");
+const Entity = @import("Entity.zig").Entity;
+const ComponentId = @import("ComponentId.zig").ComponentId;
 const ComponentInfo = @import("ComponentInfo.zig");
 const ComponentRegistry = @import("ComponentRegistry.zig");
 
@@ -49,12 +49,16 @@ pub fn has(self: *SparseSet, entity: Entity) bool {
     if (entity.index >= self.sparse.items.len) return false;
     const dense_idx = self.sparse.items[entity.index];
     if (dense_idx == null_idx) return false;
-    return self.dense.items[dense_idx].eql(entity);
+    std.debug.assert(self.dense.items[dense_idx].eql(entity));
+
+    return true;
 }
 
 /// This takes ownership of the `bytes` and frees the previous value, if one exists.
 pub fn insert(self: *SparseSet, entity: Entity, bytes: []const u8) !void {
     try self.ensureCapacity(entity.index);
+    try self.dense.ensureUnusedCapacity(self.allocator, 1);
+    try self.dense_data.ensureUnusedCapacity(self.allocator, self.elem_size);
 
     const existing = self.sparse.items[entity.index];
     if (existing != null_idx) {
@@ -77,7 +81,8 @@ pub fn insert(self: *SparseSet, entity: Entity, bytes: []const u8) !void {
 pub fn remove(self: *SparseSet, entity: Entity) void {
     if (entity.index >= self.sparse.items.len) return;
     const dense_idx = self.sparse.items[entity.index];
-    if (dense_idx == null_idx or !self.dense.items[dense_idx].eql(entity)) return;
+    if (dense_idx == null_idx) return;
+    std.debug.assert(self.dense.items[dense_idx].eql(entity));
 
     self.info.free(self.allocator, self.slot(dense_idx));
 
@@ -89,18 +94,17 @@ pub fn remove(self: *SparseSet, entity: Entity) void {
         self.sparse.items[last_entity.index] = dense_idx;
     }
     self.dense.shrinkRetainingCapacity(last_idx);
-    self.dense_data.shrinkRetainingCapacity(last_idx * self.elem_size);
+    self.dense_data.shrinkRetainingCapacity(@as(u64, last_idx) * self.elem_size);
     self.sparse.items[entity.index] = null_idx;
 }
 
 pub fn get(self: *SparseSet, entity: Entity) ?[]u8 {
     if (entity.index >= self.sparse.items.len) return null;
-
     const dense_idx = self.sparse.items[entity.index];
     if (dense_idx == null_idx) return null;
-    if (!self.dense.items[dense_idx].eql(entity)) return null;
+    std.debug.assert(self.dense.items[dense_idx].eql(entity));
 
-    return self.dense_data.items[dense_idx * self.elem_size ..][0..self.elem_size];
+    return self.slot(dense_idx);
 }
 
 pub fn count(self: *SparseSet) usize {
@@ -112,5 +116,5 @@ pub fn entities(self: *SparseSet) []Entity {
 }
 
 fn slot(self: *SparseSet, dense_idx: usize) []u8 {
-    return self.dense_data.items[dense_idx * self.elem_size ..][0..self.elem_size];
+    return self.dense_data.items[@as(u64, dense_idx) * self.elem_size ..][0..self.elem_size];
 }

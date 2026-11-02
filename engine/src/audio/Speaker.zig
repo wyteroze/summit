@@ -1,7 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const ecs = @import("../ecs/Ecs.zig");
+const Ecs = @import("../ecs/Ecs.zig");
 const bind = @import("../scripting/bind/bind.zig");
 const Assets = @import("../assets/Assets.zig");
 const types = @import("types.zig");
@@ -19,37 +19,38 @@ attenuation: types.Attenuation = .inverse_square,
 pub const sub_api = bind.record(Speaker, .{ .handle = SpeakerHandle });
 
 pub const SpeakerHandle = struct {
-    entity: ecs.Entity,
+    entity: Ecs.Entity,
     audio: *Audio,
 
-    pub fn get(self: SpeakerHandle) ?*Speaker {
+    pub fn get(self: SpeakerHandle, ecs: *Ecs) !?*Speaker {
         // TODO!!!!!!!!!!!!!!!!!!! Stop querying `id` so often, create it once then save it somewhere
         // like a struct instead of having to do this so often (plus it looks ugly)
-        const id = self.entity.world.components.id("Speaker") orelse unreachable;
-        return self.entity.world.getComponent(self.entity, id, Speaker);
+        const w = try ecs.getWorld(self.entity.world_id);
+        const id = w.componentId("Speaker") orelse unreachable;
+        return try w.getComponent(self.entity, id, Speaker);
     }
 
-    pub fn require(self: SpeakerHandle) !*Speaker {
-        return self.get() orelse error.SpeakerRemoved;
+    pub fn require(self: SpeakerHandle, ecs: *Ecs) !*Speaker {
+        return (try self.get(ecs)) orelse error.SpeakerRemoved;
     }
 
-    pub fn isAlive(self: SpeakerHandle) bool {
-        return self.get() != null;
+    pub fn isAlive(self: SpeakerHandle, ecs: *Ecs) bool {
+        return (self.get(ecs) catch return false) != null;
     }
 
-    pub fn load(self: SpeakerHandle, asset: Assets.AssetHandle) !Audio.track.TrackHandle {
-        _ = try self.require();
+    pub fn load(self: SpeakerHandle, asset: Assets.AssetHandle, ecs: *Ecs) !Audio.track.TrackHandle {
+        _ = try self.require(ecs);
         return self.audio.create(asset, self.entity);
     }
 
-    pub fn play(self: SpeakerHandle, asset: Assets.AssetHandle) !Audio.track.TrackHandle {
-        const t = try self.load(asset);
+    pub fn play(self: SpeakerHandle, asset: Assets.AssetHandle, ecs: *Ecs) !Audio.track.TrackHandle {
+        const t = try self.load(asset, ecs);
         try self.audio.start(t, .{});
 
         return t;
     }
 
-    pub fn fromComponent(host: anytype, e: ecs.Entity) SpeakerHandle {
+    pub fn fromComponent(host: anytype, e: Ecs.Entity) SpeakerHandle {
         return .{ .entity = e, .audio = host.audio };
     }
 
@@ -61,39 +62,39 @@ pub const SpeakerHandle = struct {
         },
         .props = &.{
             bind.prop("volume", struct {
-                fn get(self: SpeakerHandle) !f32 {
-                    return (try self.require()).volume;
+                fn get(self: SpeakerHandle, ecs: *Ecs) !f32 {
+                    return (try self.require(ecs)).volume;
                 }
             }.get, struct {
-                fn set(self: SpeakerHandle, volume: f32) !void {
-                    (try self.require()).volume = std.math.clamp(volume, min_volume, max_volume);
+                fn set(self: SpeakerHandle, volume: f32, ecs: *Ecs) !void {
+                    (try self.require(ecs)).volume = std.math.clamp(volume, min_volume, max_volume);
                 }
             }.set),
             bind.prop("minDistance", struct {
-                fn get(self: SpeakerHandle) !f32 {
-                    return (try self.require()).min_distance;
+                fn get(self: SpeakerHandle, ecs: *Ecs) !f32 {
+                    return (try self.require(ecs)).min_distance;
                 }
             }.get, struct {
-                fn set(self: SpeakerHandle, distance: f32) !void {
-                    (try self.require()).min_distance = @max(distance, 0);
+                fn set(self: SpeakerHandle, distance: f32, ecs: *Ecs) !void {
+                    (try self.require(ecs)).min_distance = @max(distance, 0);
                 }
             }.set),
             bind.prop("maxDistance", struct {
-                fn get(self: SpeakerHandle) !f32 {
-                    return (try self.require()).max_distance;
+                fn get(self: SpeakerHandle, ecs: *Ecs) !f32 {
+                    return (try self.require(ecs)).max_distance;
                 }
             }.get, struct {
-                fn set(self: SpeakerHandle, distance: f32) !void {
-                    (try self.require()).max_distance = @max(distance, 0);
+                fn set(self: SpeakerHandle, distance: f32, ecs: *Ecs) !void {
+                    (try self.require(ecs)).max_distance = @max(distance, 0);
                 }
             }.set),
             bind.prop("attenuation", struct {
-                fn get(self: SpeakerHandle) !Audio.types.Attenuation {
-                    return (try self.require()).attenuation;
+                fn get(self: SpeakerHandle, ecs: *Ecs) !Audio.types.Attenuation {
+                    return (try self.require(ecs)).attenuation;
                 }
             }.get, struct {
-                fn set(self: SpeakerHandle, attenuation: Audio.types.Attenuation) !void {
-                    (try self.require()).attenuation = attenuation;
+                fn set(self: SpeakerHandle, attenuation: Audio.types.Attenuation, ecs: *Ecs) !void {
+                    (try self.require(ecs)).attenuation = attenuation;
                 }
             }.set),
         },

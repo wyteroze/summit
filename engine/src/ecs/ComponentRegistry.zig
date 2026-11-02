@@ -1,21 +1,27 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const zlua = @import("zlua");
-const ComponentId = @import("ComponentId.zig");
+const ComponentId = @import("ComponentId.zig").ComponentId;
 const ComponentInfo = @import("ComponentInfo.zig");
 
 pub const max_component_size = 256;
 pub const max_alignment = 16;
 
 const ComponentRegistry = @This();
+world_id: u8,
 allocator: std.mem.Allocator,
 arena: std.heap.ArenaAllocator,
 infos: std.ArrayList(*const ComponentInfo),
 ids: std.StringHashMap(ComponentId),
 
-pub fn init(allocator: std.mem.Allocator) ComponentRegistry {
-    return .{ .allocator = allocator, .arena = .init(allocator), .infos = .empty, .ids = .init(allocator) };
+pub fn init(world_id: u8, allocator: std.mem.Allocator) ComponentRegistry {
+    return .{
+        .world_id = world_id,
+        .allocator = allocator,
+        .arena = .init(allocator),
+        .infos = .empty,
+        .ids = .init(allocator),
+    };
 }
 
 pub fn deinit(self: *ComponentRegistry) void {
@@ -57,9 +63,10 @@ fn add(self: *ComponentRegistry, template: ComponentInfo, name: []const u8) !Com
     stored.* = template;
     stored.name = try a.dupe(u8, name);
 
-    const c_id: ComponentId = .{ .value = @intCast(self.infos.items.len) };
+    const c_id: ComponentId = .{ .world_id = self.world_id, .value = @intCast(self.infos.items.len) };
     try self.infos.append(self.allocator, stored);
     try self.ids.put(stored.name, c_id);
+
     return c_id;
 }
 

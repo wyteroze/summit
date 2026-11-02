@@ -1,7 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const ecs = @import("../ecs/Ecs.zig");
+const Ecs = @import("../ecs/Ecs.zig");
 const Assets = @import("../assets/Assets.zig");
 const core = @import("../core/core.zig");
 const math = @import("../core/math/math.zig");
@@ -16,8 +16,8 @@ pub const Environment = struct {
     clear_color: core.Color = .fromRgbFloat(0, 0, 0, 1.0),
 };
 pub const RenderViewOptions = struct {
-    camera: ecs.Entity,
-    scene: ecs.Entity,
+    camera: Ecs.Entity,
+    scene: Ecs.Entity,
     /// If null, uses the size of the entity.
     /// If the entity has the same size as the window,
     /// it renders straight to the swapchain, which is ideal for performance.

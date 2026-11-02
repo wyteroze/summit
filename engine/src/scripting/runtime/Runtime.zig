@@ -4,7 +4,7 @@ const std = @import("std");
 const zlua = @import("zlua");
 const core = @import("../../core/core.zig");
 const bind = @import("../bind/bind.zig");
-const ecs = @import("../../ecs/Ecs.zig");
+const Ecs = @import("../../ecs/Ecs.zig");
 const Assets = @import("../../assets/Assets.zig");
 const Input = @import("../../input/Input.zig");
 const Ui = @import("../../ui/Ui.zig");
@@ -58,11 +58,11 @@ pub fn getScript(self: *Runtime, handle: ScriptHandle) !*Script {
     return self.scripts.getPtr(handle.id) orelse return error.InvalidId;
 }
 
-pub fn instantiateSystem(self: *Runtime, handle: ScriptHandle, world: *ecs.World) !ecs.SystemRegistry.SystemHandle {
+pub fn instantiateSystem(self: *Runtime, handle: ScriptHandle, world: *Ecs.World) !Ecs.SystemRegistry.SystemHandle {
     return (try self.getScript(handle)).instantiateSystem(world);
 }
 
-pub fn instantiateEntity(self: *Runtime, handle: ScriptHandle, entity: ecs.Entity) !void {
+pub fn instantiateEntity(self: *Runtime, handle: ScriptHandle, entity: Ecs.Entity) !void {
     try (try self.getScript(handle)).instantiateEntity(entity);
 }
 

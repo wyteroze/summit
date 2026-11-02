@@ -7,8 +7,8 @@ const types = @import("types.zig");
 const names = @import("names.zig");
 const recipes = @import("recipes.zig");
 const Host = @import("Host.zig");
-const ecs = @import("../../ecs/Ecs.zig");
-const Codec = ecs.Codec;
+const Ecs = @import("../../ecs/Ecs.zig");
+const Codec = Ecs.Codec;
 pub const registry = @import("registry.zig");
 pub const Marshal = @import("marshal.zig").Marshal;
 pub const Wrap = @import("wrap.zig").Wrap;
@@ -164,11 +164,11 @@ pub fn Binder(comptime api: anytype) type {
                     }
                 }.f,
                 .push_component = if (is_record) struct {
-                    fn f(l: *zlua.Lua, entity: ecs.Entity, id: ecs.ComponentId, _: []const u8) void {
+                    fn f(l: *zlua.Lua, entity: Ecs.Entity, id: Ecs.ComponentId, _: []const u8) void {
                         if (H) |Handle| {
                             M.push(l, Handle.fromComponent(Host.fromState(l), entity));
                         } else {
-                            M.push(l, ecs.lua_components.ComponentRef{ .entity = entity, .id = id });
+                            M.push(l, Ecs.lua_components.ComponentRef{ .entity = entity, .id = id });
                         }
                     }
                 }.f else null,
