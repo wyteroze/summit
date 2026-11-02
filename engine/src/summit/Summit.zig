@@ -7,7 +7,7 @@ const engine = @import("../engine.zig");
 const Memory = @import("Memory.zig");
 const Platform = engine.Platform;
 const gpu = engine.gpu;
-const ecs = engine.ecs;
+const Ecs = engine.Ecs;
 const math = engine.core.math;
 const scripting = engine.scripting;
 const Os = engine.Os;
@@ -38,7 +38,7 @@ allocator: std.mem.Allocator,
 running: bool,
 last_frame: std.Io.Timestamp,
 
-world: ecs.World,
+world: *Ecs.World,
 gpu_device: gpu.GpuDevice,
 host: scripting.bind.Host,
 
@@ -46,6 +46,7 @@ host: scripting.bind.Host,
 memory: Memory,
 os: Os,
 ui: Ui,
+ecs: Ecs,
 audio: Audio,
 renderer: render.Renderer,
 input: Input,
@@ -79,7 +80,10 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     errdefer self.scheduler.deinit();
     try self.platform.init(try self.getAlloc("Platform"), .initSdl());
     errdefer self.platform.deinit();
-    self.ui = try .init(try self.getAlloc("Ui"));
+    self.ecs = undefined;
+    try self.ecs.init(try self.getAlloc("Ecs"));
+    errdefer self.ecs.deinit();
+    self.ui = try .init(&self.ecs, try self.getAlloc("Ui"));
     errdefer self.ui.deinit();
     self.gpu_device = try .init(try self.getAlloc("Gpu"), .initDiligent());
     errdefer self.gpu_device.deinit();
@@ -99,13 +103,12 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     errdefer self.input.deinit();
 
     // Create the world
-    self.world = .init(try self.getAlloc("ECSWorld"));
-    errdefer self.world.deinit();
+    self.world = try self.ecs.createWorld();
 
     try self.audio.init(io, try self.getAlloc("Audio"), &self.platform);
     errdefer self.audio.deinit();
 
-    self.host = .{ .world = &self.world, .assets = &self.assets, .input = &self.input, .ui = &self.ui, .audio = &self.audio, .windowing = &self.windowing };
+    self.host = .{ .ecs = &self.ecs, .assets = &self.assets, .input = &self.input, .ui = &self.ui, .audio = &self.audio, .windowing = &self.windowing };
     self.runtime = try .init(try self.getAlloc("LuaRuntime"), &self.host);
     errdefer self.runtime.deinit();
 
@@ -133,7 +136,7 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
 }
 
 pub fn deinit(self: *Summit) void {
-    self.world.deinit();
+    self.ecs.deinit();
     self.ui.deinit();
     self.audio.deinit();
     self.renderer.deinit();
@@ -167,9 +170,10 @@ pub fn update(self: *Summit) void {
     self.windowing.update();
     self.ui.update();
     self.ui.paint();
-    self.submitToRenderer();
+    self.submitToRenderer() catch |e| std.log.err("Failed to submit to renderer: {t}", .{e});
     self.submitToAudio();
     self.assets.tick(start);
+    self.world.clearChanged();
 }
 
 pub fn setupTestScene(self: *Summit) !void {
@@ -178,7 +182,7 @@ pub fn setupTestScene(self: *Summit) !void {
     self.windowing.main_window = window;
     try window.focus();
 
-    var world = &self.world;
+    const world = self.world;
     var ui = &self.ui;
 
     // Create a scene inside of the world
@@ -233,10 +237,10 @@ pub fn setupTestScene(self: *Summit) !void {
         .kind = .{ .point = .{ .radius = 10 } },
     });
     try world.set(light, pos_id, math.Vec3, .zero);
-    try light.setParent(scene);
+    try world.setParent(light, scene);
 
     // Parent the component under the scene
-    try entity.setParent(scene);
+    try world.setParent(entity, scene);
 
     // Scripts
     {
@@ -259,13 +263,13 @@ pub fn setupTestScene(self: *Summit) !void {
     try ui.world.set(view_entity, ui.component_ids.render_view, Ui.types.RenderViewOptions, .{ .camera = camera, .scene = scene });
     try ui.world.set(view_entity, ui.component_ids.position, math.Vec2, .new(0, 0));
     try ui.world.set(view_entity, ui.component_ids.size, Ui.types.SizeMode, .{ .width = .fill, .height = .fill });
-    try view_entity.setParent((try window.getElement()).entity);
+    try ui.world.setParent(view_entity, (try window.getElement()).entity);
 
     const view_entity_2 = try ui.world.spawnEntity();
     try ui.world.set(view_entity_2, ui.component_ids.render_view, Ui.types.RenderViewOptions, .{ .camera = camera_2, .scene = scene });
     try ui.world.set(view_entity_2, ui.component_ids.position, math.Vec2, .new(0, 0));
     try ui.world.set(view_entity_2, ui.component_ids.size, Ui.types.SizeMode, .{ .width = .fill, .height = .fill });
-    try view_entity_2.setParent((try window_2.getElement()).entity);
+    try ui.world.setParent(view_entity_2, (try window_2.getElement()).entity);
 }
 
 fn getAlloc(self: *Summit, category: []const u8) !std.mem.Allocator {
@@ -274,18 +278,18 @@ fn getAlloc(self: *Summit, category: []const u8) !std.mem.Allocator {
 
 fn collectUiItems(
     ui: *Ui,
-    entity: ecs.Entity,
+    entity: Ecs.Entity,
     items: *std.ArrayList(render.types.UiItem),
     alloc: std.mem.Allocator,
 ) void {
     const cids = ui.component_ids;
-    if (!ui.world.hasComponent(entity, cids.render_view)) {
-        const pos: math.Vec2 = if (ui.world.getComponent(entity, cids.computed_position, math.Vec2)) |p| p.* else .zero;
-        const size: math.Vec2 = if (ui.world.getComponent(entity, cids.computed_size, math.Vec2)) |p| p.* else .zero;
-        const corners = if (ui.world.getComponent(entity, cids.corner_radii, Ui.types.CornerRadii)) |c| c.* else null;
-        const borders = if (ui.world.getComponent(entity, cids.borders, Ui.types.Borders)) |b| b.* else null;
-        const image = if (ui.world.getComponent(entity, cids.image, Ui.types.Image)) |i| i.* else null;
-        const color: core.Color = if (ui.world.getComponent(entity, cids.color, core.Color)) |c|
+    if (!ui.world.hasComponentUnchecked(entity, cids.render_view)) {
+        const pos: math.Vec2 = if (ui.world.getComponentUnchecked(entity, cids.computed_position, math.Vec2)) |p| p.* else .zero;
+        const size: math.Vec2 = if (ui.world.getComponentUnchecked(entity, cids.computed_size, math.Vec2)) |p| p.* else .zero;
+        const corners = if (ui.world.getComponentUnchecked(entity, cids.corner_radii, Ui.types.CornerRadii)) |c| c.* else null;
+        const borders = if (ui.world.getComponentUnchecked(entity, cids.borders, Ui.types.Borders)) |b| b.* else null;
+        const image = if (ui.world.getComponentUnchecked(entity, cids.image, Ui.types.Image)) |i| i.* else null;
+        const color: core.Color = if (ui.world.getComponentUnchecked(entity, cids.color, core.Color)) |c|
             c.*
         else if (image != null)
             .fromRgbFloat(1.0, 1.0, 1.0, 1.0)
@@ -319,8 +323,8 @@ fn collectUiItems(
             },
         }) catch @panic("Out of memory");
 
-        if (ui.world.getComponent(entity, cids.text, Ui.types.Text)) |txt| {
-            if (ui.world.getComponent(entity, cids.computed_text_layout, Ui.types.ComputedTextLayout)) |ct| {
+        if (ui.world.getComponentUnchecked(entity, cids.text, Ui.types.Text)) |txt| {
+            if (ui.world.getComponentUnchecked(entity, cids.computed_text_layout, Ui.types.ComputedTextLayout)) |ct| {
                 if (txt.font) |f| if (f.ensureGpuGet(.font, .{}) catch null) |atlas| {
                     for (ct.quads) |quad| {
                         items.append(alloc, .{ .quad = .{
@@ -338,7 +342,7 @@ fn collectUiItems(
             }
         }
 
-        if (ui.world.getComponent(entity, cids.painter, Ui.Painter)) |settings| {
+        if (ui.world.getComponentUnchecked(entity, cids.painter, Ui.Painter)) |settings| {
             if (ui.painters.get(entity.toU64())) |st| {
                 if (st.mesh.indices.items.len > 0) items.append(alloc, .{ .painter = .{
                     .origin = pos.arr(),
@@ -352,13 +356,13 @@ fn collectUiItems(
         }
     }
 
-    for (entity.getChildren()) |child| {
+    for (ui.world.getChildrenUnchecked(entity)) |child| {
         collectUiItems(ui, child, items, alloc);
     }
 }
 
-fn submitToRenderer(self: *Summit) void {
-    const w = &self.world;
+fn submitToRenderer(self: *Summit) !void {
+    const w = self.world;
     const ui = &self.ui;
     const renderer = &self.renderer;
     const allocator = renderer.frame_allocator.allocator();
@@ -379,12 +383,12 @@ fn submitToRenderer(self: *Summit) void {
 
     // 3D world
 
-    const light_query = w.query(&.{light_id});
+    const light_query = w.queryUnchecked(&.{light_id});
     var light_iter = light_query.iterator();
     while (light_iter.next()) |entity| {
-        const l = w.getComponent(entity, light_id, render.types.Light).?;
-        const pos: math.Vec3 = if (w.getComponent(entity, pos_id, math.Vec3)) |p| p.* else .zero;
-        const rot: math.Vec3 = if (w.getComponent(entity, rot_id, math.Vec3)) |r| r.* else .zero;
+        const l = w.getComponentUnchecked(entity, light_id, render.types.Light).?;
+        const pos: math.Vec3 = if (w.getComponentUnchecked(entity, pos_id, math.Vec3)) |p| p.* else .zero;
+        const rot: math.Vec3 = if (w.getComponentUnchecked(entity, rot_id, math.Vec3)) |r| r.* else .zero;
 
         const pos_or_dir = switch (l.kind) {
             .point => pos,
@@ -408,12 +412,12 @@ fn submitToRenderer(self: *Summit) void {
     }
 
     // TODO: Make querying better. Quite limited right now
-    const query = w.query(&.{ mesh_id, image_id });
+    const query = w.queryUnchecked(&.{ mesh_id, image_id });
 
     var iter = query.iterator();
     while (iter.next()) |entity| {
-        const mesh = w.getComponent(entity, mesh_id, engine.Assets.AssetHandle);
-        const image = w.getComponent(entity, image_id, engine.Assets.AssetHandle);
+        const mesh = w.getComponentUnchecked(entity, mesh_id, engine.Assets.AssetHandle);
+        const image = w.getComponentUnchecked(entity, image_id, engine.Assets.AssetHandle);
 
         // No visual appearance
         if (mesh == null and image == null) continue;
@@ -424,9 +428,9 @@ fn submitToRenderer(self: *Summit) void {
         // Mesh with no image = plain white
         const image_data = if (image) |i| i.ensureGpuGet(.image, .{}) catch continue else renderer.default_image;
 
-        const rot: math.Vec3 = if (w.getComponent(entity, rot_id, math.Vec3)) |r| r.* else .zero;
-        const pos: math.Vec3 = if (w.getComponent(entity, pos_id, math.Vec3)) |p| p.* else .zero;
-        const scale: math.Vec3 = if (w.getComponent(entity, scale_id, math.Vec3)) |scale| scale.* else .one;
+        const rot: math.Vec3 = if (w.getComponentUnchecked(entity, rot_id, math.Vec3)) |r| r.* else .zero;
+        const pos: math.Vec3 = if (w.getComponentUnchecked(entity, pos_id, math.Vec3)) |p| p.* else .zero;
+        const scale: math.Vec3 = if (w.getComponentUnchecked(entity, scale_id, math.Vec3)) |scale| scale.* else .one;
         // Not visible (or invalid), don't waste resources rendering it.
         if (scale.x <= 0 or scale.y <= 0 or scale.z <= 0) continue;
 
@@ -443,35 +447,36 @@ fn submitToRenderer(self: *Summit) void {
 
     const ui_cids = ui.component_ids;
 
-    var window_lists: std.array_hash_map.Auto(u64, struct { id: u64, entity: ecs.Entity, items: std.ArrayList(render.types.UiItem) }) = .{};
+    var window_lists: std.array_hash_map.Auto(u64, struct { id: u64, entity: Ecs.Entity, items: std.ArrayList(render.types.UiItem) }) = .{};
     {
-        var it = ui.world.query(&.{ui_cids.window}).iterator();
+        var it = ui.world.queryUnchecked(&.{ui_cids.window}).iterator();
         while (it.next()) |e| {
-            const win = ui.world.getComponent(e, ui_cids.window, Ui.types.Window).?;
+            const win = ui.world.getComponentUnchecked(e, ui_cids.window, Ui.types.Window).?;
             window_lists.put(allocator, e.toU64(), .{ .id = win.id, .entity = e, .items = .empty }) catch @panic("Out of memory");
         }
     }
 
     // Collect RenderViews
     {
-        const q = ui.world.query(&.{ui_cids.render_view});
-
+        const q = ui.world.queryUnchecked(&.{ui_cids.render_view});
         var it = q.iterator();
+
         while (it.next()) |entity| {
-            const rv = ui.world.getComponent(entity, ui_cids.render_view, Ui.types.RenderViewOptions).?;
-            if (!rv.camera.isAlive() or !rv.scene.isAlive()) continue;
+            const rv = ui.world.getComponentUnchecked(entity, ui_cids.render_view, Ui.types.RenderViewOptions).?;
+            // We check with the game world, not the ui world.
+            if (!w.isEntityAlive(rv.camera) or !w.isEntityAlive(rv.scene)) continue;
 
             const root = blk: {
                 var r = entity;
-                while (r.getParent()) |p| r = p;
+                while (ui.world.getParentUnchecked(r)) |p| r = p;
 
                 break :blk r;
             };
-            const win = ui.world.getComponent(root, ui_cids.window, Ui.types.Window) orelse continue;
+            const win = ui.world.getComponentUnchecked(root, ui_cids.window, Ui.types.Window) orelse continue;
             const list = window_lists.getPtr(root.toU64()) orelse continue;
 
-            const position = ui.world.getComponent(entity, ui_cids.computed_position, math.Vec2) orelse continue;
-            const size = ui.world.getComponent(entity, ui_cids.computed_size, math.Vec2) orelse continue;
+            const position = ui.world.getComponentUnchecked(entity, ui_cids.computed_position, math.Vec2) orelse continue;
+            const size = ui.world.getComponentUnchecked(entity, ui_cids.computed_size, math.Vec2) orelse continue;
 
             const px: [2]u32 = .{
                 @max(1, @as(u32, @intFromFloat(@round(size.x * win.scale)))),
@@ -489,10 +494,10 @@ fn submitToRenderer(self: *Summit) void {
                 continue;
             };
 
-            const scene = w.getComponent(rv.scene, scene_id, Ui.types.Scene) orelse continue;
-            const cam_settings = w.getComponent(rv.camera, camera_id, Camera) orelse continue;
-            const cam_pos: math.Vec3 = if (w.getComponent(rv.camera, pos_id, math.Vec3)) |p| p.* else .zero;
-            const cam_rot: math.Vec3 = if (w.getComponent(rv.camera, rot_id, math.Vec3)) |r| r.* else .zero;
+            const scene = w.getComponentUnchecked(rv.scene, scene_id, Ui.types.Scene) orelse continue;
+            const cam_settings = w.getComponentUnchecked(rv.camera, camera_id, Camera) orelse continue;
+            const cam_pos: math.Vec3 = if (w.getComponentUnchecked(rv.camera, pos_id, math.Vec3)) |p| p.* else .zero;
+            const cam_rot: math.Vec3 = if (w.getComponentUnchecked(rv.camera, rot_id, math.Vec3)) |r| r.* else .zero;
 
             const view_mat = math.Mat4.fromTRS(cam_pos, .fromEuler(cam_rot.toRadians()), .one).invertRT();
             const proj: math.Mat4 = .perspectiveReversedZInf(
@@ -534,7 +539,7 @@ fn submitToRenderer(self: *Summit) void {
 }
 
 fn submitToAudio(self: *Summit) void {
-    const w = &self.world;
+    const w = self.world;
     const audio = &self.audio;
 
     const speaker_id = w.components.id("Speaker").?;
@@ -543,11 +548,11 @@ fn submitToAudio(self: *Summit) void {
     const rot_id = w.components.id("Rotation").?;
 
     const listener = blk: {
-        var it = w.query(&.{listener_id}).iterator();
+        var it = w.queryUnchecked(&.{listener_id}).iterator();
         break :blk if (it.next()) |e| e else null;
     };
-    const listener_pos: math.Vec3 = if (listener) |l| if (w.getComponent(l, pos_id, math.Vec3)) |p| p.* else .zero else .zero;
-    const listener_rot: math.Vec3 = if (listener) |l| if (w.getComponent(l, rot_id, math.Vec3)) |r| r.* else .zero else .zero;
+    const listener_pos: math.Vec3 = if (listener) |l| if (w.getComponentUnchecked(l, pos_id, math.Vec3)) |p| p.* else .zero else .zero;
+    const listener_rot: math.Vec3 = if (listener) |l| if (w.getComponentUnchecked(l, rot_id, math.Vec3)) |r| r.* else .zero else .zero;
     const right = math.Quat.fromEuler(listener_rot.toRadians()).toMat4().transformDirection(.new(1, 0, 0)).normalize();
     audio.setListener(.{ .position = listener_pos, .right = right });
 
@@ -560,19 +565,18 @@ fn submitToAudio(self: *Summit) void {
         const owner = t.owner orelse continue;
         const id = audio.getHandle(index).id;
 
-        if (!owner.isAlive()) {
+        if (!w.isEntityAlive(owner)) {
             audio.destroy(id);
             continue;
         }
-        const speaker = w.getComponent(owner, speaker_id, Audio.Speaker) orelse {
+        const speaker = w.getComponentUnchecked(owner, speaker_id, Audio.Speaker) orelse {
             audio.destroy(id);
             continue;
         };
 
         if (state != .active) continue;
-
         audio.setParams(id, .{
-            .position = if (w.getComponent(owner, pos_id, math.Vec3)) |p| p.* else null,
+            .position = if (w.getComponentUnchecked(owner, pos_id, math.Vec3)) |p| p.* else null,
             .volume = t.volume * speaker.volume,
             .pitch = t.pitch,
             .loops = t.loops,

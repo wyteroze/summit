@@ -2,7 +2,7 @@
 
 const std = @import("std");
 const bind = @import("../scripting/bind/bind.zig");
-const ecs = @import("../ecs/Ecs.zig");
+const Ecs = @import("../ecs/Ecs.zig");
 const core = @import("../core/core.zig");
 const math = @import("../core/math/math.zig");
 const render = @import("../render/render.zig");
@@ -36,40 +36,41 @@ pub const ElementSignals = struct {
 };
 
 pub const ComponentIds = struct {
-    position: ecs.ComponentId,
-    size: ecs.ComponentId,
-    layout: ecs.ComponentId,
-    color: ecs.ComponentId,
-    opacity: ecs.ComponentId,
-    text: ecs.ComponentId,
-    render_view: ecs.ComponentId,
-    computed_size: ecs.ComponentId,
-    computed_position: ecs.ComponentId,
-    computed_text_layout: ecs.ComponentId,
-    image: ecs.ComponentId,
-    corner_radii: ecs.ComponentId,
-    borders: ecs.ComponentId,
-    signals: ecs.ComponentId,
-    interactable: ecs.ComponentId,
-    window: ecs.ComponentId,
-    painter: ecs.ComponentId,
+    position: Ecs.ComponentId,
+    size: Ecs.ComponentId,
+    layout: Ecs.ComponentId,
+    color: Ecs.ComponentId,
+    opacity: Ecs.ComponentId,
+    text: Ecs.ComponentId,
+    render_view: Ecs.ComponentId,
+    computed_size: Ecs.ComponentId,
+    computed_position: Ecs.ComponentId,
+    computed_text_layout: Ecs.ComponentId,
+    image: Ecs.ComponentId,
+    corner_radii: Ecs.ComponentId,
+    borders: Ecs.ComponentId,
+    signals: Ecs.ComponentId,
+    interactable: Ecs.ComponentId,
+    window: Ecs.ComponentId,
+    painter: Ecs.ComponentId,
 };
 
 const Ui = @This();
 allocator: std.mem.Allocator,
 frame_allocator: std.heap.ArenaAllocator,
 component_ids: ComponentIds,
-world: ecs.World,
-changed: std.ArrayList(ecs.Entity),
+world: *Ecs.World,
+changed: std.ArrayList(Ecs.Entity),
+dispatcher: core.signal.Dispatcher,
 
-pressed: ?ecs.Entity = null,
-hovered: ?ecs.Entity = null,
+pressed: ?Ecs.Entity = null,
+hovered: ?Ecs.Entity = null,
 pointer_pos: math.Vec2 = .zero,
-roots: std.ArrayList(ecs.Entity) = .empty,
+roots: std.ArrayList(Ecs.Entity) = .empty,
 painters: std.AutoHashMap(u64, *Painter.PainterState),
 
-pub fn init(allocator: std.mem.Allocator) !Ui {
-    var world: ecs.World = .init(allocator);
+pub fn init(ecs: *Ecs, allocator: std.mem.Allocator) !Ui {
+    var world = try ecs.createWorld();
 
     const position = try world.registerComponent(math.Vec2, "Position");
     const size = try world.registerComponent(types.SizeMode, "Size");
@@ -93,6 +94,7 @@ pub fn init(allocator: std.mem.Allocator) !Ui {
         .allocator = allocator,
         .frame_allocator = .init(allocator),
         .world = world,
+        .dispatcher = .init(allocator),
         .changed = .empty,
         .painters = .init(allocator),
         .component_ids = .{
@@ -124,19 +126,20 @@ pub fn deinit(self: *Ui) void {
         self.allocator.destroy(s.*);
     }
     self.painters.deinit();
+    self.dispatcher.deinit();
 
-    self.world.deinit();
     self.roots.deinit(self.allocator);
     self.frame_allocator.deinit();
 }
 
 pub fn update(self: *Ui) void {
-    self.world.dispatcher.flush();
+    self.dispatcher.flush();
 
-    const changed = &self.world.hierarchy.changed;
-    if (changed.items.len == 0) return;
-    for (changed.items) |e| {
-        if (!e.isAlive() or e.getParent() != null) continue;
+    const world = self.world;
+    const changed = world.changedEntities();
+    if (changed.len == 0) return;
+    for (changed) |e| {
+        if (!world.isEntityAlive(e) or world.getParentUnchecked(e) != null) continue;
         const known = for (self.roots.items) |r| {
             if (r.eql(e)) break true;
         } else false;
@@ -144,15 +147,15 @@ pub fn update(self: *Ui) void {
         if (!known) self.roots.append(self.allocator, e) catch @panic("Out of memory");
     }
 
-    reflow.reflowUi(&self.world, self.component_ids, changed.items, self.allocator, self.frame_allocator.allocator());
+    reflow.reflowUi(world, self.component_ids, changed, self.allocator, self.frame_allocator.allocator());
     _ = self.frame_allocator.reset(.retain_capacity);
-    changed.clearRetainingCapacity();
-    self.world.changed_set.clearRetainingCapacity();
+    world.clearChanged();
 }
 
 pub fn paint(self: *Ui) void {
     const allocator = self.frame_allocator.allocator();
     const ids = self.component_ids;
+    const w = self.world;
 
     {
         var dead: std.ArrayList(u64) = .empty;
@@ -160,7 +163,7 @@ pub fn paint(self: *Ui) void {
         var it = self.painters.iterator();
         while (it.next()) |kv| {
             const e = kv.value_ptr.*.entity;
-            if (!e.isAlive() or e.getComponent(ids.painter, Painter) == null)
+            if (!w.isEntityAlive(e) or w.getComponentUnchecked(e, ids.painter, Painter) == null)
                 dead.append(self.allocator, kv.key_ptr.*) catch {};
         }
         for (dead.items) |k| if (self.painters.fetchRemove(k)) |kv| {
@@ -169,13 +172,13 @@ pub fn paint(self: *Ui) void {
         };
     }
 
-    var paint_entities: std.ArrayList(ecs.Entity) = .empty;
-    var iter = self.world.query(&.{ids.painter}).iterator();
+    var paint_entities: std.ArrayList(Ecs.Entity) = .empty;
+    var iter = self.world.queryUnchecked(&.{ids.painter}).iterator();
     while (iter.next()) |e| paint_entities.append(allocator, e) catch @panic("Out of memory");
 
     for (paint_entities.items) |e| {
-        if (!e.isAlive()) continue;
-        const size = (e.getComponent(ids.computed_size, math.Vec2) orelse continue).*;
+        if (!w.isEntityAlive(e)) continue;
+        const size = (w.getComponentUnchecked(e, ids.computed_size, math.Vec2) orelse continue).*;
         const st = self.painterState(e) catch continue;
 
         if (st.needs_paint or !size.eq(st.drawn_size)) {
@@ -185,7 +188,7 @@ pub fn paint(self: *Ui) void {
             if (st.on_paint) |sig| {
                 st.commands.clearRetainingCapacity();
                 sig.fire(.{});
-                self.world.dispatcher.flush();
+                self.dispatcher.flush();
             }
             st.dirty = true;
         }
@@ -198,7 +201,7 @@ pub fn paint(self: *Ui) void {
     }
 }
 
-pub fn painterState(self: *Ui, e: ecs.Entity) !*Painter.PainterState {
+pub fn painterState(self: *Ui, e: Ecs.Entity) !*Painter.PainterState {
     const gop = try self.painters.getOrPut(e.toU64());
     if (!gop.found_existing) {
         errdefer _ = self.painters.remove(e.toU64());
@@ -227,7 +230,7 @@ pub const CreateElementOptions = struct {
 
 pub fn createElement(self: *Ui, windowing: *Windowing, options: ?CreateElementOptions) !Element {
     const entity = try self.world.spawnEntity();
-    errdefer entity.destroy();
+    errdefer self.world.destroyEntityUnchecked(entity);
 
     const opts = options orelse return .{ .entity = entity };
     const parent = if (opts.parent) |p|
@@ -237,7 +240,8 @@ pub fn createElement(self: *Ui, windowing: *Windowing, options: ?CreateElementOp
     else
         null;
 
-    try entity.setParent(parent);
+    // This also checks if the parent is valid
+    try self.world.setParent(entity, parent);
     try self.world.set(entity, self.component_ids.interactable, Interactable, if (opts.interactable) |i| i else true);
     try self.world.set(entity, self.component_ids.size, types.SizeMode, if (opts.size) |s| s else .{});
     try self.world.set(entity, self.component_ids.position, math.Vec2, if (opts.position) |p| p else .zero);
@@ -257,15 +261,17 @@ pub fn createElement(self: *Ui, windowing: *Windowing, options: ?CreateElementOp
     return .{ .entity = entity };
 }
 
-pub fn getSignal(self: *Ui, e: ecs.Entity, comptime field: []const u8) !*PointerSignal {
+pub fn getSignal(self: *Ui, e: Ecs.Entity, comptime field: []const u8) !*PointerSignal {
     const id = self.component_ids.signals;
-    if (e.getComponent(id, ElementSignals) == null)
-        try self.world.set(e, id, ElementSignals, .{});
+    const w = self.world;
 
-    const s = e.getComponent(id, ElementSignals).?;
+    const s = (try w.getComponent(e, id, ElementSignals)) orelse blk: {
+        try w.set(e, id, ElementSignals, .{});
+        break :blk w.getComponentUnchecked(e, id, ElementSignals).?;
+    };
+
     if (@field(s, field) == null)
-        @field(s, field) = try PointerSignal.create(self.allocator, &self.world.dispatcher);
-
+        @field(s, field) = try PointerSignal.create(self.allocator, &self.dispatcher);
     return @field(s, field).?;
 }
 
@@ -285,10 +291,10 @@ pub fn pointerReleased(self: *Ui, pos: math.Vec2) bool {
     const pressed = self.pressed orelse return false;
     defer self.pressed = null;
 
-    if (!pressed.isAlive()) return true;
+    if (!self.world.isEntityAlive(pressed)) return true;
     if (self.hitTestRoots(pos)) |hit| {
         self.bubble("pointer_up", hit, pos);
-        if (selfOrAncestor(pressed, hit))
+        if (selfOrAncestor(self.world, pressed, hit))
             self.bubble("activated", pressed, pos);
     }
 
@@ -300,32 +306,35 @@ pub fn pointerMoved(self: *Ui, pos: math.Vec2) bool {
     return self.pressed != null;
 }
 
-fn selfOrAncestor(maybe_ancestor: ecs.Entity, e: ecs.Entity) bool {
-    var cur: ?ecs.Entity = e;
-    while (cur) |c| : (cur = c.getParent()) if (c.eql(maybe_ancestor)) return true;
+fn selfOrAncestor(world: *Ecs.World, maybe_ancestor: Ecs.Entity, e: Ecs.Entity) bool {
+    var cur: ?Ecs.Entity = e;
+    while (cur) |c| : (cur = world.getParentUnchecked(c)) if (c.eql(maybe_ancestor)) return true;
     return false;
 }
 
-fn bubble(self: *Ui, comptime field: []const u8, target: ecs.Entity, pos: math.Vec2) void {
-    var cur: ?ecs.Entity = target;
-    while (cur) |e| : (cur = e.getParent()) {
-        const s = e.getComponent(self.component_ids.signals, ElementSignals) orelse continue;
+fn bubble(self: *Ui, comptime field: []const u8, target: Ecs.Entity, pos: math.Vec2) void {
+    const w = self.world;
+    var cur: ?Ecs.Entity = target;
+    while (cur) |e| : (cur = w.getParentUnchecked(e)) {
+        const s = w.getComponentUnchecked(e, self.component_ids.signals, ElementSignals) orelse continue;
         if (@field(s, field)) |sig| sig.fire(.{pos});
     }
 }
 
-fn isInteractive(self: *Ui, e: ecs.Entity) bool {
-    if (e.getComponent(self.component_ids.interactable, Interactable)) |i| return i.*;
-    return e.getComponent(self.component_ids.signals, ElementSignals) != null;
+fn isInteractive(self: *Ui, e: Ecs.Entity) bool {
+    const w = self.world;
+    if (w.getComponentUnchecked(e, self.component_ids.interactable, Interactable)) |i| return i.*;
+    return w.getComponentUnchecked(e, self.component_ids.signals, ElementSignals) != null;
 }
 
-fn hitTest(self: *Ui, e: ecs.Entity, p: math.Vec2) ?ecs.Entity {
-    const pos = e.getComponent(self.component_ids.computed_position, math.Vec2) orelse return null;
-    const size = e.getComponent(self.component_ids.computed_size, math.Vec2) orelse return null;
+fn hitTest(self: *Ui, e: Ecs.Entity, p: math.Vec2) ?Ecs.Entity {
+    const w = self.world;
+    const pos = w.getComponentUnchecked(e, self.component_ids.computed_position, math.Vec2) orelse return null;
+    const size = w.getComponentUnchecked(e, self.component_ids.computed_size, math.Vec2) orelse return null;
 
     if (p.x < pos.x or p.y < pos.y or p.x >= pos.x + size.x or p.y >= pos.y + size.y) return null;
 
-    const children = e.getChildren();
+    const children = w.getChildrenUnchecked(e);
     var i = children.len;
     while (i > 0) {
         i -= 1;
@@ -336,13 +345,14 @@ fn hitTest(self: *Ui, e: ecs.Entity, p: math.Vec2) ?ecs.Entity {
     return if (self.isInteractive(e)) e else null;
 }
 
-fn hitTestRoots(self: *Ui, p: math.Vec2) ?ecs.Entity {
+fn hitTestRoots(self: *Ui, p: math.Vec2) ?Ecs.Entity {
+    const w = self.world;
     var i = self.roots.items.len;
     while (i > 0) {
         i -= 1;
 
         const r = self.roots.items[i];
-        if (!r.isAlive() or r.getParent() != null) {
+        if (!w.isEntityAlive(r) or w.getParentUnchecked(r) != null) {
             _ = self.roots.orderedRemove(i);
             continue;
         }
@@ -352,33 +362,37 @@ fn hitTestRoots(self: *Ui, p: math.Vec2) ?ecs.Entity {
     return null;
 }
 
-fn fireOwn(self: *Ui, comptime field: []const u8, e: ecs.Entity, pos: math.Vec2) void {
-    const s = e.getComponent(self.component_ids.signals, ElementSignals) orelse return;
+fn fireOwn(self: *Ui, comptime field: []const u8, e: Ecs.Entity, pos: math.Vec2) void {
+    const s = self.world.getComponentUnchecked(e, self.component_ids.signals, ElementSignals) orelse return;
     if (@field(s, field)) |sig| sig.fire(.{pos});
 }
 
-fn setHover(self: *Ui, new: ?ecs.Entity, pos: math.Vec2) void {
+fn setHover(self: *Ui, new: ?Ecs.Entity, pos: math.Vec2) void {
+    const w = self.world;
     var old = self.hovered;
-    if (old) |o| if (!o.isAlive()) {
+    if (old) |o| if (!w.isEntityAlive(o)) {
         old = null;
     };
 
-    const same = if (old != null and new != null) old.?.eql(new.?) else old == null and new == null;
+    const same = if (old != null and new != null)
+        old.?.eql(new.?)
+    else
+        old == null and new == null;
     if (same) return;
     self.hovered = new;
 
     var cur = old;
-    while (cur) |e| : (cur = e.getParent()) {
-        if (new) |n| if (selfOrAncestor(e, n)) break;
+    while (cur) |e| : (cur = w.getParentUnchecked(e)) {
+        if (new) |n| if (selfOrAncestor(w, e, n)) break;
         self.fireOwn("pointer_left", e, pos);
     }
 
-    var chain: [32]ecs.Entity = undefined;
+    var chain: [32]Ecs.Entity = undefined;
     var len: usize = 0;
     cur = new;
 
-    while (cur) |e| : (cur = e.getParent()) {
-        if (old) |o| if (selfOrAncestor(e, o)) break;
+    while (cur) |e| : (cur = w.getParentUnchecked(e)) {
+        if (old) |o| if (selfOrAncestor(w, e, o)) break;
         if (len == chain.len) break;
         chain[len] = e;
         len += 1;
@@ -396,7 +410,7 @@ fn updateHover(self: *Ui, pos: math.Vec2) void {
     self.setHover(hit, pos);
 
     const target = self.pressed orelse hit orelse return;
-    if (target.isAlive()) self.bubble("pointer_moved", target, pos);
+    if (self.world.isEntityAlive(target)) self.bubble("pointer_moved", target, pos);
 }
 
 pub const api = bind.module("ui", .{
@@ -420,21 +434,21 @@ pub const api = bind.module("ui", .{
 });
 
 pub const Element = struct {
-    entity: ecs.Entity,
+    entity: Ecs.Entity,
 
-    const ToEntity = bind.Via(Element, ecs.Entity, struct {
-        fn f(e: Element) ecs.Entity {
+    const ToEntity = bind.Via(Element, Ecs.Entity, struct {
+        fn f(e: Element) Ecs.Entity {
             return e.entity;
         }
     }.f);
 
     pub const sub_api = bind.handle(Element, .{
         .alive = bind.func("isAlive", struct {
-            fn c(self: Element) bool {
-                return self.entity.isAlive();
+            fn c(self: Element, ui: *Ui) bool {
+                return ui.world.isEntityAlive(self.entity);
             }
         }.c),
-        .inherit = bind.inherit(Element.ToEntity, ecs.Entity.sub_api.impl.recipe),
+        .inherit = bind.inherit(Element.ToEntity, Ecs.lua_entity.sub_api.impl.recipe),
         .signals = &.{
             // `ui` argument is provided by marshaller
             bind.signal("pointerDown", struct {

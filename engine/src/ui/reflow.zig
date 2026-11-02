@@ -1,31 +1,31 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const ecs = @import("../ecs/Ecs.zig");
+const Ecs = @import("../ecs/Ecs.zig");
 const math = @import("../core/math/math.zig");
 const text = @import("text.zig");
 const types = @import("types.zig");
 const ComponentIds = @import("Ui.zig").ComponentIds;
 
-const MeasureCache = std.AutoHashMap(ecs.Entity, math.Vec2);
+const MeasureCache = std.AutoHashMap(Ecs.Entity, math.Vec2);
 const GridDims = struct { cols: usize, rows: usize };
 const GridCell = struct { col: usize, row: usize };
 
 pub fn reflowUi(
-    world: *ecs.World,
+    world: *Ecs.World,
     ids: ComponentIds,
-    changed: []const ecs.Entity,
+    changed: []const Ecs.Entity,
     allocator: std.mem.Allocator,
     frame_allocator: std.mem.Allocator,
 ) void {
-    var dirty: std.AutoHashMap(ecs.Entity, void) = .init(frame_allocator);
+    var dirty: std.AutoHashMap(Ecs.Entity, void) = .init(frame_allocator);
 
     for (changed) |e| {
-        if (!e.isAlive()) continue;
+        if (!world.isEntityAlive(e)) continue;
 
         var cur = e;
-        while (cur.getParent()) |p| {
-            const mode = world.getComponent(cur, ids.size, types.SizeMode) orelse {
+        while (world.getParentUnchecked(cur)) |p| {
+            const mode = world.getComponentUnchecked(cur, ids.size, types.SizeMode) orelse {
                 cur = p;
                 continue;
             };
@@ -47,15 +47,15 @@ pub fn reflowUi(
         const measured = measure(r.*, world, ids, &cache, null);
         const origin: math.Vec2 = blk: {
             const e = r.*;
-            const own: math.Vec2 = if (world.getComponent(e, ids.position, math.Vec2)) |p| p.* else .zero;
+            const own: math.Vec2 = if (world.getComponentUnchecked(e, ids.position, math.Vec2)) |p| p.* else .zero;
 
-            const parent = e.getParent() orelse break :blk own;
-            if (parent.getComponent(ids.layout, types.Layout) == null) {
-                const parent_origin: math.Vec2 = if (world.getComponent(parent, ids.computed_position, math.Vec2)) |p| p.* else .zero;
+            const parent = world.getParentUnchecked(e) orelse break :blk own;
+            if (world.getComponentUnchecked(parent, ids.layout, types.Layout) == null) {
+                const parent_origin: math.Vec2 = if (world.getComponentUnchecked(parent, ids.computed_position, math.Vec2)) |p| p.* else .zero;
                 break :blk parent_origin.add(own);
             }
 
-            break :blk if (world.getComponent(e, ids.computed_position, math.Vec2)) |p| p.* else .zero;
+            break :blk if (world.getComponentUnchecked(e, ids.computed_position, math.Vec2)) |p| p.* else .zero;
         };
 
         // arrange only needs an allocator for `[]GlyphQuad`s,
@@ -64,11 +64,11 @@ pub fn reflowUi(
     }
 }
 
-fn measure(entity: ecs.Entity, world: *ecs.World, ids: ComponentIds, cache: *MeasureCache, max_width: ?f32) math.Vec2 {
-    const mode: types.SizeMode = if (entity.getComponent(ids.size, types.SizeMode)) |m| m.* else .{};
-    const layout = entity.getComponent(ids.layout, types.Layout);
-    const txt = entity.getComponent(ids.text, types.Text);
-    const children = entity.getChildren();
+fn measure(entity: Ecs.Entity, world: *Ecs.World, ids: ComponentIds, cache: *MeasureCache, max_width: ?f32) math.Vec2 {
+    const mode: types.SizeMode = if (world.getComponentUnchecked(entity, ids.size, types.SizeMode)) |m| m.* else .{};
+    const layout = world.getComponentUnchecked(entity, ids.layout, types.Layout);
+    const txt = world.getComponentUnchecked(entity, ids.text, types.Text);
+    const children = world.getChildrenUnchecked(entity);
 
     var intr: math.Vec2 = .zero;
 
@@ -97,7 +97,7 @@ fn measure(entity: ecs.Entity, world: *ecs.World, ids: ComponentIds, cache: *Mea
                     var used: f32 = 0;
                     var fills: f32 = 0;
                     for (children) |c| {
-                        const size_mode: types.SizeMode = if (c.getComponent(ids.size, types.SizeMode)) |m| m.* else .{};
+                        const size_mode: types.SizeMode = if (world.getComponentUnchecked(c, ids.size, types.SizeMode)) |m| m.* else .{};
                         if (size_mode.width == .fill) {
                             fills += 1;
                             continue;
@@ -115,7 +115,7 @@ fn measure(entity: ecs.Entity, world: *ecs.World, ids: ComponentIds, cache: *Mea
                 var cross_max: f32 = 0;
 
                 for (children, 0..) |c, i| {
-                    const size_mode: types.SizeMode = if (c.getComponent(ids.size, types.SizeMode)) |m| m.* else .{};
+                    const size_mode: types.SizeMode = if (world.getComponentUnchecked(c, ids.size, types.SizeMode)) |m| m.* else .{};
                     const child_size = if (pre and size_mode.width != .fill) cache.get(c).? // We just measured it above
                         else measure(c, world, ids, cache, child_w);
                     cache.put(c, child_size) catch @panic("Out of memory");
@@ -204,31 +204,31 @@ fn axis(a: types.SizeAxis, hug_val: f32) f32 {
 }
 
 fn arrange(
-    entity: ecs.Entity,
+    entity: Ecs.Entity,
     final: math.Vec2,
     origin: math.Vec2,
-    world: *ecs.World,
+    world: *Ecs.World,
     ids: ComponentIds,
     cache: *MeasureCache,
     allocator: std.mem.Allocator,
 ) void {
-    if (!world.hasComponent(entity, ids.computed_position)) world.set(entity, ids.computed_position, math.Vec2, .zero) catch {};
-    if (!world.hasComponent(entity, ids.computed_size)) world.set(entity, ids.computed_size, math.Vec2, .zero) catch {};
-    world.set(entity, ids.computed_position, math.Vec2, origin) catch {};
-    world.set(entity, ids.computed_size, math.Vec2, final) catch {};
+    if (!world.hasComponentUnchecked(entity, ids.computed_position)) world.setUnchecked(entity, ids.computed_position, math.Vec2, .zero) catch {};
+    if (!world.hasComponentUnchecked(entity, ids.computed_size)) world.setUnchecked(entity, ids.computed_size, math.Vec2, .zero) catch {};
+    world.setUnchecked(entity, ids.computed_position, math.Vec2, origin) catch {};
+    world.setUnchecked(entity, ids.computed_size, math.Vec2, final) catch {};
 
-    if (entity.getComponent(ids.text, types.Text)) |t| if (t.font) |f| {
+    if (world.getComponentUnchecked(entity, ids.text, types.Text)) |t| if (t.font) |f| {
         const font = f.ensureGpuGet(.font, .{}) catch unreachable;
         const quads = text.layoutGlyphs(world.allocator, &font, t.*, origin, final) catch @panic("Out of memory");
-        world.set(entity, ids.computed_text_layout, types.ComputedTextLayout, .{ .quads = quads }) catch allocator.free(quads);
+        world.setUnchecked(entity, ids.computed_text_layout, types.ComputedTextLayout, .{ .quads = quads }) catch allocator.free(quads);
     };
 
-    const layout_ptr = entity.getComponent(ids.layout, types.Layout) orelse {
-        arrangeOverlay(entity.getChildren(), final, origin, world, ids, cache, allocator);
+    const layout_ptr = world.getComponentUnchecked(entity, ids.layout, types.Layout) orelse {
+        arrangeOverlay(world.getChildrenUnchecked(entity), final, origin, world, ids, cache, allocator);
         return;
     };
     const layout = layout_ptr.*;
-    const children = entity.getChildren();
+    const children = world.getChildrenUnchecked(entity);
 
     const pad = switch (layout) {
         inline else => |l| l.padding,
@@ -243,11 +243,11 @@ fn arrange(
 
 fn arrangeFlex(
     layout: types.GenericLayout,
-    children: []const ecs.Entity,
+    children: []const Ecs.Entity,
     content_size: math.Vec2,
     origin: math.Vec2,
     pad: types.Padding,
-    world: *ecs.World,
+    world: *Ecs.World,
     ids: ComponentIds,
     cache: *MeasureCache,
     allocator: std.mem.Allocator,
@@ -256,7 +256,7 @@ fn arrangeFlex(
     var fill_count: u32 = 0;
 
     for (children) |c| {
-        const mode: types.SizeMode = if (c.getComponent(ids.size, types.SizeMode)) |m| m.* else .{};
+        const mode: types.SizeMode = if (world.getComponentUnchecked(c, ids.size, types.SizeMode)) |m| m.* else .{};
         const main_mode = if (layout.direction == .horizontal) mode.width else mode.height;
 
         if (main_mode == .fill) {
@@ -286,7 +286,7 @@ fn arrangeFlex(
         0;
 
     for (children, 0..) |c, i| {
-        const mode: types.SizeMode = if (c.getComponent(ids.size, types.SizeMode)) |m| m.* else .{};
+        const mode: types.SizeMode = if (world.getComponentUnchecked(c, ids.size, types.SizeMode)) |m| m.* else .{};
         const cached: math.Vec2 = cache.get(c) orelse .zero;
 
         const main_mode = if (layout.direction == .horizontal) mode.width else mode.height;
@@ -309,18 +309,17 @@ fn arrangeFlex(
             origin.add(.new(pad.left + cross_offset, pad.top + cursor));
 
         arrange(c, child_size, child_origin, world, ids, cache, allocator);
-
         cursor += main_size + layout.gap + (if (layout.justify == .space_between and i < children.len - 1) extra else 0);
     }
 }
 
 fn arrangeGrid(
     layout: types.GridLayout,
-    children: []const ecs.Entity,
+    children: []const Ecs.Entity,
     content_size: math.Vec2,
     origin: math.Vec2,
     pad: types.Padding,
-    world: *ecs.World,
+    world: *Ecs.World,
     ids: ComponentIds,
     cache: *MeasureCache,
     allocator: std.mem.Allocator,
@@ -366,7 +365,7 @@ fn arrangeGrid(
     for (children, 0..) |c, idx| {
         const cell = gridCell(layout, idx, dims);
 
-        const mode: types.SizeMode = if (c.getComponent(ids.size, types.SizeMode)) |m| m.* else .{};
+        const mode: types.SizeMode = if (world.getComponentUnchecked(c, ids.size, types.SizeMode)) |m| m.* else .{};
         const cached: math.Vec2 = cache.get(c) orelse .zero;
 
         const cell_w = col_width;
@@ -426,21 +425,21 @@ fn gridCell(g: types.GridLayout, idx: usize, dims: GridDims) GridCell {
     };
 }
 
-fn overlayOffset(c: ecs.Entity, world: *ecs.World, ids: ComponentIds) math.Vec2 {
-    return if (world.getComponent(c, ids.position, math.Vec2)) |p| p.* else .zero;
+fn overlayOffset(c: Ecs.Entity, world: *Ecs.World, ids: ComponentIds) math.Vec2 {
+    return if (world.getComponentUnchecked(c, ids.position, math.Vec2)) |p| p.* else .zero;
 }
 
 fn arrangeOverlay(
-    children: []const ecs.Entity,
+    children: []const Ecs.Entity,
     final: math.Vec2,
     origin: math.Vec2,
-    world: *ecs.World,
+    world: *Ecs.World,
     ids: ComponentIds,
     cache: *MeasureCache,
     allocator: std.mem.Allocator,
 ) void {
     for (children) |c| {
-        const mode: types.SizeMode = if (c.getComponent(ids.size, types.SizeMode)) |m| m.* else .{};
+        const mode: types.SizeMode = if (world.getComponentUnchecked(c, ids.size, types.SizeMode)) |m| m.* else .{};
         const cached: math.Vec2 = cache.get(c) orelse .zero;
 
         const size: math.Vec2 = .new(

@@ -1,7 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const ecs = @import("../ecs/Ecs.zig");
+const Ecs = @import("../ecs/Ecs.zig");
 const core = @import("../core/core.zig");
 const math = core.math;
 const Platform = @import("../platform/Platform.zig");
@@ -113,7 +113,7 @@ pub fn destroyWindow(self: *Windowing, id: u64) !void {
         return;
     };
     self.platform.destroySurface(win.value.surface);
-    win.value.entity.destroy();
+    try self.ui.world.destroyEntity(win.value.entity);
 
     if (self.main_window) |mw| if (mw.id == id) {
         // We're closing the main window, so find another window to call main (or set main to nil if there are no other windows)

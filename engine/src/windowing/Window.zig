@@ -1,7 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const ecs = @import("../ecs/Ecs.zig");
+const Ecs = @import("../ecs/Ecs.zig");
 const signal = @import("../core/signal.zig");
 const math = @import("../core/math/math.zig");
 const bind = @import("../scripting/bind/bind.zig");
@@ -14,7 +14,7 @@ pub const WindowEvent = signal.Signal(.{});
 const Window = @This();
 windowing: *Windowing,
 surface: Platform.types.SurfaceHandle,
-entity: ecs.Entity,
+entity: Ecs.Entity,
 
 closed: WindowEvent,
 resized: WindowEvent,
@@ -24,7 +24,7 @@ maximized: WindowEvent,
 minimized: WindowEvent,
 restored: WindowEvent,
 
-pub fn init(allocator: std.mem.Allocator, dispatcher: *signal.Dispatcher, windowing: *Windowing, surface: Platform.types.SurfaceHandle, entity: ecs.Entity) Window {
+pub fn init(allocator: std.mem.Allocator, dispatcher: *signal.Dispatcher, windowing: *Windowing, surface: Platform.types.SurfaceHandle, entity: Ecs.Entity) Window {
     return .{
         .windowing = windowing,
         .surface = surface,
@@ -64,8 +64,9 @@ pub fn updateSize(self: *Window) void {
 
     renderer.resizeWindow(self.surface.id, pixel, scale) catch |e| std.log.err("Failed to resized window: {s}", .{@errorName(e)});
 
-    if (ui.world.getComponent(self.entity, ui.component_ids.window, Ui.types.Window)) |w| w.scale = scale;
-    ui.world.set(self.entity, ui.component_ids.size, Ui.types.SizeMode, .fixed(@floatFromInt(logical[0]), @floatFromInt(logical[1]))) catch {};
+    if (!ui.world.isEntityAlive(self.entity)) return;
+    if (ui.world.getComponentUnchecked(self.entity, ui.component_ids.window, Ui.types.Window)) |w| w.scale = scale;
+    ui.world.setUnchecked(self.entity, ui.component_ids.size, Ui.types.SizeMode, .fixed(@floatFromInt(logical[0]), @floatFromInt(logical[1]))) catch {};
 }
 
 pub fn getId(self: *Window) usize {

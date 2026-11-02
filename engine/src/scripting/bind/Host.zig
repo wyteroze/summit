@@ -2,7 +2,7 @@
 
 const std = @import("std");
 const zlua = @import("zlua");
-const ecs = @import("../../ecs/Ecs.zig");
+const Ecs = @import("../../ecs/Ecs.zig");
 const Assets = @import("../../assets/Assets.zig");
 const Input = @import("../../input/Input.zig");
 const Ui = @import("../../ui/Ui.zig");
@@ -12,7 +12,7 @@ const Windowing = @import("../../windowing/Windowing.zig");
 
 var key: u8 = 0;
 const Host = @This();
-world: *ecs.World,
+ecs: *Ecs,
 assets: *Assets,
 input: *Input,
 ui: *Ui,

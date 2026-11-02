@@ -2,11 +2,11 @@
 
 const std = @import("std");
 const zlua = @import("zlua");
-const ecs = @import("Ecs.zig");
+const Ecs = @import("Ecs.zig");
 
 pub const ReadFn = *const fn (l: *zlua.Lua, idx: i32, out: []u8) void;
 pub const PushFn = *const fn (l: *zlua.Lua, bytes: []const u8) void;
-pub const PushComponentFn = *const fn (*zlua.Lua, ecs.Entity, ecs.ComponentId, []const u8) void;
+pub const PushComponentFn = *const fn (*zlua.Lua, Ecs.Entity, Ecs.ComponentId, []const u8) void;
 
 const Codec = @This();
 type_name: []const u8,

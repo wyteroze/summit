@@ -2,7 +2,7 @@
 
 const std = @import("std");
 const gpu = @import("../gpu/gpu.zig");
-const ecs = @import("../ecs/Ecs.zig");
+const Ecs = @import("../ecs/Ecs.zig");
 const assets = @import("../assets/Assets.zig");
 const types = @import("types.zig");
 const core = @import("../core/core.zig");
@@ -217,7 +217,7 @@ pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: 
 
 // RenderView
 
-pub fn createView(self: *Renderer, id: u64, size: [2]u32, camera: ecs.Entity) !*RenderView {
+pub fn createView(self: *Renderer, id: u64, size: [2]u32, camera: Ecs.Entity) !*RenderView {
     try self.render_views.put(id, try .init(self, size, id, camera));
 
     return self.render_views.getPtr(id).?;

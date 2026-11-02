@@ -1,8 +1,8 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const Entity = @import("Entity.zig");
-const ComponentId = @import("ComponentId.zig");
+const Entity = @import("Entity.zig").Entity;
+const ComponentId = @import("ComponentId.zig").ComponentId;
 const SparseSet = @import("SparseSet.zig");
 const World = @import("World.zig");
 

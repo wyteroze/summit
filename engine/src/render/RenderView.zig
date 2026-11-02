@@ -4,7 +4,7 @@ const std = @import("std");
 const types = @import("types.zig");
 const gpu = @import("../gpu/gpu.zig");
 const Renderer = @import("Renderer.zig");
-const ecs = @import("../ecs/Ecs.zig");
+const Ecs = @import("../ecs/Ecs.zig");
 
 const tile_size = Renderer.tile_size;
 const max_lights_per_tile = Renderer.max_lights_per_tile;
@@ -12,14 +12,14 @@ const max_lights_per_tile = Renderer.max_lights_per_tile;
 const RenderView = @This();
 id: u64,
 size: [2]u32,
-camera: ecs.Entity,
+camera: Ecs.Entity,
 renderer: *Renderer,
 target: gpu.GpuDevice.GpuImage,
 depth: gpu.GpuDevice.GpuImage,
 light_grid: gpu.GpuDevice.GpuBuffer,
 light_index_list: gpu.GpuDevice.GpuBuffer,
 
-pub fn init(renderer: *Renderer, size: [2]u32, id: u64, camera: ecs.Entity) !RenderView {
+pub fn init(renderer: *Renderer, size: [2]u32, id: u64, camera: Ecs.Entity) !RenderView {
     // Zero-sized RenderViews are not allowed by the GPU.
     if (size[0] == 0 or size[1] == 0) return error.InvalidSize;
 

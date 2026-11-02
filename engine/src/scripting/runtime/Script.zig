@@ -3,7 +3,7 @@
 const std = @import("std");
 const zlua = @import("zlua");
 const core = @import("../../core/core.zig");
-const ecs = @import("../../ecs/Ecs.zig");
+const Ecs = @import("../../ecs/Ecs.zig");
 const bind = @import("../bind/bind.zig");
 const types = @import("../../assets/types.zig");
 const Lua = zlua.Lua;
@@ -53,6 +53,11 @@ pub fn init(
     }
 
     const ref = state.ref(-1);
+    // Lua should never modify this table once it's returned.
+    // This might change in the future if users should be allowed
+    // to attach their own data to the returned table. Right now though,
+    // it's just functions that we use and don't want Lua changing.
+    state.setReadonly(-1, true);
     state.pop(1);
 
     return .{
@@ -114,7 +119,7 @@ fn callFunctionAtIndex(self: *const Script, idx: i32, comptime ResultTypes: []co
     return results;
 }
 
-pub fn instantiateSystem(self: *Script, world: *ecs.World) !ecs.SystemRegistry.SystemHandle {
+pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.SystemHandle {
     if (self.ref == 0) return error.NoInstanceTable;
     const l = self.state;
 
@@ -122,7 +127,10 @@ pub fn instantiateSystem(self: *Script, world: *ecs.World) !ecs.SystemRegistry.S
     defer l.setTop(top);
 
     const alloc = self.allocator();
-    var ids: std.ArrayList(ecs.ComponentId) = .empty;
+    // Duped by `registerSystem`
+    var ids: std.ArrayList(Ecs.ComponentId) = .empty;
+    defer ids.deinit(alloc);
+
     _ = l.getIndexRaw(zlua.registry_index, self.ref);
     if (l.getField(-1, "query") != .table) {
         std.log.err("Systems must have a `query` table containing component names.", .{});
@@ -143,17 +151,17 @@ pub fn instantiateSystem(self: *Script, world: *ecs.World) !ecs.SystemRegistry.S
     l.pop(2);
 
     return try world.registerSystem(
-        try ids.toOwnedSlice(alloc),
+        ids.items,
         // Init function
         if (init_type == .function) struct {
-            fn init(_: *ecs.World, ctx: *anyopaque) void {
+            fn init(_: *Ecs.World, ctx: *anyopaque) void {
                 const slf: *Script = @ptrCast(@alignCast(ctx));
                 _ = slf.callFunction("init", &.{}, .{}) catch {};
             }
         }.init else null,
         // Update function
         struct {
-            fn update(e: ecs.Entity, dt: f32, ctx: *anyopaque) void {
+            fn update(e: Ecs.Entity, dt: f32, ctx: *anyopaque) void {
                 const slf: *Script = @ptrCast(@alignCast(ctx));
                 _ = slf.callFunction("update", &.{}, .{ e, dt }) catch {};
             }
@@ -169,7 +177,7 @@ pub fn instantiateSystem(self: *Script, world: *ecs.World) !ecs.SystemRegistry.S
     );
 }
 
-pub fn instantiateEntity(self: *Script, entity: ecs.Entity) !void {
+pub fn instantiateEntity(self: *Script, entity: Ecs.Entity) !void {
     if (self.ref == 0) return error.NoInstanceTable;
     const l = self.state;
 

@@ -7,7 +7,7 @@
 //! It also doesn't require its layout to be processed and has less customizability, sacrificing expressiveness for being much faster.
 
 const std = @import("std");
-const ecs = @import("../ecs/Ecs.zig");
+const Ecs = @import("../ecs/Ecs.zig");
 const core = @import("../core/core.zig");
 const Ui = @import("Ui.zig");
 const types = @import("types.zig");
@@ -19,7 +19,7 @@ const math = core.math;
 pub const OnPaintEvent = core.signal.Signal(.{});
 
 pub const PainterState = struct {
-    entity: ecs.Entity,
+    entity: Ecs.Entity,
     /// The commands that this `Painter` has accumulated.
     /// These control what the `Painter` actually draws when it is rendered.
     commands: std.ArrayList(types.PainterCommand) = .empty,
@@ -57,23 +57,23 @@ pub const sub_api = bind.record(Painter, .{ .handle = PainterHandle });
 
 pub const PainterHandle = struct {
     ui: *Ui,
-    entity: ecs.Entity,
+    entity: Ecs.Entity,
 
-    pub fn fromComponent(host: anytype, e: ecs.Entity) PainterHandle {
+    pub fn fromComponent(host: anytype, e: Ecs.Entity) PainterHandle {
         return .{ .ui = host.ui, .entity = e };
     }
 
-    fn get(self: PainterHandle) ?*Painter {
-        if (!self.entity.isAlive()) return null;
-        return self.entity.getComponent(self.ui.component_ids.painter, Painter);
+    fn get(self: PainterHandle) !?*Painter {
+        const w = self.ui.world;
+        return try w.getComponent(self.entity, self.ui.component_ids.painter, Painter);
     }
 
-    pub fn isAlive(self: PainterHandle) bool {
-        return self.get() != null;
+    pub fn isAlive(self: PainterHandle) !bool {
+        return (try self.get()) != null;
     }
 
     fn state(self: PainterHandle) !*PainterState {
-        if (self.get() == null) return error.PainterRemoved;
+        if ((try self.get()) == null) return error.PainterRemoved;
         return self.ui.painterState(self.entity);
     }
 
@@ -105,7 +105,7 @@ pub const PainterHandle = struct {
     fn onPaint(self: PainterHandle) !*OnPaintEvent {
         const s = try self.state();
         if (s.on_paint == null)
-            s.on_paint = try OnPaintEvent.create(self.ui.allocator, &self.ui.world.dispatcher);
+            s.on_paint = try OnPaintEvent.create(self.ui.allocator, &self.ui.dispatcher);
         return s.on_paint.?;
     }
 
@@ -122,20 +122,20 @@ pub const PainterHandle = struct {
         .props = &.{
             bind.prop("clip", struct {
                 fn get(self: PainterHandle) !bool {
-                    return (self.get() orelse return error.PainterRemoved).clip;
+                    return ((try self.get()) orelse return error.PainterRemoved).clip;
                 }
             }.get, struct {
                 fn set(self: PainterHandle, v: bool) !void {
-                    (self.get() orelse return error.PainterRemoved).clip = v;
+                    ((try self.get()) orelse return error.PainterRemoved).clip = v;
                 }
             }.set),
             bind.prop("antialiased", struct {
                 fn get(self: PainterHandle) !bool {
-                    return (self.get() orelse return error.PainterRemoved).antialiased;
+                    return ((try self.get()) orelse return error.PainterRemoved).antialiased;
                 }
             }.get, struct {
                 fn set(self: PainterHandle, v: bool) !void {
-                    (self.get() orelse return error.PainterRemoved).antialiased = v;
+                    ((try self.get()) orelse return error.PainterRemoved).antialiased = v;
                 }
             }.set),
         },

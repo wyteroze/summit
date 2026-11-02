@@ -1,7 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const ecs = @import("../ecs/Ecs.zig");
+const Ecs = @import("../ecs/Ecs.zig");
 const signal = @import("../core/signal.zig");
 const Assets = @import("../assets/Assets.zig");
 const Audio = @import("Audio.zig");
@@ -17,7 +17,7 @@ pub const Track = struct {
     playing: bool = false,
     destroy_on_finish: bool = false,
     // Entity ID of the parent speaker, if any.
-    owner: ?ecs.Entity = null,
+    owner: ?Ecs.Entity = null,
     played: TrackEvent,
     stopped: TrackEvent,
     looped: TrackEvent,

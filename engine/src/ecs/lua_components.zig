@@ -2,7 +2,7 @@
 
 const std = @import("std");
 const zlua = @import("zlua");
-const ecs = @import("Ecs.zig");
+const Ecs = @import("Ecs.zig");
 const bind = @import("../scripting/bind/bind.zig");
 const Pushed = @import("../scripting/bind/wrap.zig").Pushed;
 
@@ -15,49 +15,46 @@ pub fn freeLuaValue(_: std.mem.Allocator, bytes: []u8) void {
     v.l.unref(v.ref);
 }
 
-fn write(e: ecs.Entity, l: *zlua.Lua, codecs: []const ecs.Codec, name: []const u8, comptime mode: ecs.World.WriteMode) !void {
-    if (!e.isAlive()) return error.DeadEntity;
-
-    const world = e.world;
-    const id = world.components.id(name) orelse return error.UnknownComponent;
+fn write(e: Ecs.Entity, l: *zlua.Lua, codecs: []const Ecs.Codec, name: []const u8, comptime mode: Ecs.World.WriteMode, ecs: *Ecs) !void {
+    const world = try ecs.getWorld(e.world_id);
+    if (!world.isEntityAlive(e)) return error.InvalidEntity;
+    const id = world.componentId(name) orelse return error.UnknownComponent;
     const info = world.components.info(id);
 
-    const exists = world.hasComponent(e, id);
-    switch (mode) {
-        .add => if (exists) return error.ComponentAlreadyExists,
-        .set => if (!exists) return error.ComponentMissing,
-        .upsert => {},
-    }
-
-    var buf: [ecs.ComponentRegistry.max_component_size]u8 align(ecs.ComponentRegistry.max_alignment) = undefined;
+    var buf: [Ecs.ComponentRegistry.max_component_size]u8 align(Ecs.ComponentRegistry.max_alignment) = undefined;
     const bytes = buf[0..info.size];
 
-    // Value is at stack index 3: (entity, name, value)
+    var new_ref: ?i32 = null;
+    errdefer if (new_ref) |r| l.unref(r);
+
     if (std.mem.eql(u8, info.type_name, type_name)) {
-        const v: LuaValue = .{ .l = l.mainThread(), .ref = l.ref(3) };
+        const ref = l.ref(3);
+        new_ref = ref;
+
+        const v: LuaValue = .{ .l = l.mainThread(), .ref = ref };
         @memcpy(bytes, std.mem.asBytes(&v));
     } else {
-        const c = ecs.Codec.find(codecs, info.type_name) orelse return error.ComponentNotExposedToLua;
+        const c = Ecs.Codec.find(codecs, info.type_name) orelse return error.ComponentNotExposedToLua;
         c.read(l, 3, bytes);
     }
 
-    try world.setRaw(e, id, bytes);
+    try world.writeRawUnchecked(e, id, bytes, mode);
 }
 
-pub fn addComponent(e: ecs.Entity, l: *zlua.Lua, codecs: []const ecs.Codec, name: []const u8) !void {
-    return write(e, l, codecs, name, .add);
+pub fn addComponent(e: Ecs.Entity, l: *zlua.Lua, codecs: []const Ecs.Codec, name: []const u8, ecs: *Ecs) !void {
+    return write(e, l, codecs, name, .add, ecs);
 }
 
-pub fn setComponent(e: ecs.Entity, l: *zlua.Lua, codecs: []const ecs.Codec, name: []const u8) !void {
-    return write(e, l, codecs, name, .upsert);
+pub fn setComponent(e: Ecs.Entity, l: *zlua.Lua, codecs: []const Ecs.Codec, name: []const u8, ecs: *Ecs) !void {
+    return write(e, l, codecs, name, .upsert, ecs);
 }
 
-pub fn getComponent(e: ecs.Entity, l: *zlua.Lua, codecs: []const ecs.Codec, name: []const u8) !Pushed {
-    const world = e.world;
+pub fn getComponent(e: Ecs.Entity, l: *zlua.Lua, codecs: []const Ecs.Codec, name: []const u8, ecs: *Ecs) !Pushed {
+    const world = try ecs.getWorld(e.world_id);
     const id = world.components.id(name) orelse return error.UnknownComponent;
     const info = world.components.info(id);
 
-    const bytes = world.getComponentRaw(e, id) orelse {
+    const bytes = try world.getComponentRaw(e, id) orelse {
         l.pushNil();
         return .{ .n = 1 };
     };
@@ -68,7 +65,7 @@ pub fn getComponent(e: ecs.Entity, l: *zlua.Lua, codecs: []const ecs.Codec, name
         return .{ .n = 1 };
     }
 
-    const c = ecs.Codec.find(codecs, info.type_name) orelse return error.ComponentNotExposedToLua;
+    const c = Ecs.Codec.find(codecs, info.type_name) orelse return error.ComponentNotExposedToLua;
     if (c.push_component) |pc| {
         pc(l, e, id, bytes);
         return .{ .n = 1 };
@@ -80,14 +77,14 @@ pub fn getComponent(e: ecs.Entity, l: *zlua.Lua, codecs: []const ecs.Codec, name
 
 // "Proxy" object for `entity.Components`.
 pub const Components = struct {
-    entity: ecs.Entity,
+    entity: Ecs.Entity,
 
-    pub fn index(self: Components, l: *zlua.Lua, codecs: []const ecs.Codec, name: []const u8) !Pushed {
-        return getComponent(self.entity, l, codecs, name);
+    pub fn index(self: Components, l: *zlua.Lua, codecs: []const Ecs.Codec, name: []const u8, ecs: *Ecs) !Pushed {
+        return getComponent(self.entity, l, codecs, name, ecs);
     }
 
-    pub fn newindex(self: Components, l: *zlua.Lua, codecs: []const ecs.Codec, name: []const u8) !void {
-        return write(self.entity, l, codecs, name, .upsert);
+    pub fn newindex(self: Components, l: *zlua.Lua, codecs: []const Ecs.Codec, name: []const u8, ecs: *Ecs) !void {
+        return write(self.entity, l, codecs, name, .upsert, ecs);
     }
 
     pub const api = bind.value(Components, .{
@@ -100,51 +97,49 @@ pub const Components = struct {
 };
 
 pub const ComponentRef = struct {
-    entity: ecs.Entity,
-    id: ecs.ComponentId,
+    entity: Ecs.Entity,
+    id: Ecs.ComponentId,
 
-    fn codecAndBytes(self: ComponentRef, codecs: []const ecs.Codec) !struct { *const ecs.Codec, []u8 } {
-        if (!self.entity.isAlive()) return error.DeadEntity;
-        const w = self.entity.world;
+    const Resolved = struct { world: *Ecs.World, codec: *const Ecs.Codec, bytes: []u8 };
+
+    fn resolve(self: ComponentRef, ecs: *Ecs, codecs: []const Ecs.Codec) !Resolved {
+        const w = try ecs.getWorld(self.entity.world_id);
+        const bytes = try w.getComponentRaw(self.entity, self.id) orelse return error.ComponentMissing;
+
         const info = w.components.info(self.id);
+        const c = Ecs.Codec.find(codecs, info.type_name) orelse return error.ComponentNotExposedToLua;
 
-        const c = ecs.Codec.find(codecs, info.type_name) orelse return error.ComponentNotExposedToLua;
-        const bytes = w.getComponentRaw(self.entity, self.id) orelse return error.ComponentMissing;
-
-        return .{ c, bytes };
+        return .{ .world = w, .codec = c, .bytes = bytes };
     }
 
-    pub fn index(self: ComponentRef, l: *zlua.Lua, codecs: []const ecs.Codec, key: []const u8) !Pushed {
-        const c, const bytes = try self.codecAndBytes(codecs);
-        c.push(l, bytes);
+    pub fn index(self: ComponentRef, l: *zlua.Lua, codecs: []const Ecs.Codec, key: []const u8, ecs: *Ecs) !Pushed {
+        const r = try self.resolve(ecs, codecs);
+        r.codec.push(l, r.bytes);
         _ = l.pushString(key);
         _ = l.getTable(-2);
         l.remove(-2);
-
         return .{ .n = 1 };
     }
 
-    pub fn newindex(self: ComponentRef, l: *zlua.Lua, codecs: []const ecs.Codec, key: []const u8) !void {
-        const c, const bytes = try self.codecAndBytes(codecs);
-        const w = self.entity.world;
+    pub fn newindex(self: ComponentRef, l: *zlua.Lua, codecs: []const Ecs.Codec, key: []const u8, ecs: *Ecs) !void {
+        const r = try self.resolve(ecs, codecs);
 
-        c.push(l, bytes);
+        r.codec.push(l, r.bytes);
         _ = l.pushString(key);
         l.pushValue(3);
         l.setTable(-3);
 
-        var buf: [ecs.ComponentRegistry.max_component_size]u8 align(ecs.ComponentRegistry.max_alignment) = undefined;
-        const out = buf[0..bytes.len];
-        c.read(l, -1, out);
+        var buf: [Ecs.ComponentRegistry.max_component_size]u8 align(Ecs.ComponentRegistry.max_alignment) = undefined;
+        const out = buf[0..r.bytes.len];
+        r.codec.read(l, -1, out);
         l.pop(1);
 
-        try w.setRaw(self.entity, self.id, out);
+        try r.world.writeRaw(self.entity, self.id, out, .set);
     }
 
-    pub fn tostring(self: ComponentRef, l: *zlua.Lua, codecs: []const ecs.Codec) !Pushed {
-        const c, const bytes = try self.codecAndBytes(codecs);
-
-        c.push(l, bytes);
+    pub fn tostring(self: ComponentRef, l: *zlua.Lua, codecs: []const Ecs.Codec, ecs: *Ecs) !Pushed {
+        const r = try self.resolve(ecs, codecs);
+        r.codec.push(l, r.bytes);
         _ = l.toStringEx(-1);
         l.remove(-2);
 
