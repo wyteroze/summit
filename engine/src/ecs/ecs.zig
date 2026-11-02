@@ -68,9 +68,18 @@ pub fn getWorld(self: *Ecs, id: u8) !*World {
     return self.worlds.get(id) orelse return error.InvalidWorldId;
 }
 
+pub fn worldAsHandle(self: *Ecs, world: *World) World.WorldHandle {
+    return .{ .ecs = self, .id = world.id };
+}
+
+pub fn isWorldAlive(self: *Ecs, id: u8) bool {
+    return self.worlds.contains(id);
+}
+
 pub const api = bind.module("ecs", .{
     .kind = .{ .singleton = Ecs },
     .members = &.{
         lua_entity.sub_api,
+        World.WorldHandle.sub_api,
     },
 });

@@ -16,7 +16,6 @@ pub const ScriptHandle = struct { id: u64 };
 const Runtime = @This();
 state: *zlua.Lua,
 binder: bind.Binder(bind.api),
-dispatcher: core.signal.Dispatcher,
 scripts: std.AutoHashMap(u64, Script),
 next_script_id: u64 = 0,
 
@@ -27,7 +26,7 @@ pub fn init(alloc: std.mem.Allocator, host: *bind.Host) !Runtime {
     var binder: bind.Binder(bind.api) = .init(l, host);
     binder.install();
 
-    return .{ .state = l, .binder = binder, .dispatcher = .init(alloc), .scripts = .init(alloc) };
+    return .{ .state = l, .binder = binder, .scripts = .init(alloc) };
 }
 
 pub fn deinit(self: *Runtime) void {
@@ -37,7 +36,6 @@ pub fn deinit(self: *Runtime) void {
     }
     self.scripts.deinit();
     self.gcCollect();
-    self.dispatcher.deinit();
     self.state.deinit();
 }
 
@@ -50,7 +48,7 @@ pub fn loadScript(self: *Runtime, name: ?[:0]const u8, source: Assets.types.Scri
     const id = self.next_script_id;
     self.next_script_id +%= 1;
 
-    try self.scripts.put(id, try .init(&self.dispatcher, name, self.state, thread, thread_ref, source, self.binder));
+    try self.scripts.put(id, try .init(name, self.state, thread, thread_ref, source, self.binder));
     return .{ .id = id };
 }
 

@@ -10,15 +10,16 @@
 //! Currently not thread-safe.
 
 const std = @import("std");
-const Entity = @import("Entity.zig").Entity;
-const ComponentId = @import("ComponentId.zig").ComponentId;
-const ComponentRegistry = @import("ComponentRegistry.zig");
-const SystemRegistry = @import("SystemRegistry.zig");
-const SparseSet = @import("SparseSet.zig");
-const Query = @import("Query.zig");
-const Hierarchy = @import("Hierarchy.zig");
+const Ecs = @import("Ecs.zig");
+const Entity = Ecs.Entity;
+const ComponentId = Ecs.ComponentId;
+const ComponentRegistry = Ecs.ComponentRegistry;
+const SystemRegistry = Ecs.SystemRegistry;
+const SparseSet = Ecs.SparseSet;
+const Query = Ecs.Query;
 const signal = @import("../core/signal.zig");
-const lua_components = @import("lua_components.zig");
+const Hierarchy = @import("Hierarchy.zig");
+const lua_components = Ecs.lua_components;
 
 pub const WriteMode = enum { add, set, upsert };
 pub const FieldTypeSpec = struct { name: []const u8, type_name: []const u8 };
@@ -135,7 +136,7 @@ pub fn registerSystem(
     self: *World,
     sys_query: []const ComponentId,
     init_fn: ?SystemRegistry.SystemInitFn,
-    update_fn: SystemRegistry.SystemUpdateFn,
+    update_fn: ?SystemRegistry.SystemUpdateFn,
     deinit_fn: ?SystemRegistry.SystemDeinitFn,
     ctx: *anyopaque,
 ) !SystemRegistry.SystemHandle {
@@ -387,3 +388,36 @@ pub fn format(
 }
 
 const bind = @import("../scripting/bind/bind.zig");
+/// This is how Lua interfaces with worlds. It has a mostly stripped-down API surface
+/// because it can't (and shouldn't) work on a level as low as we do. Engine consumers
+/// should always use a `*World` directly, while Lua uses this `WorldHandle`.
+pub const WorldHandle = struct {
+    id: u8,
+    ecs: *Ecs,
+
+    pub fn isAlive(self: WorldHandle) bool {
+        return self.ecs.isWorldAlive(self.id);
+    }
+
+    pub fn eql(self: WorldHandle, other: WorldHandle) bool {
+        return self.id == other.id;
+    }
+
+    pub fn registerComponent(self: WorldHandle, name: []const u8) !void {
+        const w = self.ecs.getWorld(self.id) catch return error.InvalidHandle;
+        // Lua doesn't really have anything to do with component ids yet, just discard the result.
+        _ = try w.registerLuaComponent(name);
+    }
+
+    // TODO: unregisterComponent()
+
+    pub const sub_api = bind.handle(WorldHandle, .{
+        .alive = bind.func("isAlive", WorldHandle.isAlive),
+        .methods = &.{
+            bind.func("registerComponent", WorldHandle.registerComponent),
+        },
+        .ops = .{
+            .eq = .{ .member = bind.func("eql", WorldHandle.eql) },
+        },
+    });
+};
