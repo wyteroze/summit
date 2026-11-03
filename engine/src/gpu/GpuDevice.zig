@@ -133,6 +133,9 @@ pub const GpuComputePipeline = struct {
     }
 };
 
+// TODO: When we have the editor and an actual build process for games,
+// compile shaders beforehand instead of at runtime. The slang compiler is heavy
+// (uses about 130mb) and creating it is slow, so we can't just create it only when we need it.
 pub const GpuShader = struct {
     backend: Backend,
     handle: types.ShaderHandle,
@@ -140,8 +143,10 @@ pub const GpuShader = struct {
     pub fn init(b: Backend, compiler: *slang.Compiler, d: desc.ShaderDesc) !GpuShader {
         var compiled_stages: [8]desc.ShaderStageDesc = undefined;
         var results: [8]slang.CompileResult = undefined;
-        defer for (results[0..d.stages.len]) |*r| r.deinit();
+        var count: usize = 0;
+        defer for (results[0..count]) |*r| r.deinit();
 
+        if (d.stages.len > 8) return error.TooManyStages;
         for (d.stages, 0..) |s, i| {
             results[i] = try compiler.compileStage(
                 "shader",
@@ -160,6 +165,7 @@ pub const GpuShader = struct {
                 .source = @ptrCast(results[i].code),
                 .entrypoint = s.entrypoint,
             };
+            count += 1;
         }
 
         const handle = b.createShader(.{ .stages = compiled_stages[0..d.stages.len] });
@@ -200,19 +206,14 @@ pub const GpuSwapchain = struct {
 const GpuDevice = @This();
 allocator: std.mem.Allocator,
 backend: Backend,
-compiler: *slang.Compiler,
+compiler: ?*slang.Compiler = null,
 
 pub fn init(allocator: std.mem.Allocator, b: Backend) !GpuDevice {
-    const compiler = try allocator.create(slang.Compiler);
-    compiler.* = .init();
-    compiler.setModuleLookup(shader_registry.lookupShaderModule);
-
-    return .{ .allocator = allocator, .backend = b, .compiler = compiler };
+    return .{ .allocator = allocator, .backend = b };
 }
 
-pub fn deinit(self: GpuDevice) void {
-    self.compiler.deinit();
-    self.allocator.destroy(self.compiler);
+pub fn deinit(self: *GpuDevice) void {
+    self.releaseCompiler();
     self.backend.deinit();
 }
 
@@ -236,8 +237,8 @@ pub fn createComputePipeline(self: GpuDevice, d: desc.ComputePipelineDesc) !GpuC
     return .init(self.backend, d);
 }
 
-pub fn createShader(self: GpuDevice, d: desc.ShaderDesc) !GpuShader {
-    return .init(self.backend, self.compiler, d);
+pub fn createShader(self: *GpuDevice, d: desc.ShaderDesc) !GpuShader {
+    return .init(self.backend, try self.getCompiler(), d);
 }
 
 pub fn createSwapchain(self: GpuDevice, d: desc.SwapchainDesc) !GpuSwapchain {
@@ -262,4 +263,23 @@ pub fn commit(self: GpuDevice) void {
 
 pub fn present(self: GpuDevice) void {
     self.backend.present();
+}
+
+pub fn getCompiler(self: *GpuDevice) !*slang.Compiler {
+    if (self.compiler) |c| return c;
+
+    const c = try self.allocator.create(slang.Compiler);
+    errdefer self.allocator.destroy(c);
+    c.* = .init();
+    c.setModuleLookup(shader_registry.lookupShaderModule);
+
+    self.compiler = c;
+    return c;
+}
+
+pub fn releaseCompiler(self: *GpuDevice) void {
+    const c = self.compiler orelse return;
+    c.deinit();
+    self.allocator.destroy(c);
+    self.compiler = null;
 }

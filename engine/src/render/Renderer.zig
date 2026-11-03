@@ -67,6 +67,8 @@ pub fn init(allocator: std.mem.Allocator, gpu_device: *gpu.GpuDevice, skybox_cub
     errdefer allocator.destroy(ui_pass);
     ui_pass.* = try .init(gpu_device, ui_shader, painter_shader);
 
+    gpu_device.releaseCompiler();
+
     try scene_graph.addNode(depth_prepass.node());
     try scene_graph.addNode(skybox_pass.node());
     try scene_graph.addNode(light_cull_pass.node());
