@@ -148,12 +148,11 @@ pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.S
 
     // Run it before processing the query so the system may create any components it needs to use.
     if (init_type == .function) {
-        const t = l.getTop();
-        defer l.setTop(t);
         const h = Host.fromState(l);
         _ = l.getIndexRaw(zlua.registry_index, self.fn_refs.init.?);
         _ = self.callFunctionAtIndex(-1, &.{}, .{h.ecs.worldAsHandle(world)}) catch
             return error.SystemInitFailed;
+        l.pop(1);
     }
 
     const alloc = self.allocator();
@@ -187,8 +186,10 @@ pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.S
             fn update(e: Ecs.Entity, dt: f32, ctx: *anyopaque) void {
                 const s: *Script = @ptrCast(@alignCast(ctx));
                 const lua = s.state;
+
                 _ = lua.getIndexRaw(zlua.registry_index, s.fn_refs.update.?);
                 _ = s.callFunctionAtIndex(-1, &.{}, .{ e, dt }) catch {};
+                lua.pop(1);
             }
         }.update else null,
         // Deinit function
@@ -196,8 +197,10 @@ pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.S
             fn deinit(ctx: *anyopaque) void {
                 const s: *Script = @ptrCast(@alignCast(ctx));
                 const lua = s.state;
+
                 _ = lua.getIndexRaw(zlua.registry_index, s.fn_refs.deinit.?);
                 _ = s.callFunctionAtIndex(-1, &.{}, .{}) catch {};
+                lua.pop(1);
             }
         }.deinit else null,
         self,
