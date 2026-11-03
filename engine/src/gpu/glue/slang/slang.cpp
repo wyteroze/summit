@@ -59,6 +59,7 @@ SummitSlangCompilerHandle slang_compiler_create() {
 
 void slang_compiler_destroy(SummitSlangCompilerHandle compiler) {
     delete static_cast<SummitSlangCompilerContext*>(compiler);
+    slang::shutdown();
 }
 
 SummitSlangCompileResult slang_compile_stage(SummitSlangCompilerHandle compiler, void* vfs, const char* module_name, const char* source, const char* entry_point, SummitSlangStageKind stage, SummitSlangTargetKind target) {

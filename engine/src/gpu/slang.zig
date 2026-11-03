@@ -75,6 +75,7 @@ pub const Compiler = struct {
 
         if (result.error_message) |msg| {
             std.log.err("Slang compile error ({s}::{s}): {s}", .{ module_name, entrypoint, msg });
+            c.slang_free_result(result);
             return error.CompileFailed;
         }
 
