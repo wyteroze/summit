@@ -8,13 +8,13 @@ pub const Counter = @import("Counter.zig");
 pub const Stepper = @import("Stepper.zig");
 pub const Job = @import("Job.zig");
 
+// TODO: Tweak these when we actually start using the scheduler.
+// These are just guesstimates to keep memory low since we aren't using it now.
 const fiber_pool_size = 256;
-const fiber_stack_size = 32 * 1024;
-const stack_mem_size = 128 * 1024;
+const fiber_stack_size = 16 * 1024;
 const priority_count = Job.JobPriority.priority_count;
 // Order is critical, high, low, normal, then background.
 const deque_capacity = [priority_count]usize{ 256, 512, 2048, 512, 512 };
-const ready_capacity = fiber_pool_size;
 const Runnable = union(enum) { job: Job, fiber: *Fiber };
 const PendingPark = struct { fiber: *Fiber, counter: *Counter };
 
