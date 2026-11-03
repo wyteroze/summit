@@ -11,6 +11,10 @@ pub const Job = @import("Job.zig");
 const fiber_pool_size = 256;
 const fiber_stack_size = 32 * 1024;
 const stack_mem_size = 128 * 1024;
+const priority_count = Job.JobPriority.priority_count;
+// Order is critical, high, low, normal, then background.
+const deque_capacity = [priority_count]usize{ 256, 512, 2048, 512, 512 };
+const ready_capacity = fiber_pool_size;
 const Runnable = union(enum) { job: Job, fiber: *Fiber };
 const PendingPark = struct { fiber: *Fiber, counter: *Counter };
 
@@ -24,7 +28,7 @@ ready_fibers: []core.threading.Deque(*Fiber),
 home_fibers: []Fiber,
 workers: []std.Thread,
 // One for each job priority (critical, high, normal, low, background)
-deques: [Job.JobPriority.priority_count][]core.threading.Deque(Job),
+deques: [priority_count][]core.threading.Deque(Job),
 running: std.atomic.Value(bool) = .init(true),
 main_worker_id: usize = 0,
 
@@ -66,15 +70,15 @@ pub fn init(self: *Scheduler, allocator: std.mem.Allocator, io: std.Io, os: *con
 
     for (0..core_count) |_| ready_fibers.appendAssumeCapacity(try .init(allocator, 4096));
 
-    var deques: [Job.JobPriority.priority_count][]core.threading.Deque(Job) = undefined;
+    var deques: [priority_count][]core.threading.Deque(Job) = undefined;
     errdefer for (deques) |dq| {
         for (dq) |*d| d.deinit(allocator);
         allocator.free(dq);
     };
 
-    for (&deques) |*dq| {
+    for (&deques, 0..) |*dq, p| {
         var list: std.ArrayList(core.threading.Deque(Job)) = try .initCapacity(allocator, core_count);
-        for (0..core_count) |_| try list.append(allocator, try .init(allocator, 4096));
+        for (0..core_count) |_| try list.append(allocator, try .init(allocator, deque_capacity[p]));
         dq.* = try list.toOwnedSlice(allocator);
     }
 
