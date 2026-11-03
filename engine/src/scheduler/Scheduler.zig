@@ -8,9 +8,9 @@ pub const Counter = @import("Counter.zig");
 pub const Stepper = @import("Stepper.zig");
 pub const Job = @import("Job.zig");
 
-const fiber_pool_size = 512;
-const fiber_stack_size = 64 * 1024; // 64KB
-const stack_mem_size = 256 * 1024;
+const fiber_pool_size = 256;
+const fiber_stack_size = 32 * 1024;
+const stack_mem_size = 128 * 1024;
 const Runnable = union(enum) { job: Job, fiber: *Fiber };
 const PendingPark = struct { fiber: *Fiber, counter: *Counter };
 

@@ -15,7 +15,6 @@ pub fn depthPrepassShaderDesc() desc.ShaderDesc {
     const source = @embedFile("shaders/src/depth_prepass.slang");
     return .{ .stages = &.{
         .{ .name = "DepthPrepassShader: vertex", .stage = .vertex, .source = source, .entrypoint = "vertexMain" },
-        .{ .name = "DepthPrepassShader: pixel", .stage = .fragment, .source = source, .entrypoint = "fragmentMain" },
     } };
 }
 

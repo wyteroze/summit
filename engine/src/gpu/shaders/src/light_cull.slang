@@ -3,7 +3,7 @@
 import lighting;
 
 #define TILE_SIZE 16
-#define MAX_LIGHTS_PER_TILE 256
+#define MAX_LIGHTS_PER_TILE 64
 
 cbuffer cullParams : register(b0) {
     float4x4 invProj;
