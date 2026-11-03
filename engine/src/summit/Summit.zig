@@ -146,6 +146,9 @@ fn onPlatformEvent(self: *Summit, evt: Platform.desc.PlatformEvent) void {
 }
 
 pub fn update(self: *Summit) void {
+    const p = self.memory.pushMemoryPool();
+    defer self.memory.popMemoryPool(p);
+
     const start = std.Io.Clock.awake.now(self.io);
     const dt = self.last_frame.durationTo(start);
     const dt_seconds: f32 = @floatCast(@as(f32, @floatFromInt(dt.toNanoseconds())) / std.time.ns_per_s);

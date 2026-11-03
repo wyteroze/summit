@@ -18,7 +18,7 @@ const Color = core.Color;
 // would be unneeded.
 pub const max_lights = 256;
 pub const tile_size = 16;
-pub const max_lights_per_tile = 256;
+pub const max_lights_per_tile = 64;
 
 const Renderer = @This();
 allocator: std.mem.Allocator,

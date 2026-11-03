@@ -42,14 +42,11 @@ pub fn init(gpu_device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader) !DepthP
 
 pub fn execute(self: *DepthPrepassPass, ctx: pass.PassContext) void {
     const depth_handle = ctx.resources.get(resource.depth_buffer, .depth_target) orelse @panic("depth_buffer resource is missing!");
-    const color_handle = ctx.resources.get(resource.color_target, .render_target);
     ctx.device.beginPass(.{
         .clear_depth = 0.0,
-        .clear_color = ctx.scene.clear_color,
         .width = ctx.view.viewport_size[0],
         .height = ctx.view.viewport_size[1],
         .depth_target = depth_handle,
-        .color_target = color_handle,
     });
     self.pipeline.apply();
 
@@ -78,7 +75,7 @@ pub fn deinit(self: *DepthPrepassPass, allocator: std.mem.Allocator) void {
 pub fn node(self: *DepthPrepassPass) pass.PassNode {
     return .{
         .name = "DepthPrepassPass",
-        .reads = &.{resource.color_target},
+        .reads = &.{},
         .writes = &.{resource.depth_buffer},
         .ptr = self,
         .execute_fn = struct {

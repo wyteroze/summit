@@ -21,8 +21,3 @@ void vertexMain(in VSInput vsIn, out VaryingsOut vsOut) {
     float4 worldPos = mul(model, float4(vsIn.pos, 1.0));
     vsOut.pos = mul(proj, mul(view, worldPos));
 }
-
-[shader("fragment")]
-float4 fragmentMain(in VaryingsOut psIn) : SV_TARGET {
-    return float4(1, 1, 1, 1);
-}

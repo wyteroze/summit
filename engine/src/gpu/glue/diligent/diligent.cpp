@@ -191,6 +191,7 @@ SummitDiligentDeviceHandle diligent_init() {
     IRenderDevice* device;
     IDeviceContext* context;
     IEngineFactory* factory;
+    
 
 #ifdef SUMMIT_D3D11_BACKEND
     EngineD3D11CreateInfo EngineCI;
@@ -212,6 +213,9 @@ SummitDiligentDeviceHandle diligent_init() {
     factory = factoryOpenGL;
 #elif SUMMIT_VULKAN_BACKEND
     EngineVkCreateInfo EngineCI;
+    EngineCI.NumAsyncShaderCompilationThreads = 1;
+
+    // TODO: `SUMMIT_RUNTIME_SAFETY` to determine if we enable this or not.
     EngineCI.EnableValidation = true;
     EngineCI.SetValidationLevel(VALIDATION_LEVEL_2);
 

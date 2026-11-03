@@ -5,6 +5,18 @@ const builtin = @import("builtin");
 const core = @import("../core/core.zig");
 const SizeFormatter = core.SizeFormatter;
 
+// why do you make me do this Apple
+const objc = if (builtin.target.os.tag.isDarwin()) struct {
+    pub extern fn objc_autoreleasePoolPush() ?*anyopaque;
+    pub extern fn objc_autoreleasePoolPop(pool: ?*anyopaque) void;
+} else struct {
+    // zig fmt: off
+    pub inline fn objc_autoreleasePoolPush() ?*anyopaque { return null; }
+    pub inline fn objc_autoreleasePoolPop(_: ?*anyopaque) void { }
+    // zig fmt: on
+};
+
+pub const MemoryPool = struct { ptr: ?*anyopaque };
 pub const MemoryCategoryInfo = struct {
     bytes_allocated: usize,
     bytes_freed: usize,
@@ -88,6 +100,14 @@ pub fn getCategoryInfo(self: *Memory, category: []const u8) !MemoryCategoryInfo 
 
 pub fn getRootAllocatorInfo(self: *Memory) MemoryCategoryInfo {
     return .{ .bytes_allocated = self.root.bytes_allocated, .bytes_freed = self.root.bytes_freed };
+}
+
+pub fn pushMemoryPool(_: *Memory) MemoryPool {
+    return .{ .ptr = objc.objc_autoreleasePoolPush() };
+}
+
+pub fn popMemoryPool(_: *Memory, pool: MemoryPool) void {
+    objc.objc_autoreleasePoolPop(pool.ptr);
 }
 
 pub fn dumpCategories(self: *const Memory) void {
