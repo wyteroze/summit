@@ -10,9 +10,11 @@ const reflow = @import("reflow.zig");
 const tessellate = @import("tessellate.zig").tessellate;
 const Windowing = @import("../windowing/Windowing.zig");
 pub const Painter = @import("Painter.zig");
+pub const collect = @import("collect.zig");
 pub const types = @import("types.zig");
 
 const u64_max = std.math.maxInt(u64);
+pub const border_max = 100;
 
 pub const Interactable = bool;
 pub const PointerSignal = core.signal.Signal(.{math.Vec2});
@@ -77,14 +79,14 @@ pub fn init(ecs: *Ecs, allocator: std.mem.Allocator) !Ui {
     const layout = try world.registerComponent(types.Layout, "Layout");
     const color = try world.registerComponent(core.Color, "Color");
     const opacity = try world.registerComponent(f32, "Opacity");
-    const text = try world.registerComponent(Ui.types.Text, "Text");
+    const text = try world.registerComponent(types.Text, "Text");
     const render_view = try world.registerComponent(types.RenderViewOptions, "RenderView");
     const computed_size = try world.registerComponent(math.Vec2, "ComputedSize");
     const computed_position = try world.registerComponent(math.Vec2, "ComputedPosition");
     const computed_text_layout = try world.registerComponent(types.ComputedTextLayout, "ComputedTextLayout");
     const image = try world.registerComponent(types.Image, "Image");
-    const corner_radii = try world.registerComponent(Ui.types.CornerRadii, "CornerRadii");
-    const borders = try world.registerComponent(Ui.types.Borders, "Borders");
+    const corner_radii = try world.registerComponent(types.CornerRadii, "CornerRadii");
+    const borders = try world.registerComponent(types.Borders, "Borders");
     const signals = try world.registerComponent(ElementSignals, "ElementSignals");
     const interactable = try world.registerComponent(Interactable, "Interactable");
     const window = try world.registerComponent(types.Window, "Window");

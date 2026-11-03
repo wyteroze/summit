@@ -5,6 +5,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const engine = @import("../engine.zig");
 const Memory = @import("Memory.zig");
+const frame = @import("frame.zig");
 const Platform = engine.Platform;
 const gpu = engine.gpu;
 const Ecs = engine.Ecs;
@@ -156,9 +157,9 @@ pub fn update(self: *Summit) void {
     self.windowing.update();
     self.ui.update();
     self.ui.paint();
-    self.world_3d.submitToRenderer(&self.ui, &self.renderer) catch |e|
-        std.log.err("Failed to submit to renderer: {t}", .{e});
-    self.world_3d.submitToAudio(&self.audio);
+    frame.renderFrame(self) catch |e|
+        std.log.err("Failed to render frame: {t}", .{e});
+    frame.submitAudio(self);
     self.assets.tick(start);
 }
 
