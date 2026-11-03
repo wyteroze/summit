@@ -140,6 +140,7 @@ pub fn deinit(self: *Summit) void {
 fn onPlatformEvent(self: *Summit, evt: Platform.desc.PlatformEvent) void {
     switch (evt) {
         .quit => self.running = false,
+        .keyboard_key_down => |kb| if (kb.keycode == .Equals) self.memory.dumpCategories(),
         else => {},
     }
 }

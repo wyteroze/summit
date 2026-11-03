@@ -3,6 +3,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const core = @import("../core/core.zig");
+const SizeFormatter = core.SizeFormatter;
 
 pub const MemoryCategoryInfo = struct {
     bytes_allocated: usize,
@@ -87,4 +88,13 @@ pub fn getCategoryInfo(self: *Memory, category: []const u8) !MemoryCategoryInfo 
 
 pub fn getRootAllocatorInfo(self: *Memory) MemoryCategoryInfo {
     return .{ .bytes_allocated = self.root.bytes_allocated, .bytes_freed = self.root.bytes_freed };
+}
+
+pub fn dumpCategories(self: *const Memory) void {
+    std.log.info("----- Memory categories ({f} total) -----", .{SizeFormatter.fmtSize(self.root.currentUsage())});
+    var iter = self.allocators.iterator();
+    while (iter.next()) |e|
+        std.log.info("{s}: {f}", .{ e.key_ptr.*, SizeFormatter.fmtSize(e.value_ptr.*.currentUsage()) });
+
+    std.log.info("----- Memory categories finished", .{});
 }
