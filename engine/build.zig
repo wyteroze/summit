@@ -188,13 +188,12 @@ pub fn build(b: *std.Build) !void {
     const dep_freetype = b.dependency("freetype", .{ .optimize = optimize, .skip_cmake = skip_cmake });
     const dep_dr_libs = b.dependency("dr_libs", .{});
     const dep_assimp = b.dependency("zig_assimp", .{ .target = target, .optimize = optimize, .formats = "STL,Obj,FBX,glTF,glTF2", .double = false, .zlib = false });
+    const dep_zphysics = b.dependency("zphysics", .{});
 
     // Runs cmake for diligent engine
     const diligent_step = dependencyStep(dep_diligent, "diligent");
-
     // Runs cmake for slang
     const slang_step = dependencyStep(dep_slang, "slang");
-
     // Runs cmake for freetype
     const freetype_step = dependencyStep(dep_freetype, "freetype");
 
@@ -214,13 +213,33 @@ pub fn build(b: *std.Build) !void {
     const dr_libs_c = c_src.add("dr_libs_impl.c", dr_libs_impl);
 
     const translator: Translator =
-        .init(dep_translate_c, .{ .name = "Translate system headers", .c_source_file = wrapper_h, .target = target, .optimize = optimize });
+        .init(dep_translate_c, .{
+            .name = "Translate system headers",
+            .c_source_file = wrapper_h,
+            .target = target,
+            .optimize = optimize,
+        });
     const assimp_translator: Translator =
-        .init(dep_translate_c, .{ .name = "Translate assimp", .c_source_file = assimp_h, .target = target, .optimize = optimize });
+        .init(dep_translate_c, .{
+            .name = "Translate assimp",
+            .c_source_file = assimp_h,
+            .target = target,
+            .optimize = optimize,
+        });
     const freetype_translator: Translator =
-        .init(dep_translate_c, .{ .name = "Translate freetype", .c_source_file = freetype_h, .target = target, .optimize = optimize });
+        .init(dep_translate_c, .{
+            .name = "Translate freetype",
+            .c_source_file = freetype_h,
+            .target = target,
+            .optimize = optimize,
+        });
     const dr_libs_translator: Translator =
-        .init(dep_translate_c, .{ .name = "Translate dr_libs", .c_source_file = dr_libs_h, .target = target, .optimize = optimize });
+        .init(dep_translate_c, .{
+            .name = "Translate dr_libs",
+            .c_source_file = dr_libs_h,
+            .target = target,
+            .optimize = optimize,
+        });
 
     if (!skip_cmake) {
         freetype_translator.addIncludePath(dep_freetype.namedLazyPath("include"));
@@ -239,8 +258,11 @@ pub fn build(b: *std.Build) !void {
             });
         }
 
-        const diligent_glue_translate: Translator = .init(dep_translate_c, .{ .c_source_file = b.path("src/gpu/glue/diligent/diligent.h"), .target = target, .optimize = optimize });
-
+        const diligent_glue_translate: Translator = .init(dep_translate_c, .{
+            .c_source_file = b.path("src/gpu/glue/diligent/diligent.h"),
+            .target = target,
+            .optimize = optimize,
+        });
         const diligent_glue_cpp_path = b.path("src/gpu/glue/diligent/diligent.cpp");
 
         diligent_glue_translate.addIncludePath(b.path("src/gpu/glue/diligent"));
@@ -248,13 +270,26 @@ pub fn build(b: *std.Build) !void {
         diligent_glue_translate.mod.link_libcpp = true;
         diligent_glue_translate.mod.addCSourceFile(.{
             .file = diligent_glue_cpp_path,
-            .flags = &.{ b.fmt("-D{s}=1", .{diligent_vendor.targetToCFlag(target)}), b.fmt("-D{s}", .{backend.toCFlag()}), "-std=c++17" },
+            .flags = &.{
+                b.fmt("-D{s}=1", .{diligent_vendor.targetToCFlag(target)}),
+                b.fmt("-D{s}", .{backend.toCFlag()}),
+                "-std=c++17",
+            },
         });
 
-        compile_commands.addCommand(.{ .cmd = "clang++", .std = "c++17", .file_path = diligent_glue_cpp_path, .cxx_args = &.{
-            b.fmt("{s}=1", .{diligent_vendor.targetToCFlag(target)}),
-            b.fmt("{s}", .{backend.toCFlag()}),
-        }, .include_paths = &.{ b.path("vendor/DiligentEngine/install/include"), b.path("src/gpu/glue/diligent/") } });
+        compile_commands.addCommand(.{
+            .cmd = "clang++",
+            .std = "c++17",
+            .file_path = diligent_glue_cpp_path,
+            .cxx_args = &.{
+                b.fmt("{s}=1", .{diligent_vendor.targetToCFlag(target)}),
+                b.fmt("{s}", .{backend.toCFlag()}),
+            },
+            .include_paths = &.{
+                b.path("vendor/DiligentEngine/install/include"),
+                b.path("src/gpu/glue/diligent/"),
+            },
+        });
 
         if (target.result.os.tag == .macos and sdk != null) {
             sdk.?.applyToTranslator(diligent_glue_translate);
@@ -273,8 +308,11 @@ pub fn build(b: *std.Build) !void {
             });
         }
 
-        const slang_glue_translate: Translator = .init(dep_translate_c, .{ .c_source_file = b.path("src/gpu/glue/slang/glue_slang.h"), .target = target, .optimize = optimize });
-
+        const slang_glue_translate: Translator = .init(dep_translate_c, .{
+            .c_source_file = b.path("src/gpu/glue/slang/glue_slang.h"),
+            .target = target,
+            .optimize = optimize,
+        });
         const slang_glue_cpp_path = b.path("src/gpu/glue/slang/slang.cpp");
 
         slang_glue_translate.addIncludePath(b.path("src/gpu/glue/slang"));
@@ -285,7 +323,15 @@ pub fn build(b: *std.Build) !void {
             .flags = &.{"-std=c++17"},
         });
 
-        compile_commands.addCommand(.{ .cmd = "clang++", .std = "c++17", .file_path = slang_glue_cpp_path, .include_paths = &.{ b.path("vendor/slang/build/Release/include"), b.path("src/gpu/glue/slang/") } });
+        compile_commands.addCommand(.{
+            .cmd = "clang++",
+            .std = "c++17",
+            .file_path = slang_glue_cpp_path,
+            .include_paths = &.{
+                b.path("vendor/slang/build/Release/include"),
+                b.path("src/gpu/glue/slang/"),
+            },
+        });
 
         if (target.result.os.tag == .macos and sdk != null) {
             sdk.?.applyToTranslator(slang_glue_translate);
@@ -295,9 +341,30 @@ pub fn build(b: *std.Build) !void {
         break :blk slang_glue_translate.mod;
     };
 
-    const engine_mod = b.addModule("engine", .{ .root_source_file = b.path("src/engine.zig"), .target = target, .optimize = optimize, .imports = &.{ .{ .name = "sdl3", .module = dep_sdl3.module("sdl3") }, .{ .name = "zlua", .module = dep_zlua.module("zlua") }, .{ .name = "toml", .module = dep_toml.module("toml") }, .{ .name = "zigimg", .module = dep_zigimg.module("zigimg") }, .{ .name = "c", .module = translator.mod }, .{ .name = "assimp", .module = assimp_translator.mod }, .{ .name = "diligent", .module = diligent_mod }, .{ .name = "slang", .module = slang_mod }, .{ .name = "freetype", .module = freetype_translator.mod }, .{ .name = "dr_libs", .module = dr_libs_translator.mod } } });
+    const engine_mod = b.addModule("engine", .{
+        .root_source_file = b.path("src/engine.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "sdl3", .module = dep_sdl3.module("sdl3") },
+            .{ .name = "zlua", .module = dep_zlua.module("zlua") },
+            .{ .name = "toml", .module = dep_toml.module("toml") },
+            .{ .name = "zigimg", .module = dep_zigimg.module("zigimg") },
+            .{ .name = "zphysics", .module = dep_zphysics.module("root") },
+            .{ .name = "c", .module = translator.mod },
+            .{ .name = "assimp", .module = assimp_translator.mod },
+            .{ .name = "diligent", .module = diligent_mod },
+            .{ .name = "slang", .module = slang_mod },
+            .{ .name = "freetype", .module = freetype_translator.mod },
+            .{ .name = "dr_libs", .module = dr_libs_translator.mod },
+        },
+    });
 
-    const engine_lib = b.addLibrary(.{ .name = "engine", .root_module = engine_mod, .linkage = .static });
+    const engine_lib = b.addLibrary(.{
+        .name = "engine",
+        .root_module = engine_mod,
+        .linkage = .static,
+    });
 
     // Assimp
     const lib_assimp = dep_assimp.artifact("assimp");
@@ -345,6 +412,9 @@ pub fn build(b: *std.Build) !void {
     dr_libs_translator.addIncludePath(dep_dr_libs.path(""));
     engine_mod.addCSourceFile(.{ .file = dr_libs_c, .language = .c });
     engine_mod.addIncludePath(dep_dr_libs.path(""));
+
+    // zphysics
+    engine_mod.linkLibrary(dep_zphysics.artifact("joltc"));
 
     if (target.result.os.tag == .macos and sdk != null) {
         sdk.?.applyToTranslator(translator);
