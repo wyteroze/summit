@@ -13,6 +13,7 @@ pub const registry = @import("registry.zig");
 pub const Marshal = @import("marshal.zig").Marshal;
 pub const Wrap = @import("wrap.zig").Wrap;
 
+const Fallback = ?*const fn (*zlua.Lua) i32;
 const Bound = struct { m: types.Member, via: ?type = null };
 const InstanceEntry = union(enum) {
     field: struct { zig: []const u8, lua: [:0]const u8 },
@@ -266,78 +267,85 @@ pub fn Binder(comptime api: anytype) type {
             l.setReadonly(-1, true);
         }
 
-        fn indexFn(comptime T: type, comptime E: []const InstanceEntry) zlua.CFn {
-            const Map: std.StaticStringMap(u16) = comptime blk: {
-                var kv: [E.len]struct { []const u8, u16 } = undefined;
-                for (E, 0..) |e, i| kv[i] = .{ entryName(e), i };
-
-                break :blk .initComptime(kv);
-            };
+        fn indexFn(comptime T: type, comptime E: []const InstanceEntry, comptime fallback: Fallback) zlua.CFn {
+            const Map = comptime entryMap(E);
 
             return zlua.wrap(struct {
                 fn f(l: *zlua.Lua) i32 {
-                    const self = M.parse(T, l, 1);
                     if (l.typeOf(2) != .string) {
                         l.pushNil();
                         return 1;
                     }
 
                     const key = l.toString(2) catch unreachable;
-                    const i = Map.get(key) orelse {
+
+                    if (comptime E.len == 0) {
+                        if (comptime fallback) |fb| return fb(l);
                         l.pushNil();
                         return 1;
-                    };
+                    } else {
+                        const i = Map.get(key) orelse {
+                            if (comptime fallback) |fb| return fb(l);
+                            l.pushNil();
+                            return 1;
+                        };
 
-                    switch (i) {
-                        inline 0...E.len - 1 => |k| switch (E[k]) {
-                            .field => |fd| {
-                                M.push(l, @field(self, fd.zig));
-                                return 1;
+                        const self = M.parse(T, l, 1);
+                        switch (i) {
+                            inline 0...E.len - 1 => |k| switch (E[k]) {
+                                .field => |fd| {
+                                    M.push(l, @field(self, fd.zig));
+                                    return 1;
+                                },
+                                .prop => |p| return W.Gen(p.m.impl.getter, .{ .via = p.via }).call(l),
+                                .method => |m| {
+                                    l.pushFunction(W.cFn(m.m.impl.function, .{ .via = m.via }), m.m.name);
+                                    return 1;
+                                },
                             },
-                            .prop => |p| return W.Gen(p.m.impl.getter, .{ .via = p.via }).call(l),
-                            .method => |m| {
-                                l.pushFunction(W.cFn(m.m.impl.function, .{ .via = m.via }), m.m.name);
-                                return 1;
-                            },
-                        },
-
-                        else => unreachable,
+                            else => unreachable,
+                        }
                     }
                 }
             }.f);
         }
 
-        fn newindexFn(comptime T: type, comptime E: []const InstanceEntry) zlua.CFn {
+        fn newindexFn(comptime T: type, comptime E: []const InstanceEntry, comptime fallback: Fallback) zlua.CFn {
             const Map = comptime entryMap(E);
 
             return zlua.wrap(struct {
                 fn f(l: *zlua.Lua) i32 {
                     if (l.typeOf(2) != .string) l.raiseErrorStr("member name must be a string", .{});
-
                     const key = l.toString(2) catch unreachable;
-                    const i = Map.get(key) orelse l.raiseErrorStr("'%s' is not a valid member", .{key.ptr});
 
-                    switch (i) {
-                        inline 0...E.len - 1 => |k| switch (E[k]) {
-                            .field => |fd| {
-                                // Needs pointer to userdata, not copy
-                                const self = l.toUserdata(T, 1) catch unreachable;
-                                const F = @TypeOf(@field(self.*, fd.zig));
-                                @field(self.*, fd.zig) = M.parse(F, l, 3);
+                    if (comptime E.len == 0) {
+                        if (comptime fallback) |fb| return fb(l);
+                        l.raiseErrorStr("'%s' is not a valid member", .{key.ptr});
+                    } else {
+                        const i = Map.get(key) orelse {
+                            if (comptime fallback) |fb| return fb(l);
+                            l.raiseErrorStr("'%s' is not a valid member", .{key.ptr});
+                        };
 
-                                return 0;
+                        switch (i) {
+                            inline 0...E.len - 1 => |k| switch (E[k]) {
+                                .field => |fd| {
+                                    const self = l.toUserdata(T, 1) catch unreachable;
+                                    const F = @TypeOf(@field(self.*, fd.zig));
+                                    @field(self.*, fd.zig) = M.parse(F, l, 3);
+                                    return 0;
+                                },
+                                .prop => |p| {
+                                    if (!@hasDecl(p.m.impl, "setter"))
+                                        l.raiseErrorStr("'%s' is read-only", .{key.ptr});
+
+                                    l.remove(2);
+                                    return W.Gen(p.m.impl.setter, .{ .via = p.via }).call(l);
+                                },
+                                .method => l.raiseErrorStr("'%s' is a method and cannot be assigned to", .{key.ptr}),
                             },
-                            .prop => |p| {
-                                if (!@hasDecl(p.m.impl, "setter"))
-                                    l.raiseErrorStr("'%s' is read-only", .{key.ptr});
-
-                                l.remove(2);
-                                return W.Gen(p.m.impl.setter, .{ .via = p.via }).call(l);
-                            },
-
-                            .method => l.raiseErrorStr("'%s' is a method and cannot be assigned to", .{key.ptr}),
-                        },
-                        else => unreachable,
+                            else => unreachable,
+                        }
                     }
                 }
             }.f);
@@ -444,21 +452,13 @@ pub fn Binder(comptime api: anytype) type {
         fn installValueMeta(l: *zlua.Lua, comptime T: type, comptime r: recipes.ValueRecipe) void {
             const base = l.getTop();
             defer std.debug.assert(l.getTop() == base);
-            const E = comptime instanceEntries(r);
             l.newTable();
 
             const name = r.name orelse names.shortTypeName(T);
             _ = l.pushStringZ(name);
             l.setField(-2, "__type");
 
-            if (E.len > 0) {
-                l.pushFunction(indexFn(T, E), "indexFn");
-                l.setField(-2, "__index");
-
-                l.pushFunction(newindexFn(T, E), "newindexFn");
-                l.setField(-2, "__newindex");
-            }
-
+            installIndexing(l, T, r);
             pushOps(l, T, r);
 
             l.pushValue(-1);
@@ -473,7 +473,6 @@ pub fn Binder(comptime api: anytype) type {
             const base = l.getTop();
             defer std.debug.assert(l.getTop() == base);
 
-            const E = comptime instanceEntries(r);
             const tag = R.tagOf(T);
             l.newTable();
 
@@ -481,14 +480,7 @@ pub fn Binder(comptime api: anytype) type {
             _ = l.pushStringZ(name);
             l.setField(-2, "__type");
 
-            if (E.len > 0) {
-                l.pushFunction(indexFn(T, E), "indexFn");
-                l.setField(-2, "__index");
-
-                l.pushFunction(newindexFn(T, E), "newindexFn");
-                l.setField(-2, "__newindex");
-            }
-
+            installIndexing(l, T, r);
             pushOps(l, T, r);
 
             if (r.release) |rel| {
@@ -498,6 +490,22 @@ pub fn Binder(comptime api: anytype) type {
             refMeta(l, T);
             l.setUserdataMetatable(tag);
             std.log.debug("Registered handle '{s}'", .{name});
+        }
+
+        /// Expects the module table at the top of the stack.
+        fn installIndexing(l: *zlua.Lua, comptime T: type, comptime r: anytype) void {
+            const E = comptime instanceEntries(r);
+            const idx_fb = comptime fallbackOf(r, "index");
+            const new_fb = comptime fallbackOf(r, "newindex");
+
+            if (E.len > 0 or idx_fb != null) {
+                l.pushFunction(indexFn(T, E, idx_fb), "indexFn");
+                l.setField(-2, "__index");
+            }
+            if (E.len > 0 or new_fb != null) {
+                l.pushFunction(newindexFn(T, E, new_fb), "newindexFn");
+                l.setField(-2, "__newindex");
+            }
         }
 
         /// Refs the metatable at the top of the stack so that Lua never collects it.
@@ -517,11 +525,21 @@ pub fn Binder(comptime api: anytype) type {
 
         fn pushOps(l: *zlua.Lua, comptime T: type, comptime r: anytype) void {
             inline for (@typeInfo(types.Ops).@"struct".field_names) |nm| {
+                if (comptime std.mem.eql(u8, nm, "index") or std.mem.eql(u8, nm, "newindex")) continue;
+
                 if (@field(r.ops, nm)) |op| {
                     l.pushFunction(opFn(T, nm, op), nm);
                     l.setField(-2, "__" ++ nm);
                 }
             }
+        }
+
+        fn fallbackOf(comptime r: anytype, comptime name: []const u8) Fallback {
+            const op = @field(r.ops, name) orelse return null;
+            return switch (op) {
+                .member => |m| &W.Gen(m.impl.function, .{}).call,
+                .auto => @compileError("ops." ++ name ++ " = .auto is not valid"),
+            };
         }
     };
 }

@@ -89,15 +89,15 @@ function flyCam.update(entity: Entity, dt: number)
     local moveZ = (btn(kb:isKeyPressed("W"))-btn(kb:isKeyPressed("S")))*dt*speed
 
     local msDelta = if input.isCursorLocked() then ms:getMoveDelta() else Vec2.zero
-    local rot = entity.components.Rotation
+    local rot = entity.Rotation
         + Vec3.new(msDelta.y, msDelta.x, 0)
 
-    entity.components.Position +=
+    entity.Position +=
         rotToRightVector(rot) * Vec3.new(moveX, moveX, moveX)
         + rotToUpVector(rot) * Vec3.new(moveY, moveY, moveY)
         + rotToForwardVector(rot) * Vec3.new(moveZ, moveZ, moveZ)
 
-    entity.components.Rotation = rot
+    entity.Rotation = rot
 end
 
 function flyCam.deinit()
