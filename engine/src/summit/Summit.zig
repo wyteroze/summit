@@ -100,7 +100,12 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     errdefer self.input.deinit();
 
     // Create the world
-    self.world_3d = try .init(try self.getAlloc("World3D"), &self.ecs);
+    self.world_3d = try .init(
+        io,
+        try self.getAlloc("World3D"),
+        try self.getAlloc("World3D.Physics"),
+        &self.ecs,
+    );
     errdefer self.world_3d.deinit();
 
     try self.audio.init(io, try self.getAlloc("Audio"), &self.platform);

@@ -12,6 +12,7 @@ const render = @import("../render/render.zig");
 const gpu = @import("../gpu/gpu.zig");
 pub const types = @import("types.zig");
 pub const collect = @import("collect.zig");
+pub const Physics = @import("Physics.zig");
 
 pub const ComponentIds = struct {
     scene: Ecs.ComponentId,
@@ -32,8 +33,14 @@ const World3D = @This();
 allocator: std.mem.Allocator,
 world: *Ecs.World,
 component_ids: ComponentIds,
+physics: Physics,
 
-pub fn init(allocator: std.mem.Allocator, ecs: *Ecs) !World3D {
+pub fn init(
+    io: std.Io,
+    allocator: std.mem.Allocator,
+    physics_allocator: std.mem.Allocator,
+    ecs: *Ecs,
+) !World3D {
     var world = try ecs.createWorld();
 
     const scene = try world.registerComponent(types.Scene, "Scene"); // For organizing collections of entities
@@ -66,10 +73,13 @@ pub fn init(allocator: std.mem.Allocator, ecs: *Ecs) !World3D {
             .speaker = speaker,
             .camera = camera,
         },
+        .physics = try .init(io, physics_allocator),
     };
 }
 
-pub fn deinit(_: *World3D) void {}
+pub fn deinit(self: *World3D) void {
+    self.physics.deinit();
+}
 
 pub fn update(self: *World3D, dt: f32) void {
     self.world.update(dt);
