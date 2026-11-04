@@ -3905,7 +3905,6 @@ pub const Lua = opaque {
     ///
     /// * Pops from Stack: `0`
     /// * Pushes to Stack: `1`
-    /// * Lua Runtime Errors: `any`
     pub fn getUserdataMetatable(lua: *Lua, tag: i32) void {
         comptime checkSupport(.{.luau}, @src().fn_name);
         c.lua_getuserdatametatable(@as(*LuaState, @ptrCast(lua)), tag);
@@ -3918,11 +3917,80 @@ pub const Lua = opaque {
     ///
     /// * Pops from Stack: `0`
     /// * Pushes to Stack: `0`
-    /// * Lua Runtime Errors: `any`
     pub fn allocationRate(lua: *Lua) ?i64 {
         comptime checkSupport(.{.luau}, @src().fn_name);
         const ar = c.lua_allocationrate(@as(*LuaState, @ptrCast(lua)));
         return if (ar == -1) null else ar;
+    }
+
+    /// Marks all global libraries and all built-in metatables read-only.
+    /// Additionally marks the globals table as read-only and working as a safe environment table (see `setSafeEnv`).
+    ///
+    /// Only available in Luau
+    ///
+    /// * Pops from Stack: `0`
+    /// * Pushes to Stack: `0`
+    pub fn sandbox(lua: *Lua) void {
+        comptime checkSupport(.{.luau}, @src().fn_name);
+        c.luaL_sandbox(@as(*LuaState, @ptrCast(lua)));
+    }
+
+    /// Encodes the integer value of the specified pointer into an opaque value suitable for printouts and display.
+    /// This is used to make it harder to guess the layout of heap-allocated objects in memory
+    /// while providing users with a stable identity of pointers they can compare for equality.
+    ///
+    /// Only available in Luau
+    ///
+    /// * Pops from Stack: `0`
+    /// * Pushes to Stack: `0`
+    pub fn encodePointer(lua: *Lua, p: *anyopaque) usize {
+        comptime checkSupport(.{.luau}, @src().fn_name);
+        return c.lua_encodepointer(@as(*LuaState, lua), @intFromPtr(p));
+    }
+
+    /// Setup keys for `encodePointer, for which both `1, 0, 0, 0` and `0, 1, 0, 0`
+    /// are guaranteed to produce an identity transformation.
+    ///
+    /// Only available in Luau
+    ///
+    /// * Pops from Stack: `0`
+    /// * Pushes to Stack: `0`
+    pub fn setPointerEncodeKey(lua: *Lua, keys: [4]u64) void {
+        comptime checkSupport(.{.luau}, @src().fn_name);
+        c.lua_setpointerencodekey(@as(*LuaState, lua), keys[0], keys[1], keys[2], keys[3]);
+    }
+
+    /// Creates a new global table which proxies the reads to the original global table.
+    /// This new global table is marked as working as a safe environment table (see `setSafeEnv`).
+    /// Writes to the global table are allowed, but update only the new global table, leaving original intact.
+    ///
+    /// Only available in Luau
+    ///
+    /// * Pops from Stack: `0`
+    /// * Pushes to Stack: `0`
+    pub fn sandboxThread(lua: *Lua) void {
+        comptime checkSupport(.{.luau}, @src().fn_name);
+        c.luaL_sandboxthread(@as(*LuaState, @ptrCast(lua)));
+    }
+
+    /// Marks the table at the index as a 'safe' environment table.
+    ///
+    /// When executing a function which has a 'safe' environment, VM makes assumptions
+    /// about the environment which make execution faster:
+    ///
+    /// * Globals that were not marked as mutable during compilation are read using the 'import'
+    /// resolve system which caches the values of expressions like `x`, `x.y` and `x.y.z`
+    /// * Built-in functions like `math.cos` are recognized and can execute a fastcall, without
+    /// worry that they were changed to mean something else
+    /// * Native code generation will often fall back to the VM when environment is not 'safe'
+    ///
+    /// Only available in Luau
+    ///
+    /// * Pops from Stack: `0`
+    /// * Pushes to Stack: `0`
+    pub fn setSafeEnv(lua: *Lua, idx: i32, enabled: bool) void {
+        comptime checkSupport(.{.luau}, @src().fn_name);
+        c.lua_setsafeenv(@as(*LuaState, @ptrCast(lua)), idx, @intFromBool(enabled));
     }
 
     // Stock ziglua

@@ -3,7 +3,7 @@
 local spin: System = {}
 spin.query = { "Spin" }
 
-function spin.init(world: World)
+function spin.init()
     world:registerComponent("Spin")
 end
 

@@ -50,7 +50,7 @@ local function rotToForwardVector(rot: Vec3): Vec3
     )
 end
 
-function flyCam.init(world: World)
+function flyCam.init()
     world:registerComponent("FlyCam")
 
     input.keyboards.keyPressed:connect(function(key, consumed, win)
