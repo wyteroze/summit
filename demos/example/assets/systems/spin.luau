@@ -8,7 +8,7 @@ function spin.init()
 end
 
 function spin.update(entity: Entity, dt: number)
-    entity.components.Rotation += Vec3.new(dt, dt, dt) * Vec3.new(5, 10, 15)
+    entity.Rotation += Vec3.new(dt, dt, dt) * Vec3.new(5, 10, 15)
 end
 
 return spin

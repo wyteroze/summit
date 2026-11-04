@@ -4,7 +4,7 @@ const std = @import("std");
 const zlua = @import("zlua");
 const Ecs = @import("Ecs.zig");
 const bind = @import("../scripting/bind/bind.zig");
-const Pushed = @import("../scripting/bind/wrap.zig").Pushed;
+pub const Pushed = @import("../scripting/bind/wrap.zig").Pushed;
 
 pub const type_name = "lua.Value";
 
@@ -15,7 +15,7 @@ pub fn freeLuaValue(_: std.mem.Allocator, bytes: []u8) void {
     v.l.unref(v.ref);
 }
 
-fn write(e: Ecs.Entity, l: *zlua.Lua, codecs: []const Ecs.Codec, name: []const u8, comptime mode: Ecs.World.WriteMode, ecs: *Ecs) !void {
+pub fn write(e: Ecs.Entity, l: *zlua.Lua, codecs: []const Ecs.Codec, name: []const u8, comptime mode: Ecs.World.WriteMode, ecs: *Ecs) !void {
     const world = try ecs.getWorld(e.world_id);
     if (!world.isEntityAlive(e)) return error.InvalidEntity;
     const id = world.componentId(name) orelse return error.UnknownComponent;
@@ -74,27 +74,6 @@ pub fn getComponent(e: Ecs.Entity, l: *zlua.Lua, codecs: []const Ecs.Codec, name
     c.push(l, bytes);
     return .{ .n = 1 };
 }
-
-// "Proxy" object for `entity.Components`.
-pub const Components = struct {
-    entity: Ecs.Entity,
-
-    pub fn index(self: Components, l: *zlua.Lua, codecs: []const Ecs.Codec, name: []const u8, ecs: *Ecs) !Pushed {
-        return getComponent(self.entity, l, codecs, name, ecs);
-    }
-
-    pub fn newindex(self: Components, l: *zlua.Lua, codecs: []const Ecs.Codec, name: []const u8, ecs: *Ecs) !void {
-        return write(self.entity, l, codecs, name, .upsert, ecs);
-    }
-
-    pub const api = bind.value(Components, .{
-        .name = "Components",
-        .ops = .{
-            .index = .{ .member = bind.func("index", Components.index) },
-            .newindex = .{ .member = bind.func("newindex", Components.newindex) },
-        },
-    });
-};
 
 pub const ComponentRef = struct {
     entity: Ecs.Entity,

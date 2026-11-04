@@ -1,6 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
+const zlua = @import("zlua");
 const bind = @import("../scripting/bind/bind.zig");
 const Ecs = @import("Ecs.zig");
 const Entity = Ecs.Entity;
@@ -31,6 +32,15 @@ pub fn removeComponent(e: Entity, ecs: *Ecs, name: []const u8) !void {
     try w.removeComponent(e, id);
 }
 
+// For reading/writing components. Lua just does `entity.componentName` to access.
+pub fn index(e: Entity, l: *zlua.Lua, codecs: []const Ecs.Codec, name: []const u8, ecs: *Ecs) !lua_components.Pushed {
+    return lua_components.getComponent(e, l, codecs, name, ecs);
+}
+
+pub fn newindex(e: Entity, l: *zlua.Lua, codecs: []const Ecs.Codec, name: []const u8, ecs: *Ecs) !void {
+    return lua_components.write(e, l, codecs, name, .upsert, ecs);
+}
+
 pub const sub_api = bind.handle(Entity, .{
     .alive = bind.func("isAlive", isAlive),
     .methods = &.{
@@ -41,12 +51,10 @@ pub const sub_api = bind.handle(Entity, .{
         bind.func("removeComponent", removeComponent),
         bind.func("destroy", destroy),
     },
-    .props = &.{
-        bind.readonly("components", struct {
-            fn c(self: Entity) lua_components.Components {
-                return .{ .entity = self };
-            }
-        }.c),
+    .ops = .{
+        .eq = .{ .member = bind.func("eq", Entity.eql) },
+        .index = .{ .member = bind.func("index", index) },
+        .newindex = .{ .member = bind.func("newindex", newindex) },
+        .tostring = .auto,
     },
-    .ops = .{ .eq = .{ .member = bind.func("eq", Entity.eql) }, .tostring = .auto },
 });
