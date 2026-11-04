@@ -15,3 +15,32 @@ pub const Camera = struct {
     fov: f32 = 90,
     near_plane: f32 = 0.1,
 };
+
+// TODO: convex_hull and mesh.
+pub const Shape = enum { box, sphere, capsule, cylinder };
+pub const MotionType = enum { dynamic, kinematic };
+pub const PhysicsMaterial = struct {
+    density: f32 = 1.0,
+    friction: f32 = 0.5,
+    restitution: f32 = 0.0,
+};
+
+pub const Collider = struct {
+    shape: Shape = .box,
+    sensor: bool = false,
+    material: PhysicsMaterial = .{},
+};
+
+pub const Axes = packed struct { x: bool = false, y: bool = false, z: bool = false };
+pub const LockedAxes = struct { position: Axes = .{}, rotation: Axes = .{} };
+
+pub const RigidBody = struct {
+    motion: MotionType = .dynamic,
+    // Overrides the density-derived mass if not null.
+    mass: ?f32 = null,
+    linear_damping: f32 = 0.05,
+    angular_damping: f32 = 0.05,
+    gravity_scale: f32 = 1.0,
+    locked: LockedAxes = .{},
+    continuous: bool = false,
+};
