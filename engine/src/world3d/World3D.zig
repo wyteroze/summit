@@ -12,7 +12,7 @@ const render = @import("../render/render.zig");
 const gpu = @import("../gpu/gpu.zig");
 pub const types = @import("types.zig");
 pub const collect = @import("collect.zig");
-pub const Physics = @import("Physics.zig");
+pub const Physics = @import("physics/Physics.zig");
 
 pub const ComponentIds = struct {
     scene: Ecs.ComponentId,
