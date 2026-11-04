@@ -27,6 +27,8 @@ pub const ComponentIds = struct {
     audio_listener: Ecs.ComponentId,
     speaker: Ecs.ComponentId,
     camera: Ecs.ComponentId,
+    collider: Ecs.ComponentId,
+    rigid_body: Ecs.ComponentId,
 };
 
 const World3D = @This();
@@ -55,6 +57,8 @@ pub fn init(
     const audio_listener = try world.registerComponent(Audio.types.AudioListener, "AudioListener");
     const speaker = try world.registerComponent(Audio.Speaker, "Speaker");
     const camera = try world.registerComponent(types.Camera, "Camera");
+    const collider = try world.registerComponent(types.Collider, "Collider");
+    const rigid_body = try world.registerComponent(types.RigidBody, "RigidBody");
 
     return .{
         .allocator = allocator,
@@ -72,6 +76,8 @@ pub fn init(
             .audio_listener = audio_listener,
             .speaker = speaker,
             .camera = camera,
+            .collider = collider,
+            .rigid_body = rigid_body,
         },
         .physics = try .init(io, physics_allocator),
     };
