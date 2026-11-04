@@ -41,6 +41,8 @@ pub fn deinit(self: *Runtime) void {
 
 pub fn loadScript(self: *Runtime, name: ?[:0]const u8, source: Assets.types.ScriptSource) !ScriptHandle {
     const thread = self.state.newThread();
+    thread.sandboxThread();
+
     const thread_ref = self.state.ref(-1);
     errdefer self.state.unref(thread_ref);
     self.state.pop(1);
@@ -60,8 +62,8 @@ pub fn instantiateSystem(self: *Runtime, handle: ScriptHandle, world: *Ecs.World
     return (try self.getScript(handle)).instantiateSystem(world);
 }
 
-pub fn instantiateEntity(self: *Runtime, handle: ScriptHandle, entity: Ecs.Entity) !void {
-    try (try self.getScript(handle)).instantiateEntity(entity);
+pub fn instantiateEntity(self: *Runtime, handle: ScriptHandle, world: *Ecs.World, entity: Ecs.Entity) !void {
+    try (try self.getScript(handle)).instantiateEntity(world, entity);
 }
 
 pub fn allocator(self: Runtime) std.mem.Allocator {

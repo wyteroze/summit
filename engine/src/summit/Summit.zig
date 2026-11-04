@@ -239,14 +239,14 @@ pub fn setupTestScene(self: *Summit) !void {
         defer source.cpuRelease();
         const script = try self.runtime.loadScript("camera.luau", try source.cpuGet(.script_source));
         try world.set(camera, script_id, scripting.Runtime.ScriptHandle, script);
-        self.runtime.instantiateEntity(script, camera) catch |e| std.log.err("Failed to instantiate camera script: {t}", .{e});
+        self.runtime.instantiateEntity(script, world, camera) catch |e| std.log.err("Failed to instantiate camera script: {t}", .{e});
     }
     {
         const source = try self.assets.load("asset://scripts/teapot.luau");
         defer source.cpuRelease();
         const script = try self.runtime.loadScript("teapot.luau", try source.cpuGet(.script_source));
         try world.set(entity, script_id, scripting.Runtime.ScriptHandle, script);
-        self.runtime.instantiateEntity(script, entity) catch |e| std.log.err("Failed to instantiate teapot script: {t}", .{e});
+        self.runtime.instantiateEntity(script, world, entity) catch |e| std.log.err("Failed to instantiate teapot script: {t}", .{e});
     }
 
     // Render at logical size for 3D, while UI renders at pixel size to stay crisp.

@@ -133,6 +133,7 @@ pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.S
     const top = l.getTop();
     defer l.setTop(top);
 
+    self.setWorldGlobal(world);
     _ = l.getIndexRaw(zlua.registry_index, self.ref);
 
     const init_type = l.getField(-1, "init");
@@ -207,13 +208,14 @@ pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.S
     );
 }
 
-pub fn instantiateEntity(self: *Script, entity: Ecs.Entity) !void {
+pub fn instantiateEntity(self: *Script, world: *Ecs.World, entity: Ecs.Entity) !void {
     if (self.ref == 0) return error.NoInstanceTable;
     const l = self.state;
 
     const top = l.getTop();
     defer l.setTop(top);
 
+    self.setWorldGlobal(world);
     _ = try self.callFunction("init", &.{}, .{entity});
 }
 
@@ -249,4 +251,14 @@ fn luaErr(self: *const Script) void {
 
     if (!formatted) std.log.err("{s}", .{msg});
     self.state.pop(1);
+}
+
+fn setWorldGlobal(self: *const Script, world: *Ecs.World) void {
+    const l = self.state;
+    const h = Host.fromState(l);
+
+    l.pushGlobalTable();
+    self.binder.pushValue(l, h.ecs.worldAsHandle(world));
+    l.setField(-2, "world");
+    l.pop(1);
 }

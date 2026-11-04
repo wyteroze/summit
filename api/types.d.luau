@@ -281,9 +281,11 @@ declare extern type Entity with
     [string]: any?
 end
 
-declare extern type World with
-
+declare extern type World3D with
+    function registerComponent(self, name: string): ()
 end
+
+declare world: World3D
 
 export type Script = {
     init: ((entity: Entity) -> ())?,
@@ -293,7 +295,7 @@ export type Script = {
 
 export type System = {
     query: { string }?,
-    init: ((world: World) -> ())?,
+    init: (() -> ())?,
     update: ((entity: Entity, dt: number) -> ())?,
     deinit: (() -> ())?,
 }
