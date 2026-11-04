@@ -44,3 +44,6 @@ pub const RigidBody = struct {
     locked: LockedAxes = .{},
     continuous: bool = false,
 };
+
+// Internal component used to track Jolt state for each body
+pub const PhysicsBody = struct {};
