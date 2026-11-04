@@ -14,6 +14,8 @@
         .slang = .{ .path = "vendor/slang" },
         .freetype = .{ .path = "vendor/freetype" },
         .zlua = .{ .path = "vendor/ziglua" },
+        // Original repo credit to https://github.com/kcbanner/zphysics/tree/0.16.x_io
+        .zphysics = .{ .path = "vendor/zphysics" },
         .sdl3 = .{
             .url = "git+https://codeberg.org/7Games/zig-sdl3?ref=v0.2.3#666331118c8f7d8a03ea633d79a343c34dc32b84",
             .hash = "sdl3-0.2.3-NmT1Q1QDKgACd5t_PNSG08lcOCX25qaRYZjUmXPTVBY_",
