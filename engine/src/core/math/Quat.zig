@@ -5,7 +5,7 @@ const Vec3 = @import("Vec3.zig").Vec3;
 const Mat4 = @import("Mat4.zig").Mat4;
 
 pub const Quat = extern struct {
-    const Simd4 = @Vector(4, f32);
+    pub const Simd4 = @Vector(4, f32);
     x: f32,
     y: f32,
     z: f32,
