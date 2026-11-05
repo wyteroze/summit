@@ -32,7 +32,7 @@ pub const Collider = struct {
 };
 
 pub const Axes = packed struct { x: bool = false, y: bool = false, z: bool = false };
-pub const LockedAxes = struct { position: Axes = .{}, rotation: Axes = .{} };
+pub const LockedAxes = packed struct { position: Axes = .{}, rotation: Axes = .{} };
 
 pub const RigidBody = struct {
     motion: MotionType = .dynamic,
@@ -46,4 +46,8 @@ pub const RigidBody = struct {
 };
 
 // Internal component used to track Jolt state for each body
-pub const PhysicsBody = struct { id: u32 };
+pub const PhysicsBody = struct {
+    id: u32,
+    locked: LockedAxes,
+    mass: ?f32,
+};
