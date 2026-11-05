@@ -177,6 +177,8 @@ pub fn Marshal(comptime Reg: type) type {
         }
 
         fn parseRecord(comptime T: type, l: *zlua.Lua, idx: i32) T {
+            if (idx > 0 and idx > l.getTop()) return .{};
+
             const t = l.absIndex(idx);
             if (l.typeOf(t) != .table) l.raiseErrorStr("expected a table for %s", .{@typeName(T).ptr});
             const info = @typeInfo(T).@"struct";
