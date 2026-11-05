@@ -226,6 +226,8 @@ pub fn setupTestScene(self: *Summit) !void {
     // Spawn a new entity
     const entity = try world.spawnEntity();
 
+    const floor = try world.spawnEntity();
+
     const light = try world.spawnEntity();
     try world.set(light, light_id, render.types.Light, .{
         .color = .fromRgbFloat(1.0, 1.0, 1.0, 1.0),
@@ -245,6 +247,13 @@ pub fn setupTestScene(self: *Summit) !void {
         const script = try self.runtime.loadScript("camera.luau", try source.cpuGet(.script_source));
         try world.set(camera, script_id, scripting.Runtime.ScriptHandle, script);
         self.runtime.instantiateEntity(script, world, camera) catch |e| std.log.err("Failed to instantiate camera script: {t}", .{e});
+    }
+    {
+        const source = try self.assets.load("asset://scripts/floor.luau");
+        defer source.cpuRelease();
+        const script = try self.runtime.loadScript("floor.luau", try source.cpuGet(.script_source));
+        try world.set(floor, script_id, scripting.Runtime.ScriptHandle, script);
+        self.runtime.instantiateEntity(script, world, floor) catch |e| std.log.err("Failed to instantiate floor script: {t}", .{e});
     }
     {
         const source = try self.assets.load("asset://scripts/teapot.luau");
