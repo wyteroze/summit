@@ -423,12 +423,18 @@ pub const WorldHandle = struct {
         _ = try w.registerLuaComponent(name);
     }
 
+    pub fn spawnEntity(self: WorldHandle) !Entity {
+        const w = self.ecs.getWorld(self.id) catch return error.InvalidHandle;
+        return try w.spawnEntity();
+    }
+
     // TODO: unregisterComponent()
 
     pub const sub_api = bind.handle(WorldHandle, .{
         .alive = bind.func("isAlive", WorldHandle.isAlive),
         .methods = &.{
             bind.func("registerComponent", WorldHandle.registerComponent),
+            bind.func("spawnEntity", WorldHandle.spawnEntity),
         },
         .ops = .{
             .eq = .{ .member = bind.func("eql", WorldHandle.eql) },
