@@ -287,8 +287,13 @@ declare extern type Entity with
     [string]: any?
 end
 
-declare extern type World3D with
+declare extern type World with
     function registerComponent(self, name: string): ()
+    function spawnEntity(self): Entity
+end
+
+declare extern type World3D extends World with
+    
 end
 
 declare world: World3D
