@@ -62,8 +62,12 @@ pub fn instantiateSystem(self: *Runtime, handle: ScriptHandle, world: *Ecs.World
     return (try self.getScript(handle)).instantiateSystem(world);
 }
 
-pub fn instantiateEntity(self: *Runtime, handle: ScriptHandle, world: *Ecs.World, entity: Ecs.Entity) !void {
-    try (try self.getScript(handle)).instantiateEntity(world, entity);
+pub fn instantiateEntity(self: *Runtime, handle: ScriptHandle, entity: Ecs.Entity) !void {
+    try (try self.getScript(handle)).instantiateEntity(entity);
+}
+
+pub fn setGlobal(self: *Runtime, handle: ScriptHandle, name: [:0]const u8, val: anytype) !void {
+    (try self.getScript(handle)).setGlobal(name, val);
 }
 
 pub fn allocator(self: Runtime) std.mem.Allocator {
