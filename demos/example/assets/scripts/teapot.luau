@@ -12,6 +12,11 @@ function teapot.init(entity: Entity)
     entity:addComponent("Mesh", assets.load("asset://models/cube.fbx"))
     entity:addComponent("Image", assets.load("asset://images/chicken.jpg"))
     entity:addComponent("Spin", Vec3.new(5, 10, 15))
+    entity:addComponent("Collider", {})
+    entity:addComponent("RigidBody", { locked = {
+        position = { x = true },
+        rotation = { z = true }
+    } })
 
     entity:addComponent("Speaker", {
         volume = 1,

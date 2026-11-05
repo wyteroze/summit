@@ -46,4 +46,4 @@ pub const RigidBody = struct {
 };
 
 // Internal component used to track Jolt state for each body
-pub const PhysicsBody = struct {};
+pub const PhysicsBody = struct { id: u32 };

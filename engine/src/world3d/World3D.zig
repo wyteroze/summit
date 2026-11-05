@@ -29,6 +29,7 @@ pub const ComponentIds = struct {
     camera: Ecs.ComponentId,
     collider: Ecs.ComponentId,
     rigid_body: Ecs.ComponentId,
+    physics_body: Ecs.ComponentId,
 };
 
 const World3D = @This();
@@ -49,6 +50,7 @@ pub fn init(
     const mesh = try world.registerComponent(Assets.AssetHandle, "Mesh"); // For giving an entity a mesh appearance
     const image = try world.registerComponent(Assets.AssetHandle, "Image"); // For giving an entity an image appearance (or a texture, if it has a mesh)
     const position = try world.registerComponent(math.Vec3, "Position"); // For moving entities
+    // Urgent TODO: Make rotation use Quat instead of Vec3
     const rotation = try world.registerComponent(math.Vec3, "Rotation"); // For rotating entites (Euler)
     const scale = try world.registerComponent(math.Vec3, "Scale"); // For scaling entities
     const script = try world.registerComponent(scripting.Runtime.ScriptHandle, "Script"); // For giving entities behavior
@@ -59,6 +61,7 @@ pub fn init(
     const camera = try world.registerComponent(types.Camera, "Camera");
     const collider = try world.registerComponent(types.Collider, "Collider");
     const rigid_body = try world.registerComponent(types.RigidBody, "RigidBody");
+    const physics_body = try world.registerComponent(types.PhysicsBody, "PhysicsBody");
 
     return .{
         .allocator = allocator,
@@ -78,6 +81,7 @@ pub fn init(
             .camera = camera,
             .collider = collider,
             .rigid_body = rigid_body,
+            .physics_body = physics_body,
         },
         .physics = try .init(io, physics_allocator),
     };
@@ -88,6 +92,20 @@ pub fn deinit(self: *World3D) void {
 }
 
 pub fn update(self: *World3D, dt: f32) void {
+    self.physics.reconcile() catch |e|
+        std.log.err("Physics.reconcile() failed: {t}", .{e});
     self.world.update(dt);
     self.world.clearChanged();
 }
+
+const bind = @import("../scripting/bind/bind.zig");
+pub const api = bind.module("physics", .{
+    .kind = .library,
+    .members = &.{
+        bind.record(types.Collider, .{}),
+        bind.record(types.RigidBody, .{}),
+        bind.record(types.Axes, .{}),
+        bind.record(types.LockedAxes, .{}),
+        bind.record(types.PhysicsMaterial, .{}),
+    },
+});
