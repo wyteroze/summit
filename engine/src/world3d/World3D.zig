@@ -39,12 +39,16 @@ component_ids: ComponentIds,
 physics: Physics,
 
 pub fn init(
+    self: *World3D,
     io: std.Io,
     allocator: std.mem.Allocator,
     physics_allocator: std.mem.Allocator,
     ecs: *Ecs,
-) !World3D {
+) !void {
     var world = try ecs.createWorld();
+    world.user_data = self;
+    self.world = world;
+    self.allocator = allocator;
 
     const scene = try world.registerComponent(types.Scene, "Scene"); // For organizing collections of entities
     const mesh = try world.registerComponent(Assets.AssetHandle, "Mesh"); // For giving an entity a mesh appearance
@@ -62,28 +66,24 @@ pub fn init(
     const rigid_body = try world.registerComponent(types.RigidBody, "RigidBody");
     const physics_body = try world.registerComponent(types.PhysicsBody, "PhysicsBody");
 
-    return .{
-        .allocator = allocator,
-        .world = world,
-        .component_ids = .{
-            .scene = scene,
-            .mesh = mesh,
-            .image = image,
-            .position = position,
-            .rotation = rotation,
-            .scale = scale,
-            .script = script,
-            .light = light,
-            .name = name,
-            .audio_listener = audio_listener,
-            .speaker = speaker,
-            .camera = camera,
-            .collider = collider,
-            .rigid_body = rigid_body,
-            .physics_body = physics_body,
-        },
-        .physics = try .init(io, physics_allocator),
+    self.component_ids = .{
+        .scene = scene,
+        .mesh = mesh,
+        .image = image,
+        .position = position,
+        .rotation = rotation,
+        .scale = scale,
+        .script = script,
+        .light = light,
+        .name = name,
+        .audio_listener = audio_listener,
+        .speaker = speaker,
+        .camera = camera,
+        .collider = collider,
+        .rigid_body = rigid_body,
+        .physics_body = physics_body,
     };
+    self.physics = try .init(io, physics_allocator);
 }
 
 pub fn deinit(self: *World3D) void {
@@ -100,14 +100,69 @@ pub fn update(self: *World3D, dt: f32) void {
     self.world.clearChanged();
 }
 
+pub fn raycast(self: *World3D, origin: math.Vec3, dir: math.Vec3, opts: Physics.RaycastOptions) ?Physics.RaycastHit {
+    return self.physics.raycast(origin, dir, opts);
+}
+
 const bind = @import("../scripting/bind/bind.zig");
-pub const api = bind.module("physics", .{
-    .kind = .library,
+pub const World3DHandle = struct {
+    id: u8,
+    ecs: *Ecs,
+
+    const ToWorldHandle = bind.Via(World3DHandle, Ecs.World.WorldHandle, struct {
+        fn f(h: World3DHandle) Ecs.World.WorldHandle {
+            return .{ .id = h.id, .ecs = h.ecs };
+        }
+    }.f);
+
+    pub fn isAlive(self: World3DHandle) bool {
+        return self.ecs.isWorldAlive(self.id);
+    }
+
+    pub fn eql(self: World3DHandle, other: World3DHandle) bool {
+        return self.id == other.id;
+    }
+
+    pub fn get(self: World3DHandle) !*World3D {
+        const w = try self.ecs.getWorld(self.id);
+        const ud = w.user_data orelse return error.NoWorld3D;
+        return @ptrCast(@alignCast(ud));
+    }
+
+    // Opts anonymous struct is temporary until Lua can pass slices
+    pub fn raycast(
+        self: World3DHandle,
+        origin: math.Vec3,
+        dir: math.Vec3,
+        opts: struct {
+            max_distance: ?f32 = null,
+            //ignore: []const Ecs.Entity = &.{},
+            include_sensors: bool = false,
+        },
+    ) !?Physics.RaycastHit {
+        return (try self.get()).raycast(origin, dir, .{ .max_distance = opts.max_distance, .include_sensors = opts.include_sensors });
+    }
+
+    pub const sub_api = bind.handle(World3DHandle, .{
+        .alive = bind.func("isAlive", World3DHandle.isAlive),
+        .inherit = bind.inherit(World3DHandle.ToWorldHandle, Ecs.World.WorldHandle.sub_api.impl.recipe),
+        .methods = &.{
+            bind.func("raycast", World3DHandle.raycast),
+        },
+        .ops = .{
+            .eq = .{ .member = bind.func("eql", World3DHandle.eql) },
+        },
+    });
+};
+
+pub const api = bind.module("world3d", .{
     .members = &.{
+        World3DHandle.sub_api,
         bind.record(types.Collider, .{}),
         bind.record(types.RigidBody, .{}),
         bind.record(types.Axes, .{}),
         bind.record(types.LockedAxes, .{}),
         bind.record(types.PhysicsMaterial, .{}),
+        // bind.record(Physics.RaycastOptions, .{}),
     },
 });

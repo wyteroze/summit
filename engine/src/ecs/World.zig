@@ -42,6 +42,7 @@ hierarchy: Hierarchy,
 changed_set: std.AutoHashMap(u64, void),
 // This lives here instead of ComponentRegistry because it has no idea when components are modified.
 changed_components: std.ArrayList(ChangedComponent),
+user_data: ?*anyopaque = null,
 
 pub fn init(id: u8, allocator: std.mem.Allocator) World {
     return .{

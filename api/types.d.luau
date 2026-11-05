@@ -292,12 +292,6 @@ declare extern type World with
     function spawnEntity(self): Entity
 end
 
-declare extern type World3D extends World with
-    
-end
-
-declare world: World3D
-
 export type Script = {
     init: ((entity: Entity) -> ())?,
     update: ((entity: Entity, dt: number) -> ())?,
@@ -310,6 +304,26 @@ export type System = {
     update: ((entity: Entity, dt: number) -> ())?,
     deinit: (() -> ())?,
 }
+
+-- WORLD3D --
+export type RaycastOptions = {
+    max_distance: number?,
+    ignore: { Entity }?,
+    include_sensors: boolean,
+}
+
+export type RaycastHit = {
+    entity: Entity,
+    position: Vec3,
+    normal: Vec3,
+    distance: number,
+}
+
+declare extern type World3D extends World with
+    function raycast(self, origin: Vec3, direction: Vec3, options: RaycastOptions?): RaycastHit?
+end
+
+declare world: World3D
 
 -- INPUT --
 

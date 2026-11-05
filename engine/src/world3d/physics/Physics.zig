@@ -14,6 +14,9 @@ const LayerMatrix = @import("LayerMatrix.zig");
 const fixed_dt = 1.0 / 120.0;
 const max_substeps = 2;
 
+const default_ray_distance = 1000.0;
+const ray_skip_epsilon = 0.001;
+
 const ShapeKey = struct {
     shape: types.Shape,
     size: [3]u32,
@@ -40,6 +43,19 @@ const Dirty = packed struct {
 };
 
 const Pending = struct { entity: Ecs.Entity, dirty: Dirty = .{} };
+
+pub const RaycastOptions = struct {
+    max_distance: ?f32 = null,
+    ignore: []const Ecs.Entity = &.{},
+    include_sensors: bool = false,
+};
+
+pub const RaycastHit = struct {
+    entity: Ecs.Entity,
+    position: math.Vec3,
+    normal: math.Vec3,
+    distance: f32,
+};
 
 const Physics = @This();
 allocator: std.mem.Allocator,
@@ -172,6 +188,51 @@ pub fn pull(self: *Physics) !void {
         try w.setUnchecked(e, cids.position, math.Vec3, pos);
         try w.setUnchecked(e, cids.rotation, math.Quat, rot);
     }
+}
+
+pub fn raycast(self: *Physics, origin: math.Vec3, dir: math.Vec3, opts: RaycastOptions) ?RaycastHit {
+    const w = self.getWorld().world;
+    const dir_norm = dir.normalize();
+    if (dir.eq(.zero)) return null;
+
+    const max_dist = opts.max_distance orelse default_ray_distance;
+    const query = self.physics_system.getNarrowPhaseQuery();
+    const lock_if = self.physics_system.getBodyLockInterfaceNoLock();
+
+    var traveled: f32 = 0;
+    for (0..16) |_| {
+        if (traveled >= max_dist) return null;
+
+        const o = origin.add(dir_norm.scale(traveled));
+        const d = dir_norm.scale(max_dist - traveled);
+        const result = query.castRay(.{
+            .origin = .{ o.x, o.y, o.z, 1 },
+            .direction = .{ d.x, d.y, d.z, 0 },
+        }, .{});
+        if (!result.has_hit) return null;
+
+        const hit_dist = traveled + result.hit.fraction * (max_dist - traveled);
+        const hit_pos = origin.add(dir_norm.scale(hit_dist));
+
+        var lock: zphysics.BodyLockRead = .{};
+        lock.lock(lock_if, result.hit.body_id);
+        defer lock.unlock();
+        const body = lock.body orelse return null;
+
+        const e: Ecs.Entity = .fromU64(body.user_data);
+        const rejected = !w.isEntityAlive(e) or
+            (!opts.include_sensors and body.isSensor()) or
+            std.mem.findScalar(Ecs.Entity, opts.ignore, e) != null;
+
+        if (rejected) {
+            traveled = hit_dist + ray_skip_epsilon;
+            continue;
+        }
+
+        const n = body.getWorldSpaceSurfaceNormal(result.hit.sub_shape_id, hit_pos.arr());
+        return .{ .entity = e, .position = hit_pos, .normal = .new(n[0], n[1], n[2]), .distance = hit_dist };
+    }
+    return null;
 }
 
 fn getWorld(self: *Physics) *World3D {

@@ -100,7 +100,8 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     errdefer self.input.deinit();
 
     // Create the world
-    self.world_3d = try .init(
+    self.world_3d = undefined;
+    try self.world_3d.init(
         io,
         try self.getAlloc("World3D"),
         try self.getAlloc("World3D.Physics"),
@@ -198,12 +199,14 @@ pub fn setupTestScene(self: *Summit) !void {
         const src = try self.assets.load("asset://systems/fly_cam.luau");
         defer src.cpuRelease();
         const script = try self.runtime.loadScript("fly_cam.luau", try src.cpuGet(.script_source));
+        try self.runtime.setGlobal(script, "world", World3D.World3DHandle{ .ecs = &self.ecs, .id = world.id });
         _ = self.runtime.instantiateSystem(script, world) catch |e| std.log.err("Failed to instantiate fly system: {t}", .{e});
     }
     {
         const src = try self.assets.load("asset://systems/spin.luau");
         defer src.cpuRelease();
         const script = try self.runtime.loadScript("spin.luau", try src.cpuGet(.script_source));
+        try self.runtime.setGlobal(script, "world", World3D.World3DHandle{ .ecs = &self.ecs, .id = world.id });
         _ = self.runtime.instantiateSystem(script, world) catch |e| std.log.err("Failed to instantiate spin system: {t}", .{e});
     }
 
@@ -246,14 +249,16 @@ pub fn setupTestScene(self: *Summit) !void {
         defer source.cpuRelease();
         const script = try self.runtime.loadScript("camera.luau", try source.cpuGet(.script_source));
         try world.set(camera, script_id, scripting.Runtime.ScriptHandle, script);
-        self.runtime.instantiateEntity(script, world, camera) catch |e| std.log.err("Failed to instantiate camera script: {t}", .{e});
+        try self.runtime.setGlobal(script, "world", World3D.World3DHandle{ .ecs = &self.ecs, .id = world.id });
+        self.runtime.instantiateEntity(script, camera) catch |e| std.log.err("Failed to instantiate camera script: {t}", .{e});
     }
     {
         const source = try self.assets.load("asset://scripts/floor.luau");
         defer source.cpuRelease();
         const script = try self.runtime.loadScript("floor.luau", try source.cpuGet(.script_source));
         try world.set(floor, script_id, scripting.Runtime.ScriptHandle, script);
-        self.runtime.instantiateEntity(script, world, floor) catch |e| std.log.err("Failed to instantiate floor script: {t}", .{e});
+        try self.runtime.setGlobal(script, "world", World3D.World3DHandle{ .ecs = &self.ecs, .id = world.id });
+        self.runtime.instantiateEntity(script, floor) catch |e| std.log.err("Failed to instantiate floor script: {t}", .{e});
     }
 
     // Render at logical size for 3D, while UI renders at pixel size to stay crisp.
