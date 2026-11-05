@@ -23,6 +23,10 @@ pub const Quat = extern struct {
         return .{ .x = v[0], .y = v[1], .z = v[2], .w = v[3] };
     }
 
+    pub fn eq(a: Quat, b: Quat) bool {
+        return a.x == b.x and a.y == b.y and a.z == b.z and a.w == b.w;
+    }
+
     // YXZ order. RADIANS!!!
     pub fn fromEuler(vec: Vec3) Quat {
         const hx = vec.x * 0.5;
@@ -81,12 +85,18 @@ pub const Quat = extern struct {
     }
 
     pub fn mul(a: Quat, b: Quat) Quat {
-        return .{
-            .x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
-            .y = a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
-            .z = a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
-            .w = a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
-        };
+        const bv = b.simd();
+        const av = a.simd();
+
+        const b1 = @shuffle(f32, bv, undefined, .{ 3, 2, 1, 0 }) * Simd4{ 1, -1, 1, -1 };
+        const b2 = @shuffle(f32, bv, undefined, .{ 2, 3, 0, 1 }) * Simd4{ 1, 1, -1, -1 };
+        const b3 = @shuffle(f32, bv, undefined, .{ 1, 0, 3, 2 }) * Simd4{ -1, 1, 1, -1 };
+
+        const r = bv * @as(Simd4, @splat(av[3])) +
+            b1 * @as(Simd4, @splat(av[0])) +
+            b2 * @as(Simd4, @splat(av[1])) +
+            b3 * @as(Simd4, @splat(av[2]));
+        return .fromSimd(r);
     }
 
     pub fn normalize(a: Quat) Quat {
@@ -116,6 +126,58 @@ pub const Quat = extern struct {
         } };
     }
 
+    pub fn negate(q: Quat) Quat {
+        return .{ .x = -q.x, .y = -q.y, .z = -q.z, .w = -q.w };
+    }
+
+    pub fn slerp(q0: Quat, other: Quat, a: f32) Quat {
+        var d = q0.dot(other);
+        const q1 = if (d < 0) blk: {
+            d = -d;
+            break :blk other.negate();
+        } else other;
+
+        if (d > 0.9995) {
+            return Quat.new(
+                std.math.lerp(q0.x, q1.x, a),
+                std.math.lerp(q0.y, q1.y, a),
+                std.math.lerp(q0.z, q1.z, a),
+                std.math.lerp(q0.w, q1.w, a),
+            ).normalize();
+        }
+
+        const t0 = std.math.acos(d);
+        const t = t0 * a;
+        const st0 = @sin(t0);
+
+        const s0 = @cos(t) - d * @sin(t) / st0;
+        const s1 = @sin(t) / st0;
+
+        return .new(
+            s0 * q0.x + s1 * q1.x,
+            s0 * q0.y + s1 * q1.y,
+            s0 * q0.z + s1 * q1.z,
+            s0 * q0.w + s1 * q1.w,
+        );
+    }
+
+    pub fn dot(a: Quat, b: Quat) f32 {
+        return @reduce(.Add, a.simd() * b.simd());
+    }
+
+    /// Rotate a vector by this (unit) quaternion.
+    pub fn rotate(q: Quat, v: Vec3) Vec3 {
+        const tx = 2 * (q.y * v.z - q.z * v.y);
+        const ty = 2 * (q.z * v.x - q.x * v.z);
+        const tz = 2 * (q.x * v.y - q.y * v.x);
+
+        return .{
+            .x = v.x + q.w * tx + (q.y * tz - q.z * ty),
+            .y = v.y + q.w * ty + (q.z * tx - q.x * tz),
+            .z = v.z + q.w * tz + (q.x * ty - q.y * tx),
+        };
+    }
+
     pub fn format(
         self: @This(),
         writer: *std.Io.Writer,
@@ -125,9 +187,25 @@ pub const Quat = extern struct {
             .{ self.x, self.y, self.z, self.w },
         );
     }
-
-    pub const __lua = .val;
 };
 
 const bind = @import("../../scripting/bind/bind.zig");
-pub const api = bind.value(Quat, .{});
+pub const api = bind.value(Quat, .{
+    .fields = &.{ "x", "y", "z", "w" },
+    .methods = &.{
+        bind.func("toEuler", Quat.toEuler),
+        bind.func("normalize", Quat.normalize),
+        bind.func("toMat4", Quat.toMat4),
+        bind.func("slerp", Quat.slerp),
+        bind.func("rotate", Quat.rotate),
+    },
+    .statics = &.{
+        bind.constant("identity", Quat.identity),
+        bind.func("new", Quat.new),
+        bind.func("fromEuler", Quat.fromEuler),
+        bind.func("fromAxisAngle", Quat.fromAxisAngle),
+    },
+    .ops = .{
+        .eq = .{ .member = bind.func("eql", Quat.eq) },
+    },
+});

@@ -52,6 +52,8 @@ declare extern type Quat with
     function inverse(self): Quat
     --- Interpolates this `Quat` to the target with the given alpha using spherical linear interpolation.
     function slerp(self, target: Quat, alpha: number): Quat
+    --- Rotate a vectors by this (unit) quaternion.
+    function rotate(self, v: Vec3): Vec3
     
     function __mul(self, other: Vec3): Vec3
     function __mul(self, other: Quat): Quat
