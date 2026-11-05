@@ -23,9 +23,7 @@ const lua_components = Ecs.lua_components;
 
 pub const WriteMode = enum { add, set, upsert };
 pub const FieldTypeSpec = struct { name: []const u8, type_name: []const u8 };
-
-pub const UpdateSignal = signal.Signal(.{f32});
-pub const DestroySignal = signal.Signal(.{});
+pub const ChangedComponent = struct { entity: Entity, component: ComponentId };
 
 const World = @This();
 // The ID of this world, because multiple can exist at once.
@@ -42,6 +40,8 @@ free: std.ArrayList(u32),
 
 hierarchy: Hierarchy,
 changed_set: std.AutoHashMap(u64, void),
+// This lives here instead of ComponentRegistry because it has no idea when components are modified.
+changed_components: std.ArrayList(ChangedComponent),
 
 pub fn init(id: u8, allocator: std.mem.Allocator) World {
     return .{
@@ -55,6 +55,7 @@ pub fn init(id: u8, allocator: std.mem.Allocator) World {
         .free = .empty,
         .hierarchy = .init(allocator),
         .changed_set = .init(allocator),
+        .changed_components = .empty,
     };
 }
 
@@ -62,6 +63,7 @@ pub fn deinit(self: *World) void {
     for (self.storages.items) |*s| s.deinit();
     self.hierarchy.deinit();
     self.changed_set.deinit();
+    self.changed_components.deinit(self.allocator);
     self.storages.deinit(self.allocator);
     self.components.deinit();
     self.systems.deinit();
@@ -191,6 +193,12 @@ pub fn markChanged(self: *World, entity: Entity) !void {
     try self.hierarchy.changed.append(self.allocator, entity);
 }
 
+pub fn markComponentChanged(self: *World, entity: Entity, component: ComponentId) !void {
+    std.debug.assert(entity.world_id == self.id);
+    std.debug.assert(component.world_id == self.id);
+    try self.changed_components.append(self.allocator, .{ .entity = entity, .component = component });
+}
+
 pub fn isEntityAlive(self: *World, entity: Entity) bool {
     if (entity.world_id != self.id) return false;
     if (entity.index >= self.alive.items.len) return false;
@@ -237,13 +245,18 @@ pub fn setParentUnchecked(self: *World, e: Entity, parent: ?Entity) !void {
     return self.hierarchy.setParent(e, parent);
 }
 
-pub fn changedEntities(self: *World) []const Entity {
+pub fn changedEntities(self: *const World) []const Entity {
     return self.hierarchy.changed.items;
+}
+
+pub fn changedComponents(self: *const World) []const ChangedComponent {
+    return self.changed_components.items;
 }
 
 pub fn clearChanged(self: *World) void {
     self.hierarchy.changed.clearRetainingCapacity();
     self.changed_set.clearRetainingCapacity();
+    self.changed_components.clearRetainingCapacity();
 }
 
 // Components
@@ -267,6 +280,7 @@ pub fn writeRawUnchecked(self: *World, e: Entity, id: ComponentId, bytes: []cons
         .upsert => {},
     }
     try self.markChanged(e);
+    try self.markComponentChanged(e, id);
     try storage.insert(e, bytes);
 }
 

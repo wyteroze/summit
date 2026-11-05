@@ -92,9 +92,13 @@ pub fn deinit(self: *World3D) void {
 }
 
 pub fn update(self: *World3D, dt: f32) void {
+    std.log.debug("Update", .{});
     self.physics.reconcile() catch |e|
         std.log.err("Physics.reconcile() failed: {t}", .{e});
     self.world.update(dt);
+    for (self.world.changedComponents()) |c| {
+        std.log.debug("Entity = {d}, Component = {d}", .{ c.entity.toU64(), c.component.toU32() });
+    }
     self.world.clearChanged();
 }
 
