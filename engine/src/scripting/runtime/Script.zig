@@ -127,13 +127,13 @@ fn callFunctionAtIndex(self: *const Script, idx: i32, comptime ResultTypes: []co
     return results;
 }
 
+/// Globals should be set before calling this.
 pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.SystemHandle {
     if (self.ref == 0) return error.NoInstanceTable;
     const l = self.state;
     const top = l.getTop();
     defer l.setTop(top);
 
-    self.setWorldGlobal(world);
     _ = l.getIndexRaw(zlua.registry_index, self.ref);
 
     const init_type = l.getField(-1, "init");
@@ -149,9 +149,8 @@ pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.S
 
     // Run it before processing the query so the system may create any components it needs to use.
     if (init_type == .function) {
-        const h = Host.fromState(l);
         _ = l.getIndexRaw(zlua.registry_index, self.fn_refs.init.?);
-        _ = self.callFunctionAtIndex(-1, &.{}, .{h.ecs.worldAsHandle(world)}) catch
+        _ = self.callFunctionAtIndex(-1, &.{}, .{}) catch
             return error.SystemInitFailed;
         l.pop(1);
     }
@@ -208,15 +207,24 @@ pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.S
     );
 }
 
-pub fn instantiateEntity(self: *Script, world: *Ecs.World, entity: Ecs.Entity) !void {
+/// Globals should be set before calling this.
+pub fn instantiateEntity(self: *Script, entity: Ecs.Entity) !void {
     if (self.ref == 0) return error.NoInstanceTable;
     const l = self.state;
 
     const top = l.getTop();
     defer l.setTop(top);
 
-    self.setWorldGlobal(world);
     _ = try self.callFunction("init", &.{}, .{entity});
+}
+
+pub fn setGlobal(self: *const Script, name: [:0]const u8, val: anytype) void {
+    const l = self.state;
+
+    l.pushGlobalTable();
+    self.binder.pushValue(l, val);
+    l.setField(-2, name);
+    l.pop(1);
 }
 
 fn pushMsgHandler(self: *const Script) i32 {
@@ -251,14 +259,4 @@ fn luaErr(self: *const Script) void {
 
     if (!formatted) std.log.err("{s}", .{msg});
     self.state.pop(1);
-}
-
-fn setWorldGlobal(self: *const Script, world: *Ecs.World) void {
-    const l = self.state;
-    const h = Host.fromState(l);
-
-    l.pushGlobalTable();
-    self.binder.pushValue(l, h.ecs.worldAsHandle(world));
-    l.setField(-2, "world");
-    l.pop(1);
 }
