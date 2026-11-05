@@ -10,6 +10,9 @@ pub const Vec3 = extern struct {
 
     pub const zero: Vec3 = .{ .x = 0, .y = 0, .z = 0 };
     pub const one: Vec3 = .{ .x = 1, .y = 1, .z = 1 };
+    pub const x_axis: Vec3 = .{ .x = 1, .y = 0, .z = 0 };
+    pub const y_axis: Vec3 = .{ .x = 0, .y = 1, .z = 0 };
+    pub const z_axis: Vec3 = .{ .x = 0, .y = 0, .z = 1 };
 
     pub fn new(x: f32, y: f32, z: f32) Vec3 {
         return .{ .x = x, .y = y, .z = z };
@@ -102,7 +105,17 @@ pub const api = bind.value(Vec3, .{
     .statics = &.{
         bind.constant("zero", Vec3.zero),
         bind.constant("one", Vec3.one),
+        bind.constant("xAxis", Vec3.x_axis),
+        bind.constant("yAxis", Vec3.y_axis),
+        bind.constant("zAxis", Vec3.z_axis),
         bind.func("new", Vec3.new),
+    },
+    .methods = &.{
+        bind.func("length", Vec3.length),
+        bind.func("normalize", Vec3.normalize),
+        bind.func("dot", Vec3.dot),
+        bind.func("cross", Vec3.cross),
+        bind.func("scale", Vec3.scale),
     },
     .ops = .{
         .tostring = .auto,

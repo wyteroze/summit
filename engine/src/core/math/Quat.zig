@@ -96,9 +96,9 @@ pub const Quat = extern struct {
         const bv = b.simd();
         const av = a.simd();
 
-        const b1 = @shuffle(f32, bv, undefined, .{ 3, 2, 1, 0 }) * Simd4{ 1, -1, 1, -1 };
-        const b2 = @shuffle(f32, bv, undefined, .{ 2, 3, 0, 1 }) * Simd4{ 1, 1, -1, -1 };
-        const b3 = @shuffle(f32, bv, undefined, .{ 1, 0, 3, 2 }) * Simd4{ -1, 1, 1, -1 };
+        const b1 = @shuffle(f32, bv, undefined, [4]i32{ 3, 2, 1, 0 }) * Simd4{ 1, -1, 1, -1 };
+        const b2 = @shuffle(f32, bv, undefined, [4]i32{ 2, 3, 0, 1 }) * Simd4{ 1, 1, -1, -1 };
+        const b3 = @shuffle(f32, bv, undefined, [4]i32{ 1, 0, 3, 2 }) * Simd4{ -1, 1, 1, -1 };
 
         const r = bv * @as(Simd4, @splat(av[3])) +
             b1 * @as(Simd4, @splat(av[0])) +
@@ -215,5 +215,6 @@ pub const api = bind.value(Quat, .{
     },
     .ops = .{
         .eq = .{ .member = bind.func("eql", Quat.eq) },
+        .mul = .{ .member = bind.func("mul", Quat.mul) },
     },
 });

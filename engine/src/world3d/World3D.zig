@@ -50,8 +50,7 @@ pub fn init(
     const mesh = try world.registerComponent(Assets.AssetHandle, "Mesh"); // For giving an entity a mesh appearance
     const image = try world.registerComponent(Assets.AssetHandle, "Image"); // For giving an entity an image appearance (or a texture, if it has a mesh)
     const position = try world.registerComponent(math.Vec3, "Position"); // For moving entities
-    // Urgent TODO: Make rotation use Quat instead of Vec3
-    const rotation = try world.registerComponent(math.Vec3, "Rotation"); // For rotating entites (Euler)
+    const rotation = try world.registerComponent(math.Quat, "Rotation"); // For rotating entites (Euler)
     const scale = try world.registerComponent(math.Vec3, "Scale"); // For scaling entities
     const script = try world.registerComponent(scripting.Runtime.ScriptHandle, "Script"); // For giving entities behavior
     const light = try world.registerComponent(render.types.Light, "Light"); // For creating sources of illumination
