@@ -22,6 +22,14 @@ pub const Quat = extern struct {
     pub fn fromSimd(v: Simd4) Quat {
         return .{ .x = v[0], .y = v[1], .z = v[2], .w = v[3] };
     }
+    /// XYZW order
+    pub fn toArr(self: Quat) [4]f32 {
+        return .{ self.x, self.y, self.z, self.w };
+    }
+    /// XYZW order
+    pub fn fromArr(arr: [4]f32) Quat {
+        return .{ .x = arr[0], .y = arr[1], .z = arr[2], .w = arr[3] };
+    }
 
     pub fn eq(a: Quat, b: Quat) bool {
         return a.x == b.x and a.y == b.y and a.z == b.z and a.w == b.w;
