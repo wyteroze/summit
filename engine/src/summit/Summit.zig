@@ -175,7 +175,6 @@ pub fn update(self: *Summit) void {
 
 pub fn setupTestScene(self: *Summit) !void {
     const window = try self.windowing.createWindow(.{ .title = "summit", .size = .new(1280, 720) });
-    const window_2 = try self.windowing.createWindow(.{ .title = "summit 2", .size = .new(854, 480) });
     self.windowing.main_window = window;
     try window.focus();
 
@@ -267,12 +266,6 @@ pub fn setupTestScene(self: *Summit) !void {
     try ui.world.set(view_entity, ui.component_ids.position, math.Vec2, .new(0, 0));
     try ui.world.set(view_entity, ui.component_ids.size, Ui.types.SizeMode, .{ .width = .fill, .height = .fill });
     try ui.world.setParent(view_entity, (try window.getElement()).entity);
-
-    const view_entity_2 = try ui.world.spawnEntity();
-    try ui.world.set(view_entity_2, ui.component_ids.render_view, Ui.types.RenderViewOptions, .{ .camera = camera_2, .scene = scene });
-    try ui.world.set(view_entity_2, ui.component_ids.position, math.Vec2, .new(0, 0));
-    try ui.world.set(view_entity_2, ui.component_ids.size, Ui.types.SizeMode, .{ .width = .fill, .height = .fill });
-    try ui.world.setParent(view_entity_2, (try window_2.getElement()).entity);
 }
 
 fn getAlloc(self: *Summit, category: []const u8) !std.mem.Allocator {
