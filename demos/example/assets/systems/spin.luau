@@ -3,8 +3,6 @@
 
 const ENTITY_COLUMNS, ENTITY_ROWS = 12, 12
 local assets = require("@assets")
-local ui = require("@ui")
-local fpsTextElement = nil
 local spin: System = {}
 spin.query = { "Spin" }
 
