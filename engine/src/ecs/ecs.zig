@@ -54,13 +54,14 @@ pub fn createWorld(self: *Ecs) !*World {
 
 pub fn destroyWorld(self: *Ecs, world: *World) !void {
     if (self.worlds.fetchRemove(world.id)) |kv| {
+        const id = kv.value.id;
         kv.value.deinit();
         self.allocator.destroy(kv.value);
 
         // Should never be possible, but better to be safe than sorry I guess
-        if (self.free_len >= 255) return;
+        if (self.free_len >= u8_max) return;
+        self.free[self.free_len] = id;
         self.free_len += 1;
-        self.free[self.free_len] = kv.value.id;
     } else return error.InvalidWorld;
 }
 

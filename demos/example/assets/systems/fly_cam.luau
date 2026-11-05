@@ -61,6 +61,11 @@ function flyCam.update(entity: Entity, dt: number)
     ):scale(dt * speed)
 
     entity.Position += entity.Rotation:rotate(move)
+
+    local result = world:raycast(entity.Position, -Vec3.yAxis);
+    if result then
+        print(result.entity, result.position, result.normal, result.distance)
+    end
 end
 
 function flyCam.deinit()

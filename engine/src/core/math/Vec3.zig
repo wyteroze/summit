@@ -48,6 +48,9 @@ pub const Vec3 = extern struct {
     pub fn div(self: Vec3, other: Vec3) Vec3 {
         return .fromSimd(self.simd() / other.simd());
     }
+    pub fn negate(self: Vec3) Vec3 {
+        return .fromSimd(-self.simd());
+    }
     pub fn dot(self: Vec3, other: Vec3) f32 {
         return @reduce(.Add, self.simd() * other.simd());
     }
@@ -93,8 +96,6 @@ pub const Vec3 = extern struct {
     ) std.Io.Writer.Error!void {
         try writer.print("Vec3({d:.2}, {d:.2}, {d:.2})", .{ self.x, self.y, self.z });
     }
-
-    pub const __lua = .val;
 };
 
 // TODO: Make this use the native Luau `vector` type.
@@ -123,5 +124,6 @@ pub const api = bind.value(Vec3, .{
         .sub = .{ .member = bind.func("sub", Vec3.sub) },
         .mul = .{ .member = bind.func("mul", Vec3.mul) },
         .div = .{ .member = bind.func("div", Vec3.div) },
+        .unm = .{ .member = bind.func("unm", Vec3.negate) },
     },
 });
