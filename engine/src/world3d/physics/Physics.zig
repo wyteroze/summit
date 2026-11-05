@@ -167,10 +167,10 @@ pub fn pull(self: *Physics) !void {
         if (body.getMotionType() != .dynamic) continue;
 
         const pos: math.Vec3 = .new(body.position[0], body.position[1], body.position[2]);
-        const rot: math.Quat = .new(body.rotation[0], body.rotation[1], body.rotation[2], body.rotation[3]);
+        const rot: math.Quat = .fromArr(body.rotation);
 
         try w.setUnchecked(e, cids.position, math.Vec3, pos);
-        try w.setUnchecked(e, cids.rotation, math.Vec3, rot.toEuler());
+        try w.setUnchecked(e, cids.rotation, math.Quat, rot);
     }
 }
 
@@ -219,6 +219,10 @@ fn createShape(shape: types.Shape, size: math.Vec3, density: f32) !*zphysics.Sha
 
 fn vec3Or(w: *Ecs.World, e: Ecs.Entity, cid: Ecs.ComponentId, default: math.Vec3) math.Vec3 {
     return if (w.getComponentUnchecked(e, cid, math.Vec3)) |v| v.* else default;
+}
+
+fn quatOr(w: *Ecs.World, e: Ecs.Entity, cid: Ecs.ComponentId, default: math.Quat) math.Quat {
+    return if (w.getComponentUnchecked(e, cid, math.Quat)) |v| v.* else default;
 }
 
 /// Engine motion type to Jolt's MotionType
@@ -292,7 +296,7 @@ fn createBody(self: *Physics, e: Ecs.Entity) !void {
 
     const shape = try self.getShape(collider.shape, vec3Or(w, e, cids.scale, .one), collider.material.density);
     const pos = vec3Or(w, e, cids.position, .zero);
-    const rot: math.Quat = .fromEuler(vec3Or(w, e, cids.rotation, .zero));
+    const rot = quatOr(w, e, cids.rotation, .identity);
 
     var settings: zphysics.BodyCreationSettings = .{
         .user_data = e.toU64(),
@@ -391,7 +395,7 @@ fn apply(self: *Physics, p: Pending, dt: f32) !void {
 
     if (d.transform) {
         const pos = vec3Or(w, e, cids.position, .zero);
-        const q: math.Quat = .fromEuler(vec3Or(w, e, cids.rotation, .zero));
+        const rot = quatOr(w, e, cids.rotation, .identity);
 
         if (motion == .kinematic) {
             {
@@ -400,12 +404,12 @@ fn apply(self: *Physics, p: Pending, dt: f32) !void {
                 defer lock.unlock();
 
                 const body = lock.body orelse return;
-                body.moveKinematic(pos.arr(), .{ q.x, q.y, q.z, q.w }, dt);
+                body.moveKinematic(pos.arr(), rot.toArr(), dt);
             }
             bi.activate(body_id);
         } else {
             bi.setPosition(body_id, pos.arr(), activate);
-            bi.setRotation(body_id, .{ q.x, q.y, q.z, q.w }, activate);
+            bi.setRotation(body_id, rot.toArr(), activate);
         }
     }
 

@@ -155,9 +155,9 @@ pub fn submitAudio(summit: *Summit) void {
         var it = w.queryUnchecked(&.{cids.audio_listener}).iterator();
         break :blk it.next();
     };
-    const listener_pos: math.Vec3 = if (listener) |l| orZero(w, l, cids.position) else .zero;
-    const listener_rot: math.Vec3 = if (listener) |l| orZero(w, l, cids.rotation) else .zero;
-    const right = math.Quat.fromEuler(listener_rot.toRadians()).toMat4().transformDirection(.new(1, 0, 0)).normalize();
+    const listener_pos: math.Vec3 = if (listener) |l| vec3OrZero(w, l, cids.position) else .zero;
+    const listener_rot: math.Quat = if (listener) |l| quatOrIdentity(w, l, cids.rotation) else .identity;
+    const right = listener_rot.toMat4().transformDirection(.new(1, 0, 0)).normalize();
     audio.setListener(.{ .position = listener_pos, .right = right });
 
     // Voices
@@ -192,6 +192,10 @@ pub fn submitAudio(summit: *Summit) void {
     }
 }
 
-fn orZero(w: *Ecs.World, e: Ecs.Entity, cid: Ecs.ComponentId) math.Vec3 {
+fn vec3OrZero(w: *Ecs.World, e: Ecs.Entity, cid: Ecs.ComponentId) math.Vec3 {
     return if (w.getComponentUnchecked(e, cid, math.Vec3)) |v| v.* else .zero;
+}
+
+fn quatOrIdentity(w: *Ecs.World, e: Ecs.Entity, cid: Ecs.ComponentId) math.Quat {
+    return if (w.getComponentUnchecked(e, cid, math.Quat)) |v| v.* else .identity;
 }

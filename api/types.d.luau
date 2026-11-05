@@ -27,6 +27,8 @@ declare extern type Vec3 with
     function dot(self, other: Vec3): number
     --- Returns the cross product of this `Vec3` and the given `Vec3`.
     function cross(self, other: Vec3): Vec3
+    --- Scales this vector by the given factor.
+    function scale(self, scale: number): Vec3
 
 	function __add(self, other: Vec3): Vec3
 	function __div(self, other: Vec3 | number): Vec3
@@ -151,17 +153,19 @@ declare Vec3: {
     --- A `Vec3` with a value of 1 on the Y axis.
     read yAxis: Vec3,
     --- A `Vec3` with a value of 1 on the Z axis.
-    read xAxis: Vec3,
+    read zAxis: Vec3,
 }
 
 --- A 4D value, commonly used for representing 3D rotation.
 declare Quat: {
+    --- Creates a new `Quat` from the given components.
+    read new: (x: number, y: number, z: number, w: number) -> Quat,
     --- A `Quat` with zero rotation.
     read identity: Quat,
     --- Creates a `Quat` with the given Euler rotation.
     read fromEuler: (euler: Vec3) -> Quat,
     --- Creates a `Quat` of the given axis rotated around the given angle in degrees.
-    read axisAngle: (axis: Vec3, angle: number) -> Quat,
+    read fromAxisAngle: (axis: Vec3, angle: number) -> Quat,
     --- Creates a `Quat` facing the given direction, optionally with an up vector of the given value.
     read lookRotation: (direction: Vec3, up: Vec3?) -> Quat,
 }

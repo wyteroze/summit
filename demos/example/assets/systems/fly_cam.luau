@@ -4,50 +4,16 @@ local input = require("@input")
 local windowing = require("@windowing")
 
 local speed = 1
+local yaw, pitch = 0, 0
+local RADIANS_PER_PIXEL = 0.01
+local PITCH_LIMIT = math.rad(89)
+
 local flyCam: System = {}
 flyCam.query = { "FlyCam" }
 
 -- Bool to number
 local function btn(bool)
     return if bool then 1 else 0
-end
-
--- TODO: Make these engine functions in the future
--- pitch = x, yaw = y, roll = z
-
-local function rotToRightVector(rot: Vec3): Vec3
-    local pitch = math.rad(rot.x)
-    local yaw = math.rad(rot.y)
-    local roll = math.rad(rot.z)
-
-    return Vec3.new(
-        math.cos(roll) * math.cos(yaw) - math.sin(roll) * math.sin(pitch) * math.sin(yaw),
-        math.sin(roll) * math.cos(roll),
-        -math.cos(roll) * math.sin(yaw) - math.sin(roll) * math.sin(pitch) * math.cos(yaw)
-    )
-end
-
-local function rotToUpVector(rot: Vec3): Vec3
-    local pitch = math.rad(rot.x)
-    local yaw = math.rad(rot.y)
-    local roll = math.rad(rot.z)
-
-    return Vec3.new(
-        math.sin(roll) * math.cos(yaw) + math.cos(roll) * math.sin(pitch) * math.sin(yaw),
-        math.cos(roll) * math.cos(pitch),
-        -math.sin(roll) * math.sin(yaw) + math.cos(roll) * math.sin(pitch) * math.cos(yaw)
-    )
-end
-
-local function rotToForwardVector(rot: Vec3): Vec3
-    local pitch = math.rad(rot.x)
-    local yaw = math.rad(rot.y)
-
-    return Vec3.new(
-        math.cos(pitch) * math.sin(yaw),
-        -math.sin(pitch),
-        math.cos(pitch) * math.cos(yaw)
-    )
 end
 
 function flyCam.init()
@@ -82,22 +48,18 @@ function flyCam.update(entity: Entity, dt: number)
     local kb = input.getKeyboard(1) :: Keyboard
     local ms = input.getMouse(1) :: Mouse
 
-    -- TODO: Allow vec * (or /) number 
-    
-    local moveX = (btn(kb:isKeyPressed("D"))-btn(kb:isKeyPressed("A")))*dt*speed
-    local moveY = (btn(kb:isKeyPressed("Space"))-btn(kb:isKeyPressed("LeftShift")))*dt*speed
-    local moveZ = (btn(kb:isKeyPressed("W"))-btn(kb:isKeyPressed("S")))*dt*speed
-
     local msDelta = if input.isCursorLocked() then ms:getMoveDelta() else Vec2.zero
-    local rot = entity.Rotation
-        + Vec3.new(msDelta.y, msDelta.x, 0)
+    yaw += msDelta.x * RADIANS_PER_PIXEL
+    pitch = math.clamp(pitch + msDelta.y * RADIANS_PER_PIXEL, -PITCH_LIMIT, PITCH_LIMIT)
+    entity.Rotation = Quat.fromEuler(Vec3.new(pitch, yaw, 0))
 
-    entity.Position +=
-        rotToRightVector(rot) * Vec3.new(moveX, moveX, moveX)
-        + rotToUpVector(rot) * Vec3.new(moveY, moveY, moveY)
-        + rotToForwardVector(rot) * Vec3.new(moveZ, moveZ, moveZ)
+    local move = Vec3.new(
+        (btn(kb:isKeyPressed("D")) - btn(kb:isKeyPressed("A"))),
+        (btn(kb:isKeyPressed("Space")) - btn(kb:isKeyPressed("LeftShift"))),
+        (btn(kb:isKeyPressed("W")) - btn(kb:isKeyPressed("S")))
+    ):scale(dt * speed)
 
-    entity.Rotation = rot
+    entity.Position += entity.Rotation:rotate(move)
 end
 
 function flyCam.deinit()

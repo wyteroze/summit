@@ -210,14 +210,14 @@ pub fn setupTestScene(self: *Summit) !void {
     // Make a camera for the scene
     const camera = try world.spawnEntity();
     try world.set(camera, pos_id, math.Vec3, .new(0, 0, 0));
-    try world.set(camera, rot_id, math.Vec3, .new(0, 0, 0));
+    try world.set(camera, rot_id, math.Quat, .identity);
     try world.set(camera, scale_id, math.Vec3, .new(1, 1, 1));
     try world.set(camera, listener_id, Audio.types.AudioListener, .{});
     try world.set(camera, camera_id, World3D.types.Camera, .{});
 
     const camera_2 = try world.spawnEntity();
     try world.set(camera_2, pos_id, math.Vec3, .new(0, 0, 0));
-    try world.set(camera_2, rot_id, math.Vec3, .new(0, 0, 0));
+    try world.set(camera_2, rot_id, math.Quat, .identity);
     try world.set(camera_2, scale_id, math.Vec3, .new(1, 1, 1));
     try world.set(camera_2, camera_id, World3D.types.Camera, .{});
 

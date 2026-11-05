@@ -24,6 +24,10 @@ fn vec3Or(w: *Ecs.World, e: Ecs.Entity, cid: Ecs.ComponentId, default: math.Vec3
     return if (w.getComponentUnchecked(e, cid, math.Vec3)) |v| v.* else default;
 }
 
+fn quatOr(w: *Ecs.World, e: Ecs.Entity, cid: Ecs.ComponentId, default: math.Quat) math.Quat {
+    return if (w.getComponentUnchecked(e, cid, math.Quat)) |v| v.* else default;
+}
+
 /// Collects all lights and converts them to `GpuLight`'s.
 pub fn lights(self: *World3D, allocator: std.mem.Allocator) ![]gpu.types.GpuLight {
     const w = self.world;
@@ -35,14 +39,11 @@ pub fn lights(self: *World3D, allocator: std.mem.Allocator) ![]gpu.types.GpuLigh
     while (it.next()) |entity| {
         const l = w.getComponentUnchecked(entity, cids.light, render.types.Light).?;
         const pos = vec3Or(w, entity, cids.position, .zero);
-        const rot = vec3Or(w, entity, cids.rotation, .zero);
+        const rot = quatOr(w, entity, cids.rotation, .identity);
 
         const pos_or_dir = switch (l.kind) {
             .point => pos,
-            .directional => blk: {
-                const rot_mat = math.Quat.fromEuler(rot.toRadians()).toMat4();
-                break :blk rot_mat.transformDirection(.new(0, 0, 1)).normalize();
-            },
+            .directional => rot.toMat4().transformDirection(.new(0, 0, 1)).normalize(),
         };
 
         const rgb = l.color.srgbDecode();
@@ -82,14 +83,14 @@ pub fn objects(self: *World3D, allocator: std.mem.Allocator, defaults: Defaults)
         // Mesh with no image = plain white
         const image_data = if (image) |i| i.ensureGpuGet(.image, .{}) catch continue else defaults.image;
 
-        const rot = vec3Or(w, entity, cids.rotation, .zero);
+        const rot = quatOr(w, entity, cids.rotation, .identity);
         const pos = vec3Or(w, entity, cids.position, .zero);
         const scale = vec3Or(w, entity, cids.scale, .one);
         // Not visible (or invalid), don't waste resources rendering it.
         if (scale.x <= 0 or scale.y <= 0 or scale.z <= 0) continue;
 
         try out.append(allocator, .{
-            .model = .fromTRS(pos, .fromEuler(rot.toRadians()), scale),
+            .model = .fromTRS(pos, rot, scale),
             .mesh = mesh_data,
             .material = .{
                 .image = image_data,
@@ -109,12 +110,12 @@ pub fn camera(self: *World3D, entity: Ecs.Entity, px: [2]u32) ?CameraMatrices {
 
     const settings = w.getComponentUnchecked(entity, cids.camera, types.Camera) orelse return null;
     const pos = vec3Or(w, entity, cids.position, .zero);
-    const rot = vec3Or(w, entity, cids.rotation, .zero);
+    const rot = quatOr(w, entity, cids.rotation, .identity);
 
     const aspect = @as(f32, @floatFromInt(px[0])) / @as(f32, @floatFromInt(px[1]));
 
     return .{
-        .view = math.Mat4.fromTRS(pos, .fromEuler(rot.toRadians()), .one).invertRT(),
+        .view = math.Mat4.fromTRS(pos, rot, .one).invertRT(),
         .proj = .perspectiveReversedZInf(
             std.math.degreesToRadians(settings.fov),
             aspect,

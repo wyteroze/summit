@@ -7,8 +7,8 @@ local teapot: Script = {}
 
 function teapot.init(entity: Entity)
     print("Teapot init")
-    entity:addComponent("Position", Vec3.new(0, 0, 0))
-    entity:addComponent("Rotation", Vec3.new(0, 0, 0))
+    entity:addComponent("Position", Vec3.zero)
+    entity:addComponent("Rotation", Quat.identity)
     entity:addComponent("Mesh", assets.load("asset://models/cube.fbx"))
     entity:addComponent("Image", assets.load("asset://images/chicken.jpg"))
     entity:addComponent("Spin", Vec3.new(5, 10, 15))
