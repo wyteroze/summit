@@ -30,11 +30,11 @@ pub const BodyId = enum(BodyIdInt) {
     _,
 
     pub inline fn indexBits(self: BodyId) BodyIdInt {
-        return @intFromEnum(self) & @intFromEnum(BodyId.index_bits);
+        return @backingInt(self) & @backingInt(BodyId.index_bits);
     }
 
     pub inline fn toJpc(self: BodyId) c.JPC_BodyID {
-        return .{ .id = @intFromEnum(self) };
+        return .{ .id = @backingInt(self) };
     }
 };
 
@@ -44,7 +44,7 @@ pub const SubShapeId = enum(SubShapeIdInt) {
     _,
 
     pub inline fn toJpc(self: SubShapeId) c.JPC_SubShapeID {
-        return .{ .id = @intFromEnum(self) };
+        return .{ .id = @backingInt(self) };
     }
 };
 
@@ -791,6 +791,7 @@ pub const AllowedDOFs = enum(c.JPC_AllowedDOFs) {
     rotation_x = c.JPC_ALLOWED_DOFS_ROTATION_X, // 0b001000
     rotation_y = c.JPC_ALLOWED_DOFS_ROTATION_Y, // 0b010000
     rotation_z = c.JPC_ALLOWED_DOFS_ROTATION_Z, // 0b100000
+    _,
 };
 
 pub const OverrideMassProperties = enum(c.JPC_OverrideMassProperties) {
@@ -1046,7 +1047,7 @@ pub const DebugRenderer = if (!debug_renderer_enabled) extern struct {} else ext
     }
 
     pub fn createSingleton(debug_renderer_impl: *anyopaque) !void {
-        switch (@as(DebugRendererResult, @enumFromInt(c.JPC_CreateDebugRendererSingleton(debug_renderer_impl)))) {
+        switch (@as(DebugRendererResult, @fromBackingInt(@intCast(c.JPC_CreateDebugRendererSingleton(debug_renderer_impl))))) {
             .success => {
                 return;
             },
@@ -1362,7 +1363,7 @@ pub const PhysicsSystem = opaque {
     pub fn getNumActiveBodies(physics_system: *const PhysicsSystem) u32 {
         return c.JPC_PhysicsSystem_GetNumActiveBodies(
             @as(*const c.JPC_PhysicsSystem, @ptrCast(physics_system)),
-            @intFromEnum(BodyType.rigid_body),
+            @backingInt(BodyType.rigid_body),
         );
     }
     pub fn getMaxBodies(physics_system: *const PhysicsSystem) u32 {
@@ -1680,7 +1681,7 @@ pub const BodyInterface = opaque {
             @ptrCast(body_ids.ptr),
             @intCast(body_ids.len),
             @ptrCast(add_state),
-            @intFromEnum(mode),
+            @backingInt(mode),
         );
     }
 
@@ -1696,7 +1697,7 @@ pub const BodyInterface = opaque {
         c.JPC_BodyInterface_AddBody(
             @as(*c.JPC_BodyInterface, @ptrCast(body_iface)),
             body_id.toJpc(),
-            @intFromEnum(mode),
+            @backingInt(mode),
         );
     }
 
@@ -1716,11 +1717,11 @@ pub const BodyInterface = opaque {
     }
 
     pub fn createAndAddBody(body_iface: *BodyInterface, settings: BodyCreationSettings, mode: Activation) !BodyId {
-        const body_id: BodyId = @enumFromInt(c.JPC_BodyInterface_CreateAndAddBody(
+        const body_id: BodyId = @fromBackingInt(@intCast(c.JPC_BodyInterface_CreateAndAddBody(
             @as(*c.JPC_BodyInterface, @ptrCast(body_iface)),
             @as(*const c.JPC_BodyCreationSettings, @ptrCast(&settings)),
-            @intFromEnum(mode),
-        ).id);
+            @backingInt(mode),
+        ).id));
         if (body_id == .invalid)
             return error.FailedToCreateBody;
         return body_id;
@@ -1787,7 +1788,7 @@ pub const BodyInterface = opaque {
             body_id.toJpc(),
             @ptrCast(shape),
             update_mass_properties,
-            @intFromEnum(activation_mode),
+            @backingInt(activation_mode),
         );
     }
 
@@ -1897,7 +1898,7 @@ pub const BodyInterface = opaque {
     }
 
     pub fn setPosition(body_iface: *BodyInterface, body_id: BodyId, in_position: [3]Real, in_activation_type: Activation) void {
-        c.JPC_BodyInterface_SetPosition(@as(*c.JPC_BodyInterface, @ptrCast(body_iface)), body_id.toJpc(), &in_position, @intFromEnum(in_activation_type));
+        c.JPC_BodyInterface_SetPosition(@as(*c.JPC_BodyInterface, @ptrCast(body_iface)), body_id.toJpc(), &in_position, @backingInt(in_activation_type));
     }
 
     pub fn getCenterOfMassPosition(body_iface: *const BodyInterface, body_id: BodyId) [3]Real {
@@ -1921,7 +1922,7 @@ pub const BodyInterface = opaque {
     }
 
     pub fn setRotation(body_iface: *BodyInterface, body_id: BodyId, in_rotation: [4]f32, in_activation_type: Activation) void {
-        c.JPC_BodyInterface_SetRotation(@as(*c.JPC_BodyInterface, @ptrCast(body_iface)), body_id.toJpc(), &in_rotation, @intFromEnum(in_activation_type));
+        c.JPC_BodyInterface_SetRotation(@as(*c.JPC_BodyInterface, @ptrCast(body_iface)), body_id.toJpc(), &in_rotation, @backingInt(in_activation_type));
     }
 
     pub fn setPositionRotationAndVelocity(
@@ -2004,20 +2005,20 @@ pub const BodyInterface = opaque {
     }
 
     pub fn getMotionType(body_iface: *const BodyInterface, body_id: BodyId) MotionType {
-        return @as(MotionType, @enumFromInt(
+        return @as(MotionType, @fromBackingInt(@intCast(
             c.JPC_BodyInterface_GetMotionType(
                 @ptrCast(body_iface),
                 body_id.toJpc(),
             ),
-        ));
+        )));
     }
 
     pub fn setMotionType(body_iface: *BodyInterface, body_id: BodyId, in_motion_type: MotionType, in_activation_type: Activation) void {
         return c.JPC_BodyInterface_SetMotionType(
             @as(*c.JPC_BodyInterface, @ptrCast(body_iface)),
             body_id.toJpc(),
-            @intFromEnum(in_motion_type),
-            @intFromEnum(in_activation_type),
+            @backingInt(in_motion_type),
+            @backingInt(in_activation_type),
         );
     }
 
@@ -2092,7 +2093,7 @@ pub const Body = extern struct {
     flags: u8,
 
     pub fn getId(body: *const Body) BodyId {
-        return @enumFromInt(c.JPC_Body_GetID(@as(*const c.JPC_Body, @ptrCast(body))).id);
+        return @fromBackingInt(@intCast(c.JPC_Body_GetID(@as(*const c.JPC_Body, @ptrCast(body))).id));
     }
 
     pub fn isActive(body: *const Body) bool {
@@ -2119,10 +2120,10 @@ pub const Body = extern struct {
     }
 
     pub fn getMotionType(body: *const Body) MotionType {
-        return @as(MotionType, @enumFromInt(c.JPC_Body_GetMotionType(@as(*const c.JPC_Body, @ptrCast(body)))));
+        return @as(MotionType, @fromBackingInt(@intCast(c.JPC_Body_GetMotionType(@as(*const c.JPC_Body, @ptrCast(body))))));
     }
     pub fn setMotionType(body: *Body, motion_type: MotionType) void {
-        return c.JPC_Body_SetMotionType(@as(*c.JPC_Body, @ptrCast(body)), @intFromEnum(motion_type));
+        return c.JPC_Body_SetMotionType(@as(*c.JPC_Body, @ptrCast(body)), @backingInt(motion_type));
     }
 
     pub fn getBroadPhaseLayer(body: *const Body) BroadPhaseLayer {
@@ -2420,7 +2421,7 @@ pub const Character = opaque {
     pub fn addToPhysicsSystem(character: *Character, args: struct { activation: Activation = .activate, lock_bodies: bool = true }) void {
         c.JPC_Character_AddToPhysicsSystem(
             @as(*c.JPC_Character, @ptrCast(character)),
-            @intFromEnum(args.activation),
+            @backingInt(args.activation),
             args.lock_bodies,
         );
     }
@@ -2545,7 +2546,7 @@ pub const CharacterVirtual = opaque {
         return velocity;
     }
     pub fn getGroundState(character: *CharacterVirtual) CharacterGroundState {
-        return @enumFromInt(c.JPC_CharacterVirtual_GetGroundState(@as(*c.JPC_CharacterVirtual, @ptrCast(character))));
+        return @fromBackingInt(@intCast(c.JPC_CharacterVirtual_GetGroundState(@as(*c.JPC_CharacterVirtual, @ptrCast(character)))));
     }
 
     pub fn getPosition(character: *const CharacterVirtual) [3]Real {
@@ -2610,9 +2611,9 @@ pub const MotionProperties = extern struct {
     reserved: [53 + c.JPC_ENABLE_ASSERTS * 3 + c.JPC_DOUBLE_PRECISION * 24]u8 align(4 + 4 * c.JPC_DOUBLE_PRECISION),
 
     pub fn getMotionQuality(motion: *const MotionProperties) MotionQuality {
-        return @as(MotionQuality, @enumFromInt(c.JPC_MotionProperties_GetMotionQuality(
+        return @as(MotionQuality, @fromBackingInt(@intCast(c.JPC_MotionProperties_GetMotionQuality(
             @as(*const c.JPC_MotionProperties, @ptrCast(motion)),
-        )));
+        ))));
     }
 
     pub fn getLinearVelocity(motion: *const MotionProperties) [3]f32 {
@@ -2713,7 +2714,7 @@ pub const MotionProperties = extern struct {
     ) void {
         c.JPC_MotionProperties_SetMassProperties(
             @as(*c.JPC_MotionProperties, @ptrCast(motion)),
-            @intFromEnum(allowed_DOFs),
+            @backingInt(allowed_DOFs),
             @as(*const c.JPC_MassProperties, @ptrCast(&mass_properties)),
         );
     }
@@ -3429,14 +3430,14 @@ pub const Shape = opaque {
     pub fn getType(shape: *const Shape) Type {
         return @as(
             Type,
-            @enumFromInt(c.JPC_Shape_GetType(@ptrCast(shape))),
+            @fromBackingInt(@intCast(c.JPC_Shape_GetType(@ptrCast(shape)))),
         );
     }
 
     pub fn getSubType(shape: *const Shape) SubType {
         return @as(
             SubType,
-            @enumFromInt(c.JPC_Shape_GetSubType(@ptrCast(shape))),
+            @fromBackingInt(@intCast(c.JPC_Shape_GetSubType(@ptrCast(shape)))),
         );
     }
 
@@ -3678,7 +3679,7 @@ pub const FixedConstraintSettings = opaque {
     pub fn setSpace(settings: *FixedConstraintSettings, space: Constraint.Space) void {
         c.JPC_FixedConstraintSettings_SetSpace(
             @as(*c.JPC_FixedConstraintSettings, @ptrCast(settings)),
-            @intFromEnum(space),
+            @backingInt(space),
         );
     }
 
@@ -3746,11 +3747,11 @@ pub const Constraint = opaque {
     }
 
     pub fn getType(constraint: *const Constraint) Type {
-        return @enumFromInt(c.JPC_Constraint_GetType(@ptrCast(constraint)));
+        return @fromBackingInt(@intCast(c.JPC_Constraint_GetType(@ptrCast(constraint))));
     }
 
     pub fn getSubType(constraint: *const Constraint) SubType {
-        return @enumFromInt(c.JPC_Constraint_GetSubType(@ptrCast(constraint)));
+        return @fromBackingInt(@intCast(c.JPC_Constraint_GetSubType(@ptrCast(constraint))));
     }
 
     pub fn getUserData(constraint: *const Constraint) u64 {
