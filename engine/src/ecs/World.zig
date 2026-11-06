@@ -21,9 +21,13 @@ const signal = @import("../core/signal.zig");
 const Hierarchy = @import("Hierarchy.zig");
 const lua_components = Ecs.lua_components;
 
+pub const ChangeAction = enum { add, update, remove };
 pub const WriteMode = enum { add, set, upsert };
-pub const FieldTypeSpec = struct { name: []const u8, type_name: []const u8 };
-pub const ChangedComponent = struct { entity: Entity, component: ComponentId };
+pub const ChangedComponent = struct {
+    action: ChangeAction,
+    entity: Entity,
+    component: ComponentId,
+};
 
 const World = @This();
 // The ID of this world, because multiple can exist at once.
@@ -61,13 +65,13 @@ pub fn init(id: u8, allocator: std.mem.Allocator) World {
 }
 
 pub fn deinit(self: *World) void {
+    self.systems.deinit();
     for (self.storages.items) |*s| s.deinit();
     self.hierarchy.deinit();
     self.changed_set.deinit();
     self.changed_components.deinit(self.allocator);
     self.storages.deinit(self.allocator);
     self.components.deinit();
-    self.systems.deinit();
     self.generations.deinit(self.allocator);
     self.alive.deinit(self.allocator);
     self.free.deinit(self.allocator);
@@ -194,10 +198,10 @@ pub fn markChanged(self: *World, entity: Entity) !void {
     try self.hierarchy.changed.append(self.allocator, entity);
 }
 
-pub fn markComponentChanged(self: *World, entity: Entity, component: ComponentId) !void {
+pub fn markComponentChanged(self: *World, entity: Entity, component: ComponentId, action: ChangeAction) !void {
     std.debug.assert(entity.world_id == self.id);
     std.debug.assert(component.world_id == self.id);
-    try self.changed_components.append(self.allocator, .{ .entity = entity, .component = component });
+    try self.changed_components.append(self.allocator, .{ .entity = entity, .component = component, .action = action });
 }
 
 pub fn isEntityAlive(self: *World, entity: Entity) bool {
@@ -281,7 +285,11 @@ pub fn writeRawUnchecked(self: *World, e: Entity, id: ComponentId, bytes: []cons
         .upsert => {},
     }
     try self.markChanged(e);
-    try self.markComponentChanged(e, id);
+    try self.markComponentChanged(e, id, switch (mode) {
+        .add => .add,
+        .set => .update,
+        .upsert => if (exists) .update else .add,
+    });
     try storage.insert(e, bytes);
 }
 
@@ -302,6 +310,7 @@ pub fn removeComponent(self: *World, entity: Entity, id: ComponentId) !void {
 pub fn removeComponentUnchecked(self: *World, entity: Entity, id: ComponentId) void {
     std.debug.assert(self.isEntityAliveUnchecked(entity));
     self.storageForUnchecked(id).remove(entity);
+    self.markComponentChanged(entity, id, .remove) catch {};
 }
 
 pub fn hasComponent(self: *World, entity: Entity, id: ComponentId) !bool {
@@ -378,7 +387,10 @@ pub fn destroyEntityUnchecked(self: *World, entity: Entity) void {
     while (self.hierarchy.popChild(entity)) |c| self.destroyEntityUnchecked(c);
     self.hierarchy.remove(entity);
 
-    for (self.storages.items) |*s| s.remove(entity);
+    for (self.storages.items) |*s| {
+        self.markComponentChanged(entity, s.component_id, .remove) catch {};
+        s.remove(entity);
+    }
     self.alive.items[entity.index] = false;
     self.generations.items[entity.index] +%= 1;
     self.free.append(self.allocator, entity.index) catch {};
