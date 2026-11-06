@@ -277,12 +277,27 @@ export type AudioAsset = Asset & {
 
 declare extern type Entity with
     --- Adds a pre-registered component of the given name with the given value. This does not implicitly register components.
-    --- You must register custom components using `World:RegisterComponent()` prior to using this.
+    --- You must register custom components using `World:registerComponent()` prior to using this.
+    --- Attempting to add a component when it already exists under this entity will result in an error.
     function addComponent(self, name: string, value: any): ()
+    --- Sets a component under this entity, adding the component to the entity if it doesn't already exist.
+    --- This does not implicitly register components. You must register custom components using `World:registerComponent()` prior to using this.
+    function setComponent(self, name: string, value: any): ()
+    --- Gets a component under this entity. Returns nil if the component doesn't exist under the entity.
+    --- This does not implicitly register components. You must register custom components using `World:registerComponent()` prior to using this.
+    function getComponent(self, name: string): any?
+    --- Returns if this entity has the given component.
+    function hasComponent(self, name: string): boolean
+    --- Removes a component with the given name from this entity. Does nothing if the entity doesn't have the component.
+    --- This does not implicitly register components. You must register custom components using `World:registerComponent()` prior to using this.
+    function removeComponent(self, name: string): ()
+    --- Destroys this entity and its components. Any handles to this entity are made invalid,
+    --- and trying to use them will result in an error.
+    function destroy(self): ()
 
     function __index(self, key: string): any?
     function __newindex(self, key: string, value: any): any?
-    
+
     -- For accessing components. Trying to access/set a component that doesn't exist will error.
     [string]: any?
 end

@@ -1,7 +1,7 @@
 -- Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 --!native
 
-const ENTITY_COLUMNS, ENTITY_ROWS = 12, 12
+const ENTITY_COLUMNS, ENTITY_ROWS = 1, 1
 local assets = require("@assets")
 local spin: System = {}
 spin.query = { "Spin" }
