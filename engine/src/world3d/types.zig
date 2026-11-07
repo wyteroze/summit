@@ -4,7 +4,7 @@ const core = @import("../core/core.zig");
 const Physics = @import("physics/Physics.zig");
 
 pub const Environment = struct {
-    ambient: core.Color = .fromRgbFloat(0.1, 0.1, 0.1, 1.0),
+    ambient: core.Color = .fromRgbFloat(0.5, 0.5, 0.5, 1.0),
     clear_color: core.Color = .fromRgbFloat(0, 0, 0, 1.0),
 };
 
