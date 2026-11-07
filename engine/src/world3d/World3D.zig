@@ -104,6 +104,10 @@ pub fn raycast(self: *World3D, origin: math.Vec3, dir: math.Vec3, opts: Physics.
     return self.physics.raycast(origin, dir, opts);
 }
 
+pub fn getContacts(self: *const World3D) []const Physics.Contact {
+    return self.physics.contacts.items;
+}
+
 const bind = @import("../scripting/bind/bind.zig");
 pub const World3DHandle = struct {
     id: u8,

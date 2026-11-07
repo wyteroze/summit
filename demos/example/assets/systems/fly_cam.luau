@@ -41,7 +41,6 @@ function flyCam.init()
 end
 
 function flyCam.update(entity: Entity, dt: number)
-    print(`FPS: {1/dt}`)
     -- TODO: Why the hell does this work correctly when the `not` is missing??? Fix it.
     if windowing.mainWindow.focused then return end
 
@@ -61,11 +60,6 @@ function flyCam.update(entity: Entity, dt: number)
     ):scale(dt * speed)
 
     entity.Position += entity.Rotation:rotate(move)
-
-    local result = world:raycast(entity.Position, -Vec3.yAxis);
-    if result then
-        print(result.entity, result.position, result.normal, result.distance)
-    end
 end
 
 function flyCam.deinit()

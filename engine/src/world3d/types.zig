@@ -1,6 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const core = @import("../core/core.zig");
+const Physics = @import("physics/Physics.zig");
 
 pub const Environment = struct {
     ambient: core.Color = .fromRgbFloat(0.1, 0.1, 0.1, 1.0),
@@ -47,7 +48,12 @@ pub const RigidBody = struct {
 
 // Internal component used to track Jolt state for each body
 pub const PhysicsBody = struct {
+    physics: *Physics,
     id: u32,
     locked: LockedAxes,
     mass: ?f32,
+
+    pub fn deinit(self: *PhysicsBody) void {
+        self.physics.releaseBody(self.id);
+    }
 };

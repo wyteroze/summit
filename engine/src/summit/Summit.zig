@@ -160,6 +160,10 @@ pub fn update(self: *Summit) void {
     const dt_seconds: f32 = @floatCast(@as(f32, @floatFromInt(dt.toNanoseconds())) / std.time.ns_per_s);
     self.last_frame = start;
 
+    for (self.world_3d.getContacts()) |c| {
+        std.log.debug("Contact: kind = {}, sensor = {}", .{ c.kind, c.sensor });
+    }
+
     self.audio.tick();
     self.input.tick();
     self.platform.poll();
