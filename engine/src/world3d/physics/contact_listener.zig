@@ -21,7 +21,7 @@ pub const ContactListener = extern struct {
         iface: *zphysics.ContactListener,
         b1: *const zphysics.Body,
         b2: *const zphysics.Body,
-        _: *const zphysics.ContactManifold,
+        manifold: *const zphysics.ContactManifold,
         _: *zphysics.ContactSettings,
     ) callconv(.c) void {
         const self: *ContactListener = @alignCast(@fieldParentPtr("interface", iface));
@@ -30,6 +30,8 @@ pub const ContactListener = extern struct {
             .a_id = @backingInt(b1.id),
             .b_id = @backingInt(b2.id),
             .sensor_side = if (b1.isSensor()) .a else if (b2.isSensor()) .b else .none,
+            .position = .fromArr(manifold.base_offset[0..3].*),
+            .normal = .fromArr(manifold.normal[0..3].*),
         }) catch {};
     }
 

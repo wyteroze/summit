@@ -26,8 +26,8 @@ pub const RawContact = struct {
     a_id: u32,
     b_id: u32,
     sensor_side: enum { none, a, b } = .none,
-    point: [3]f32 = .{ 0, 0, 0 },
-    normal: [3]f32 = .{ 0, 0, 0 },
+    position: math.Vec3 = .zero,
+    normal: math.Vec3 = .zero,
 };
 
 pub const Contact = struct {
@@ -35,6 +35,8 @@ pub const Contact = struct {
     sensor: bool,
     entity: Ecs.Entity,
     other: Ecs.Entity,
+    position: math.Vec3,
+    normal: math.Vec3,
 };
 
 const ShapeKey = struct {
@@ -230,6 +232,8 @@ pub fn pull(self: *Physics) !void {
             .sensor = a.sensor or b.sensor,
             .entity = if (swap) b.entity else a.entity,
             .other = if (swap) a.entity else b.entity,
+            .position = rc.position,
+            .normal = rc.normal,
         });
     }
 
