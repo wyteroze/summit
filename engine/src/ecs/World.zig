@@ -16,6 +16,7 @@ const ComponentId = Ecs.ComponentId;
 const ComponentRegistry = Ecs.ComponentRegistry;
 const SystemRegistry = Ecs.SystemRegistry;
 const SparseSet = Ecs.SparseSet;
+const EntityIterator = Ecs.EntityIterator;
 const Query = Ecs.Query;
 const signal = @import("../core/signal.zig");
 const Hierarchy = @import("Hierarchy.zig");
@@ -396,6 +397,10 @@ pub fn destroyEntityUnchecked(self: *World, entity: Entity) void {
     self.alive.items[entity.index] = false;
     self.generations.items[entity.index] +%= 1;
     self.free.append(self.allocator, entity.index) catch {};
+}
+
+pub fn entityIterator(self: *World) EntityIterator {
+    return .{ .world = self };
 }
 
 // Queries
