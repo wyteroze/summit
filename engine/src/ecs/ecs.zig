@@ -13,6 +13,18 @@ pub const Codec = @import("Codec.zig");
 pub const lua_components = @import("lua_components.zig");
 pub const lua_entity = @import("lua_entity.zig");
 
+pub const EventCallback = union(enum) {
+    const World3D = @import("../world3d/World3D.zig");
+
+    contactBegan: struct { other: Ecs.Entity, contact: World3D.Physics.Contact },
+    contactEnded: struct { other: Ecs.Entity },
+    sensorEntered: struct { other: Ecs.Entity },
+    sensorExited: struct { other: Ecs.Entity },
+
+    pub const Tag = std.meta.Tag(@This());
+    pub const Set = std.enums.EnumSet(Tag);
+};
+
 const u8_max = std.math.maxInt(u8);
 
 const Ecs = @This();

@@ -311,6 +311,10 @@ export type Script = {
     init: ((entity: Entity) -> ())?,
     update: ((entity: Entity, dt: number) -> ())?,
     deinit: ((entity: Entity) -> ())?,
+    contactBegan: ((entity: Entity, other: Entity, contact: Contact) -> ())?,
+    contactEnded: ((entity: Entity, other: Entity) -> ())?,
+    sensorEntered: ((entity: Entity, other: Entity) -> ())?,
+    sensorExited: ((entity: Entity, other: Entity) -> ())?,
 }
 
 export type System = {
@@ -318,6 +322,10 @@ export type System = {
     init: (() -> ())?,
     update: ((entity: Entity, dt: number) -> ())?,
     deinit: (() -> ())?,
+    contactBegan: ((entity: Entity, other: Entity, contact: Contact) -> ())?,
+    contactEnded: ((entity: Entity, other: Entity) -> ())?,
+    sensorEntered: ((entity: Entity, other: Entity) -> ())?,
+    sensorExited: ((entity: Entity, other: Entity) -> ())?,
 }
 
 -- WORLD3D --
@@ -332,6 +340,11 @@ export type RaycastHit = {
     position: Vec3,
     normal: Vec3,
     distance: number,
+}
+
+export type Contact = {
+    position: Vec3,
+    normal: Vec3,
 }
 
 declare extern type World3D extends World with

@@ -161,7 +161,8 @@ pub fn update(self: *Summit) void {
     self.last_frame = start;
 
     for (self.world_3d.getContacts()) |c| {
-        std.log.debug("Contact: kind = {}, sensor = {}, pos = {f}, normal = {f}", .{ c.kind, c.sensor, c.position, c.normal });
+        self.dispatchContact(c);
+        self.dispatchContact(c.flipped());
     }
 
     self.audio.tick();
@@ -274,4 +275,32 @@ pub fn setupTestScene(self: *Summit) !void {
 
 fn getAlloc(self: *Summit, category: []const u8) !std.mem.Allocator {
     return self.memory.ensureGetCategoryAllocator(category);
+}
+
+fn dispatchEvent(self: *Summit, entity: Ecs.Entity, evt: Ecs.EventCallback) void {
+    const world = self.ecs.getWorld(entity.world_id) catch return;
+    if (!world.isEntityAlive(entity)) return;
+
+    const script_id = self.world_3d.component_ids.script;
+
+    // First, the entity's own script
+    if (world.getComponent(entity, script_id, scripting.Runtime.ScriptHandle) catch null) |handle| {
+        if (self.runtime.getScript(handle.*)) |s| s.dispatch(entity, evt) else |_| {}
+    }
+    // Then systems whose query matches
+    world.systems.dispatchEvent(world, entity, evt);
+}
+
+fn dispatchContact(self: *Summit, c: World3D.Physics.Contact) void {
+    const evt: Ecs.EventCallback = switch (c.kind) {
+        .began => if (c.sensor)
+            .{ .sensorEntered = .{ .other = c.other } }
+        else
+            .{ .contactBegan = .{ .other = c.other, .contact = c } },
+        .ended => if (c.sensor)
+            .{ .sensorExited = .{ .other = c.other } }
+        else
+            .{ .contactEnded = .{ .other = c.other } },
+    };
+    self.dispatchEvent(c.entity, evt);
 }

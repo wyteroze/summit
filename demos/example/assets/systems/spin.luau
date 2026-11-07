@@ -32,4 +32,20 @@ function spin.update(entity: Entity, dt: number)
     --entity.Rotation = (entity.Rotation * delta):normalize()
 end
 
+function spin.contactBegan(entity: Entity, other: Entity, contact: Contact)
+    print(`Collision began: entity = {entity}, other = {other}, contact.normal = {contact.normal}, contact.position = {contact.position}`)
+end
+
+function spin.contactEnded(entity: Entity, other: Entity)
+    print(`Collision ended: entity = {entity}, other = {other}`)
+end
+
+function spin.sensorEntered(entity: Entity, other: Entity)
+    print(`Sensor entered: entity = {entity}, other = {other}`)
+end
+
+function spin.sensorExited(entity: Entity, other: Entity)
+    print(`Sensor exited: entity = {entity}, other = {other}`)
+end
+
 return spin

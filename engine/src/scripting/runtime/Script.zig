@@ -2,6 +2,7 @@
 
 const std = @import("std");
 const zlua = @import("zlua");
+const World3D = @import("../../world3d/World3D.zig");
 const Host = @import("../bind/bind.zig").Host;
 const core = @import("../../core/core.zig");
 const Ecs = @import("../../ecs/Ecs.zig");
@@ -9,11 +10,7 @@ const bind = @import("../bind/bind.zig");
 const types = @import("../../assets/types.zig");
 const Lua = zlua.Lua;
 
-const FnRefs = struct {
-    init: ?i32 = null,
-    update: ?i32 = null,
-    deinit: ?i32 = null,
-};
+pub const Lifecycle = enum { init, update, deinit };
 
 const Script = @This();
 source: types.ScriptSource,
@@ -23,7 +20,8 @@ state: *Lua,
 thread_ref: i32,
 ref: i32,
 binder: bind.Binder(bind.api),
-fn_refs: FnRefs = .{},
+lifecycle_refs: std.enums.EnumArray(Lifecycle, ?i32) = .initFill(null),
+event_refs: std.enums.EnumArray(Ecs.EventCallback.Tag, ?i32) = .initFill(null),
 
 pub fn init(
     name: ?[:0]const u8,
@@ -78,9 +76,8 @@ pub fn init(
 }
 
 pub fn deinit(self: *Script) void {
-    inline for (@typeInfo(FnRefs).@"struct".field_names) |nm| {
-        if (@field(self.fn_refs, nm)) |ref| self.state.unref(ref);
-    }
+    for (self.event_refs.values) |v| if (v) |r| self.state.unref(r);
+    for (self.lifecycle_refs.values) |v| if (v) |r| self.state.unref(r);
 
     self.state.unref(self.ref);
     self.main.unref(self.thread_ref);
@@ -130,26 +127,18 @@ fn callFunctionAtIndex(self: *const Script, idx: i32, comptime ResultTypes: []co
 /// Globals should be set before calling this.
 pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.SystemHandle {
     if (self.ref == 0) return error.NoInstanceTable;
+    try self.cacheAllRefs();
+    const lc = self.lifecycle_refs;
+
     const l = self.state;
     const top = l.getTop();
     defer l.setTop(top);
 
     _ = l.getIndexRaw(zlua.registry_index, self.ref);
 
-    const init_type = l.getField(-1, "init");
-    if (init_type != .function and init_type != .nil) return error.InitMustBeFunctionOrNil;
-    const update_type = l.getField(-2, "update");
-    if (update_type != .function and update_type != .nil) return error.UpdateMustBeFunctionOrNil;
-    const deinit_type = l.getField(-3, "deinit");
-    if (deinit_type != .function and deinit_type != .nil) return error.DeinitMustBeFunctionOrNil;
-    self.fn_refs.init = l.ref(-3);
-    self.fn_refs.update = l.ref(-2);
-    self.fn_refs.deinit = l.ref(-1);
-    l.pop(3);
-
     // Run it before processing the query so the system may create any components it needs to use.
-    if (init_type == .function) {
-        _ = l.getIndexRaw(zlua.registry_index, self.fn_refs.init.?);
+    if (lc.get(.init)) |ref| {
+        _ = l.getIndexRaw(zlua.registry_index, ref);
         _ = self.callFunctionAtIndex(-1, &.{}, .{}) catch
             return error.SystemInitFailed;
         l.pop(1);
@@ -182,27 +171,34 @@ pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.S
         // No need for init fn, we just called it
         null,
         // Update function
-        if (update_type == .function) struct {
+        if (lc.get(.update) != null) struct {
             fn update(e: Ecs.Entity, dt: f32, ctx: *anyopaque) void {
                 const s: *Script = @ptrCast(@alignCast(ctx));
                 const lua = s.state;
 
-                _ = lua.getIndexRaw(zlua.registry_index, s.fn_refs.update.?);
+                _ = lua.getIndexRaw(zlua.registry_index, s.lifecycle_refs.get(.update).?);
                 _ = s.callFunctionAtIndex(-1, &.{}, .{ e, dt }) catch {};
                 lua.pop(1);
             }
         }.update else null,
         // Deinit function
-        if (deinit_type == .function) struct {
+        if (lc.get(.deinit) != null) struct {
             fn deinit(ctx: *anyopaque) void {
                 const s: *Script = @ptrCast(@alignCast(ctx));
                 const lua = s.state;
 
-                _ = lua.getIndexRaw(zlua.registry_index, s.fn_refs.deinit.?);
+                _ = lua.getIndexRaw(zlua.registry_index, s.lifecycle_refs.get(.deinit).?);
                 _ = s.callFunctionAtIndex(-1, &.{}, .{}) catch {};
                 lua.pop(1);
             }
         }.deinit else null,
+        struct {
+            fn event(e: Ecs.Entity, evt: Ecs.EventCallback, ctx: *anyopaque) void {
+                const s: *Script = @ptrCast(@alignCast(ctx));
+                s.dispatch(e, evt);
+            }
+        }.event,
+        self.eventMask(),
         self,
     );
 }
@@ -210,6 +206,7 @@ pub fn instantiateSystem(self: *Script, world: *Ecs.World) !Ecs.SystemRegistry.S
 /// Globals should be set before calling this.
 pub fn instantiateEntity(self: *Script, entity: Ecs.Entity) !void {
     if (self.ref == 0) return error.NoInstanceTable;
+    try self.cacheAllRefs();
     const l = self.state;
 
     const top = l.getTop();
@@ -225,6 +222,72 @@ pub fn setGlobal(self: *const Script, name: [:0]const u8, val: anytype) void {
     self.binder.pushValue(l, val);
     l.setField(-2, name);
     l.pop(1);
+}
+
+/// Calls the Lua callback for `evt` as callback(entity, ...payload).
+/// Does nothing if the callback is not implemented.
+pub fn dispatch(self: *const Script, entity: Ecs.Entity, evt: Ecs.EventCallback) void {
+    const ref = self.event_refs.get(std.meta.activeTag(evt)) orelse return;
+    const l = self.state;
+    const top = l.getTop();
+    defer l.setTop(top);
+
+    const handler_idx = self.pushMsgHandler();
+    _ = l.getIndexRaw(zlua.registry_index, ref);
+    self.binder.pushValue(l, entity);
+
+    var nargs: i32 = 1;
+    switch (evt) {
+        inline else => |payload| inline for (comptime fieldNames(@TypeOf(payload))) |nm| {
+            self.binder.pushValue(l, @field(payload, nm));
+            nargs += 1;
+        },
+    }
+
+    l.protectedCall(.{ .args = nargs, .results = 0, .msg_handler = handler_idx }) catch self.luaErr();
+}
+
+/// Returns which events this script implements.
+pub fn eventMask(self: *Script) Ecs.EventCallback.Set {
+    var mask: Ecs.EventCallback.Set = .empty;
+    var it = self.event_refs.iterator();
+    while (it.next()) |e| if (e.value.* != null) mask.insert(e.key);
+    return mask;
+}
+
+fn cacheRefs(self: *Script, comptime E: type, refs: *std.enums.EnumArray(E, ?i32)) !void {
+    const l = self.state;
+    const top = l.getTop();
+    defer l.setTop(top);
+
+    _ = l.getIndexRaw(zlua.registry_index, self.ref);
+    const field_names = comptime fieldNames(E);
+
+    inline for (field_names) |nm| {
+        switch (l.getField(-1, nm)) {
+            .function => refs.set(@field(E, nm), l.ref(-1)),
+            .nil => {},
+            else => {
+                std.log.err("'{s}' must be a function or nil", .{nm});
+                return error.EventCallbackMustBeFunctionOrNil;
+            },
+        }
+        l.pop(1);
+    }
+}
+
+fn cacheAllRefs(self: *Script) !void {
+    try self.cacheRefs(Lifecycle, &self.lifecycle_refs);
+    try self.cacheRefs(Ecs.EventCallback.Tag, &self.event_refs);
+}
+
+fn fieldNames(comptime E: type) []const [:0]const u8 {
+    return switch (@typeInfo(E)) {
+        .@"union" => |u| u.field_names,
+        .@"enum" => |e| e.field_names,
+        .@"struct" => |s| s.field_names,
+        else => @compileError("expected a union or enum or struct"),
+    };
 }
 
 fn pushMsgHandler(self: *const Script) i32 {

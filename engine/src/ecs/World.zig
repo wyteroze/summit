@@ -145,10 +145,12 @@ pub fn registerSystem(
     init_fn: ?SystemRegistry.SystemInitFn,
     update_fn: ?SystemRegistry.SystemUpdateFn,
     deinit_fn: ?SystemRegistry.SystemDeinitFn,
+    event: ?SystemRegistry.SystemEventFn,
+    event_mask: Ecs.EventCallback.Set,
     ctx: *anyopaque,
 ) !SystemRegistry.SystemHandle {
     for (sys_query) |id| _ = try self.checkComponent(id);
-    return self.systems.register(self, sys_query, init_fn, update_fn, deinit_fn, ctx);
+    return self.systems.register(self, sys_query, init_fn, update_fn, deinit_fn, event, event_mask, ctx);
 }
 
 pub fn unregisterSystem(self: *World, handle: SystemRegistry.SystemHandle) !void {
@@ -397,6 +399,12 @@ pub fn destroyEntityUnchecked(self: *World, entity: Entity) void {
 }
 
 // Queries
+
+pub fn entityMatches(self: *World, e: Entity, required: []const ComponentId) bool {
+    if (!self.isEntityAlive(e)) return false;
+    for (required) |id| if (!self.hasComponentUnchecked(e, id)) return false;
+    return true;
+}
 
 pub fn query(self: *World, required: []const ComponentId) !Query {
     for (required) |id| _ = try self.checkComponent(id);

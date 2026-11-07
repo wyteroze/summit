@@ -8,6 +8,7 @@ const Entity = Ecs.Entity;
 pub const SystemInitFn = *const fn (world: *World, ctx: *anyopaque) void;
 pub const SystemUpdateFn = *const fn (entity: Entity, dt: f32, ctx: *anyopaque) void;
 pub const SystemDeinitFn = *const fn (ctx: *anyopaque) void;
+pub const SystemEventFn = *const fn (entity: Entity, evt: Ecs.EventCallback, ctx: *anyopaque) void;
 pub const SystemHandle = struct {
     registry: *SystemRegistry,
     id: u64,
@@ -23,6 +24,8 @@ pub const SystemEntry = struct {
     init: ?SystemInitFn,
     update: ?SystemUpdateFn,
     deinit: ?SystemDeinitFn,
+    event: ?SystemEventFn,
+    event_mask: Ecs.EventCallback.Set,
 };
 
 const SystemRegistry = @This();
@@ -53,6 +56,8 @@ pub fn register(
     init_fn: ?SystemInitFn,
     update_fn: ?SystemUpdateFn,
     deinit_fn: ?SystemDeinitFn,
+    event: ?SystemEventFn,
+    event_mask: Ecs.EventCallback.Set,
     ctx: *anyopaque,
 ) !SystemHandle {
     const id = self.next_id;
@@ -65,6 +70,8 @@ pub fn register(
         .init = init_fn,
         .update = update_fn,
         .deinit = deinit_fn,
+        .event = event,
+        .event_mask = event_mask,
     });
 
     if (init_fn) |func| func(world, ctx);
@@ -87,4 +94,16 @@ pub fn runAll(self: *SystemRegistry, world: *World, dt: f32) void {
         var q_iter = world.queryUnchecked(s.query).iterator();
         while (q_iter.next()) |e| update(e, dt, s.ctx);
     };
+}
+
+pub fn dispatchEvent(self: *SystemRegistry, world: *World, entity: Entity, evt: Ecs.EventCallback) void {
+    const tag = std.meta.activeTag(evt);
+    var iter = self.systems.valueIterator();
+    while (iter.next()) |s| {
+        const f = s.event orelse continue;
+        if (!s.event_mask.contains(tag)) continue;
+        if (!world.entityMatches(entity, s.query)) continue;
+
+        f(entity, evt, s.ctx);
+    }
 }
