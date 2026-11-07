@@ -2,6 +2,7 @@
 
 const std = @import("std");
 const zphysics = @import("zphysics");
+const core = @import("../../core/core.zig");
 const math = @import("../../core/math/math.zig");
 const Ecs = @import("../../ecs/Ecs.zig");
 const World3D = @import("../World3D.zig");
@@ -9,6 +10,7 @@ const types = World3D.types;
 const BroadphaseLayerInterface = @import("broadphase_layer_interface.zig").BroadphaseLayerInterface;
 const ObjectVsBroadPhaseLayerFilter = @import("object_vs_broadphase_layer_filter.zig").ObjectVsBroadPhaseLayerFilter;
 const ObjectLayerPairFilter = @import("object_layer_pair_filter.zig").ObjectLayerPairFilter;
+const ContactListener = @import("contact_listener.zig").ContactListener;
 const LayerMatrix = @import("LayerMatrix.zig");
 
 const fixed_dt = 1.0 / 120.0;
@@ -16,6 +18,24 @@ const max_substeps = 2;
 
 const default_ray_distance = 1000.0;
 const ray_skip_epsilon = 0.001;
+
+pub const ContactQueue = core.threading.MPMCQueue(RawContact, 4096);
+pub const ContactKind = enum { began, ended };
+pub const RawContact = struct {
+    kind: ContactKind,
+    a_id: u32,
+    b_id: u32,
+    sensor_side: enum { none, a, b } = .none,
+    point: [3]f32 = .{ 0, 0, 0 },
+    normal: [3]f32 = .{ 0, 0, 0 },
+};
+
+pub const Contact = struct {
+    kind: ContactKind,
+    sensor: bool,
+    entity: Ecs.Entity,
+    other: Ecs.Entity,
+};
 
 const ShapeKey = struct {
     shape: types.Shape,
@@ -42,6 +62,7 @@ const Dirty = packed struct {
     }
 };
 
+const BodyInfo = struct { entity: Ecs.Entity, sensor: bool };
 const Pending = struct { entity: Ecs.Entity, dirty: Dirty = .{} };
 
 pub const RaycastOptions = struct {
@@ -59,13 +80,18 @@ pub const RaycastHit = struct {
 
 const Physics = @This();
 allocator: std.mem.Allocator,
+frame_allocator: std.heap.ArenaAllocator,
 physics_system: *zphysics.PhysicsSystem,
 matrix: *LayerMatrix,
 broadphase_layer_interface: *BroadphaseLayerInterface,
 object_vs_broadphase_layer_filter: *ObjectVsBroadPhaseLayerFilter,
 object_layer_pair_filter: *ObjectLayerPairFilter,
+contact_listener: *ContactListener,
+queue: *ContactQueue,
+contacts: std.ArrayList(Contact) = .empty,
+bodies: std.AutoHashMap(u32, BodyInfo),
+retired: std.ArrayList(u32) = .empty,
 shapes: std.AutoHashMap(ShapeKey, *zphysics.Shape),
-pending: std.AutoHashMap(u64, Pending),
 added_bodies: u32 = 0,
 accumulator: f32 = 0,
 
@@ -89,20 +115,34 @@ pub fn init(io: std.Io, allocator: std.mem.Allocator) !Physics {
     errdefer allocator.destroy(object_layer_pair_filter);
     object_layer_pair_filter.* = .{ .matrix = matrix };
 
+    const queue = try allocator.create(ContactQueue);
+    errdefer allocator.destroy(queue);
+    queue.* = .init(io);
+
+    const contact_listener = try allocator.create(ContactListener);
+    errdefer allocator.destroy(contact_listener);
+    contact_listener.* = .{ .queue = queue };
+
+    const physics_system = try zphysics.PhysicsSystem.create(
+        &broadphase_layer_interface.interface,
+        &object_vs_broadphase_layer_filter.filter,
+        &object_layer_pair_filter.interface,
+        .{},
+    );
+    physics_system.setContactListener(contact_listener);
+
     return .{
         .allocator = allocator,
-        .physics_system = try .create(
-            &broadphase_layer_interface.interface,
-            &object_vs_broadphase_layer_filter.filter,
-            &object_layer_pair_filter.interface,
-            .{},
-        ),
+        .frame_allocator = .init(allocator),
+        .physics_system = physics_system,
         .matrix = matrix,
         .broadphase_layer_interface = broadphase_layer_interface,
         .object_vs_broadphase_layer_filter = object_vs_broadphase_layer_filter,
         .object_layer_pair_filter = object_layer_pair_filter,
+        .contact_listener = contact_listener,
+        .queue = queue,
+        .bodies = .init(allocator),
         .shapes = .init(allocator),
-        .pending = .init(allocator),
     };
 }
 
@@ -113,18 +153,24 @@ pub fn deinit(self: *Physics) void {
 
     zphysics.deinit();
     self.shapes.deinit();
-    self.pending.deinit();
+    self.bodies.deinit();
+    self.contacts.deinit(self.allocator);
+    self.retired.deinit(self.allocator);
     self.allocator.destroy(self.broadphase_layer_interface);
     self.allocator.destroy(self.object_vs_broadphase_layer_filter);
     self.allocator.destroy(self.object_layer_pair_filter);
+    self.allocator.destroy(self.contact_listener);
+    self.allocator.destroy(self.queue);
     self.allocator.destroy(self.matrix);
+    self.frame_allocator.deinit();
 }
 
 pub fn reconcile(self: *Physics, dt: f32) !void {
     const cids = self.getWorld().component_ids;
     const w = self.getWorld().world;
-    defer self.pending.clearRetainingCapacity();
+    self.contacts.clearRetainingCapacity();
 
+    var pending: std.AutoHashMap(u64, Pending) = .init(self.frameAllocator());
     for (w.changedComponents()) |cc| {
         const d: Dirty = if (cc.component.eql(cids.position) or cc.component.eql(cids.rotation))
             .{ .transform = true }
@@ -137,19 +183,21 @@ pub fn reconcile(self: *Physics, dt: f32) !void {
         else
             continue;
 
-        const gop = try self.pending.getOrPut(cc.entity.toU64());
+        const gop = try pending.getOrPut(cc.entity.toU64());
         if (!gop.found_existing) gop.value_ptr.* = .{ .entity = cc.entity };
         gop.value_ptr.dirty = gop.value_ptr.dirty.merge(d);
     }
 
-    var iter = self.pending.valueIterator();
+    var iter = pending.valueIterator();
     while (iter.next()) |p| {
         self.apply(p.*, dt) catch |err|
             std.log.err("Physics sync failed for entity {d}: {t}", .{ p.*.entity.toU64(), err });
     }
 
-    if (self.added_bodies >= 64) self.physics_system.optimizeBroadPhase();
-    self.added_bodies = 0;
+    if (self.added_bodies >= 64) {
+        self.physics_system.optimizeBroadPhase();
+        self.added_bodies = 0;
+    }
 }
 
 pub fn step(self: *Physics, frame_dt: f32) void {
@@ -172,6 +220,22 @@ pub fn pull(self: *Physics) !void {
     try self.physics_system.getActiveBodyIds(self.allocator, &active_ids);
 
     const lock_if = self.physics_system.getBodyLockInterfaceNoLock();
+    while (self.queue.pop()) |rc| {
+        const a = self.bodies.get(rc.a_id) orelse continue;
+        const b = self.bodies.get(rc.b_id) orelse continue;
+
+        const swap = !a.sensor and b.sensor;
+        try self.contacts.append(self.allocator, .{
+            .kind = rc.kind,
+            .sensor = a.sensor or b.sensor,
+            .entity = if (swap) b.entity else a.entity,
+            .other = if (swap) a.entity else b.entity,
+        });
+    }
+
+    for (self.retired.items) |id| _ = self.bodies.remove(id);
+    self.retired.clearRetainingCapacity();
+
     for (active_ids.items) |id| {
         var lock: zphysics.BodyLockRead = .{};
         lock.lock(lock_if, id);
@@ -319,30 +383,15 @@ fn getEntityBodyId(w: *Ecs.World, cids: *const World3D.ComponentIds, entity: Ecs
         null;
 }
 
-fn processRecreates(self: *Physics) void {
-    const w3d = self.getWorld();
-    const w = w3d.world;
-    defer self.recreate.clearRetainingCapacity();
-
-    var iter = self.recreate.valueIterator();
-    while (iter.next()) |entity| {
-        const e = entity.*;
-        if (!w.isEntityAlive(e)) continue;
-        self.destroyBody(e);
-
-        if (!w.hasComponentUnchecked(e, w3d.component_ids.collider)) continue;
-        self.createBody(e) catch |err|
-            std.log.err("Failed to create body: {t}", .{err});
-    }
+pub fn releaseBody(self: *Physics, id: u32) void {
+    self.physics_system.getBodyInterfaceMut().removeAndDestroyBody(@fromBackingInt(id));
+    self.retired.append(self.allocator, id) catch {};
 }
 
 fn destroyBody(self: *Physics, e: Ecs.Entity) void {
     const w3d = self.getWorld();
-    const w = w3d.world;
-
-    const pb = w.getComponentUnchecked(e, w3d.component_ids.physics_body, types.PhysicsBody) orelse return;
-    self.physics_system.getBodyInterfaceMut().removeAndDestroyBody(@fromBackingInt(pb.id));
-    w.removeComponentUnchecked(e, w3d.component_ids.physics_body);
+    // `PhysicsBody` has a deinit hook that calls `Physics.releaseBody()`
+    w3d.world.removeComponentUnchecked(e, w3d.component_ids.physics_body);
 }
 
 fn createBody(self: *Physics, e: Ecs.Entity) !void {
@@ -387,7 +436,11 @@ fn createBody(self: *Physics, e: Ecs.Entity) !void {
         .createAndAddBody(settings, if (moving) .activate else .dont_activate);
     errdefer self.physics_system.getBodyInterfaceMut().removeAndDestroyBody(id);
 
+    try self.bodies.put(@backingInt(id), .{ .entity = e, .sensor = collider.sensor });
+    errdefer _ = self.bodies.remove(@backingInt(id));
+
     try w.setUnchecked(e, cids.physics_body, types.PhysicsBody, .{
+        .physics = self,
         .id = @backingInt(id),
         .locked = if (rb) |r| r.locked else .{},
         .mass = if (rb) |r| r.mass else null,
@@ -509,4 +562,8 @@ fn apply(self: *Physics, p: Pending, dt: f32) !void {
 fn joltMotion(collider: types.Collider, rb: ?types.RigidBody) zphysics.MotionType {
     if (rb) |r| return motionTypeToJoltType(r.motion);
     return if (collider.sensor) .kinematic else .static;
+}
+
+fn frameAllocator(self: *Physics) std.mem.Allocator {
+    return self.frame_allocator.allocator();
 }
