@@ -70,7 +70,7 @@ pub fn objects(self: *World3D, allocator: std.mem.Allocator, defaults: Defaults)
     var out: std.ArrayList(render.types.RenderObject) = .empty;
 
     // TODO: Make querying better. Quite limited right now
-    var it = w.queryUnchecked(&.{ cids.mesh, cids.image }).iterator();
+    var it = w.entityIterator();
     while (it.next()) |entity| {
         const mesh = w.getComponentUnchecked(entity, cids.mesh, Assets.AssetHandle);
         const image = w.getComponentUnchecked(entity, cids.image, Assets.AssetHandle);
