@@ -161,7 +161,7 @@ pub fn update(self: *Summit) void {
     self.last_frame = start;
 
     for (self.world_3d.getContacts()) |c| {
-        std.log.debug("Contact: kind = {}, sensor = {}", .{ c.kind, c.sensor });
+        std.log.debug("Contact: kind = {}, sensor = {}, pos = {f}, normal = {f}", .{ c.kind, c.sensor, c.position, c.normal });
     }
 
     self.audio.tick();
