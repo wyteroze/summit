@@ -9,7 +9,7 @@ const Assets = @import("../../assets/Assets.zig");
 const Input = @import("../../input/Input.zig");
 const Ui = @import("../../ui/Ui.zig");
 const Audio = @import("../../audio/Audio.zig");
-const Script = @import("Script.zig");
+pub const Script = @import("Script.zig");
 
 pub const ScriptHandle = struct { id: u64 };
 
@@ -68,6 +68,10 @@ pub fn instantiateEntity(self: *Runtime, handle: ScriptHandle, entity: Ecs.Entit
 
 pub fn setGlobal(self: *Runtime, handle: ScriptHandle, name: [:0]const u8, val: anytype) !void {
     (try self.getScript(handle)).setGlobal(name, val);
+}
+
+pub fn callFunction(self: *Runtime, handle: ScriptHandle, name: [:0]const u8, comptime ResultTypes: []const type, args: anytype) !@Tuple(ResultTypes) {
+    return (try self.getScript(handle)).callFunction(name, ResultTypes, args);
 }
 
 pub fn allocator(self: Runtime) std.mem.Allocator {

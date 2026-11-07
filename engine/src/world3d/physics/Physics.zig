@@ -37,6 +37,17 @@ pub const Contact = struct {
     other: Ecs.Entity,
     position: math.Vec3,
     normal: math.Vec3,
+
+    pub fn flipped(self: Contact) Contact {
+        return .{
+            .kind = self.kind,
+            .sensor = self.sensor,
+            .entity = self.other,
+            .other = self.entity,
+            .position = self.position,
+            .normal = self.normal,
+        };
+    }
 };
 
 const ShapeKey = struct {

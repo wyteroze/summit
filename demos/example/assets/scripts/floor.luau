@@ -12,4 +12,12 @@ function floor.init(entity: Entity)
     entity:addComponent("Collider", {})
 end
 
+function floor.contactBegan()
+    print("Floor contact began")
+end
+
+function floor.contactEnded()
+    print("Floor contact ended")
+end
+
 return floor
