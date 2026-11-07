@@ -8,7 +8,6 @@ function floor.init(entity: Entity)
     entity:addComponent("Position", Vec3.new(0, -5, 0))
     entity:addComponent("Scale", Vec3.new(10, 1, 10))
     entity:addComponent("Mesh", assets.load("asset://models/cube.fbx"))
-    entity:addComponent("Image", assets.load("asset://images/chicken.jpg"))
     entity:addComponent("Collider", {})
 end
 
