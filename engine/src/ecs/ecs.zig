@@ -7,6 +7,7 @@ pub const ComponentRegistry = @import("ComponentRegistry.zig");
 pub const SystemRegistry = @import("SystemRegistry.zig");
 pub const Entity = @import("Entity.zig").Entity;
 pub const Query = @import("Query.zig");
+pub const EntityIterator = @import("EntityIterator.zig");
 pub const SparseSet = @import("SparseSet.zig");
 pub const World = @import("World.zig");
 pub const Codec = @import("Codec.zig");
