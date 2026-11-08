@@ -7,16 +7,8 @@ const Os = @This();
 backend: Backend,
 package_id: []const u8,
 
-pub fn init(proc_init: std.process.Init, comptime os_tag: std.Target.Os.Tag, pkg_id: []const u8) !Os {
-    const backend: Backend = switch (os_tag) {
-        .windows => .initWindows(proc_init, pkg_id),
-        .macos, .ios, .tvos, .watchos, .visionos, .maccatalyst => .initDarwin(proc_init, pkg_id),
-        .linux => .initLinux(proc_init, pkg_id),
-
-        else => @compileError("This platform is not supported by any existing backends."),
-    };
-
-    return .{ .backend = backend, .package_id = pkg_id };
+pub fn init(proc_init: std.process.Init, pkg_id: []const u8) !Os {
+    return .{ .backend = .init(proc_init, pkg_id), .package_id = pkg_id };
 }
 
 pub fn filesystem(self: *const Os) Filesystem {
@@ -31,27 +23,15 @@ pub const Filesystem = struct {
     os: *const Os,
 
     pub fn getPersistPath(self: Filesystem, allocator: std.mem.Allocator) ![]const u8 {
-        return switch (self.os.backend) {
-            .darwin => |b| b.filesystem.getPersistPath(allocator),
-            .linux => |b| b.filesystem.getPersistPath(allocator),
-            .windows => |b| b.filesystem.getPersistPath(allocator),
-        };
+        return self.os.backend.filesystem.getPersistPath(allocator);
     }
 
     pub fn getTempPath(self: Filesystem, allocator: std.mem.Allocator) ![]const u8 {
-        return switch (self.os.backend) {
-            .darwin => |b| b.filesystem.getTempPath(allocator),
-            .linux => |b| b.filesystem.getTempPath(allocator),
-            .windows => |b| b.filesystem.getTempPath(allocator),
-        };
+        return self.os.backend.filesystem.getTempPath(allocator);
     }
 
     pub fn getCachePath(self: Filesystem, allocator: std.mem.Allocator) ![]const u8 {
-        return switch (self.os.backend) {
-            .darwin => |b| b.filesystem.getCachePath(allocator),
-            .linux => |b| b.filesystem.getCachePath(allocator),
-            .windows => |b| b.filesystem.getCachePath(allocator),
-        };
+        return self.os.backend.filesystem.getCachePath(allocator);
     }
 };
 
@@ -101,19 +81,11 @@ pub const Scheduling = struct {
 
     /// Gets the core topology of the device.
     pub fn getTopology(self: Scheduling, allocator: std.mem.Allocator) !CoreTopology {
-        return switch (self.os.backend) {
-            .darwin => |b| b.scheduling.getTopology(allocator),
-            .linux => unreachable, // b.scheduling.getTopology(allocator),
-            .windows => unreachable, // b.scheduling.getTopology(allocator)
-        };
+        return self.os.backend.scheduling.getTopology(allocator);
     }
 
     /// Sets the priority of the calling thread.
     pub fn setThreadPriority(self: Scheduling, priority: ThreadPriority) void {
-        return switch (self.os.backend) {
-            .darwin => |b| b.scheduling.setThreadPriority(priority),
-            .linux => unreachable, // b.scheduling.setThreadPriority(priority),
-            .windows => unreachable, // b.scheduling.setThreadPriority(priority)
-        };
+        return self.os.backend.scheduling.setThreadPriority(priority);
     }
 };

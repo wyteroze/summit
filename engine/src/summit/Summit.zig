@@ -72,7 +72,7 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
         }
     }
 
-    self.os = try .init(p_init, builtin.os.tag, "net.wyteroze.summit");
+    self.os = try .init(p_init, "net.wyteroze.summit");
     try self.scheduler.init(try self.getAlloc("Scheduler"), io, &self.os);
     errdefer self.scheduler.deinit();
     try self.platform.init(try self.getAlloc("Platform"), .initSdl());
