@@ -130,7 +130,7 @@ pub fn init(io: std.Io, allocator: std.mem.Allocator) !Physics {
 
     const queue = try allocator.create(ContactQueue);
     errdefer allocator.destroy(queue);
-    queue.* = .init(io);
+    queue.* = .init();
 
     const contact_listener = try allocator.create(ContactListener);
     errdefer allocator.destroy(contact_listener);
