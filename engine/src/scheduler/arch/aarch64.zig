@@ -1,11 +1,9 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const builtin = @import("builtin");
-const Fiber = @import("../Fiber.zig");
 
 pub const Registers = extern struct {
     sp: usize = 0,
-    x18: usize = 0, // thanks apple
     x19: usize = 0,
     x20: usize = 0,
     x21: usize = 0,
@@ -27,38 +25,34 @@ pub const Registers = extern struct {
     d14: u64 = 0,
     d15: u64 = 0,
 };
-// zig fmt: on
 
 pub fn swap(_: *Registers, _: *Registers) callconv(.naked) void {
     asm volatile (
-    // x0 = from, x1 = to
         \\ mov x9, sp
-        \\ str x9,  [x0, #0x00]
-        \\ str x18, [x0, #0x08]
-        \\ stp x19, x20, [x0, #0x10]
-        \\ stp x21, x22, [x0, #0x20]
-        \\ stp x23, x24, [x0, #0x30]
-        \\ stp x25, x26, [x0, #0x40]
-        \\ stp x27, x28, [x0, #0x50]
-        \\ stp x29, x30, [x0, #0x60]
-        \\ stp d8,  d9,  [x0, #0x70]
-        \\ stp d10, d11, [x0, #0x80]
-        \\ stp d12, d13, [x0, #0x90]
-        \\ stp d14, d15, [x0, #0xa0]
+        \\ str x9, [x0, #0x00]
+        \\ stp x19, x20, [x0, #0x08]
+        \\ stp x21, x22, [x0, #0x18]
+        \\ stp x23, x24, [x0, #0x28]
+        \\ stp x25, x26, [x0, #0x38]
+        \\ stp x27, x28, [x0, #0x48]
+        \\ stp x29, x30, [x0, #0x58]
+        \\ stp d8,  d9,  [x0, #0x68]
+        \\ stp d10, d11, [x0, #0x78]
+        \\ stp d12, d13, [x0, #0x88]
+        \\ stp d14, d15, [x0, #0x98]
         \\
-        \\ ldr x9,  [x1, #0x00]
+        \\ ldr x9, [x1, #0x00]
         \\ mov sp, x9
-        \\ ldr x18, [x1, #0x08]
-        \\ ldp x19, x20, [x1, #0x10]
-        \\ ldp x21, x22, [x1, #0x20]
-        \\ ldp x23, x24, [x1, #0x30]
-        \\ ldp x25, x26, [x1, #0x40]
-        \\ ldp x27, x28, [x1, #0x50]
-        \\ ldp x29, x30, [x1, #0x60]
-        \\ ldp d8,  d9,  [x1, #0x70]
-        \\ ldp d10, d11, [x1, #0x80]
-        \\ ldp d12, d13, [x1, #0x90]
-        \\ ldp d14, d15, [x1, #0xa0]
+        \\ ldp x19, x20, [x1, #0x08]
+        \\ ldp x21, x22, [x1, #0x18]
+        \\ ldp x23, x24, [x1, #0x28]
+        \\ ldp x25, x26, [x1, #0x38]
+        \\ ldp x27, x28, [x1, #0x48]
+        \\ ldp x29, x30, [x1, #0x58]
+        \\ ldp d8,  d9,  [x1, #0x68]
+        \\ ldp d10, d11, [x1, #0x78]
+        \\ ldp d12, d13, [x1, #0x88]
+        \\ ldp d14, d15, [x1, #0x98]
         \\ ret
     );
 }
@@ -101,18 +95,12 @@ pub noinline fn doSwap(from: *Registers, to: *Registers) void {
 pub fn trampoline() callconv(.naked) noreturn {
     asm volatile (
         \\ mov x0, x19
-        \\ bl %[land]
-        :
-        : [land] "X" (&Fiber.trampolineLand),
+        \\ mov x29, xzr
+        \\ blr x20
+        \\ brk #0
     );
 }
 
-pub inline fn readx18() usize {
-    return asm volatile ("mov %[out], x18"
-        : [out] "=r" (-> usize),
-    );
-}
-
-pub fn initRegs(sp: usize, self: *anyopaque) Registers {
-    return .{ .sp = sp, .x18 = readx18(), .lr = @intFromPtr(&trampoline), .x19 = @intFromPtr(self) };
+pub fn initRegs(sp: usize, fiber: *anyopaque, land: usize) Registers {
+    return .{ .sp = sp, .lr = @intFromPtr(&trampoline), .x19 = @intFromPtr(fiber), .x20 = land };
 }

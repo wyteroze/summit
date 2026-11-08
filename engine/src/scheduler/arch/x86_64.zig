@@ -1,7 +1,6 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const builtin = @import("builtin");
-const Fiber = @import("../Fiber.zig");
 
 pub const Registers = extern struct {
     sp: usize = 0,
@@ -17,14 +16,15 @@ pub const Registers = extern struct {
 pub fn swap(_: *Registers, _: *Registers) callconv(.naked) void {
     asm volatile (
     // rdi = from, rsi = to
-        \\ mov %%rsp, 0x00(%%rdi)
+        \\ mov (%%rsp), %%rax
+        \\ lea 8(%%rsp), %%rcx
+        \\ mov %%rcx, 0x00(%%rdi)
         \\ mov %%rbx, 0x08(%%rdi)
         \\ mov %%rbp, 0x10(%%rdi)
         \\ mov %%r12, 0x18(%%rdi)
         \\ mov %%r13, 0x20(%%rdi)
         \\ mov %%r14, 0x28(%%rdi)
         \\ mov %%r15, 0x30(%%rdi)
-        \\ mov (%%rsp), %%rax
         \\ mov %%rax, 0x38(%%rdi)
         \\
         \\ mov 0x08(%%rsi), %%rbx
@@ -38,35 +38,20 @@ pub fn swap(_: *Registers, _: *Registers) callconv(.naked) void {
     );
 }
 
-pub fn doSwap(from: *Registers, to: *Registers) void {
-    const sym = comptime if (builtin.target.os.tag.isDarwin()) "call _swap" else "call swap";
-    asm volatile (sym
-        :
-        : [from] "{rdi}" (from),
-          [to] "{rsi}" (to),
-        : .{
-          .rax = true,
-          .rdi = true,
-          .rsi = true,
-          .rbx = true,
-          .rbp = true,
-          .r12 = true,
-          .r13 = true,
-          .r14 = true,
-          .r15 = true,
-          .memory = true,
-        });
-}
-
 pub fn trampoline() callconv(.naked) noreturn {
     asm volatile (
         \\ mov %%rbx, %%rdi
-        \\ jmp *%[land]
-        :
-        : [land] "X" (&Fiber.trampolineLand),
+        \\ jmp *%%r12
     );
 }
 
-pub fn initRegs(sp: usize, self: *anyopaque) Registers {
-    return .{ .sp = sp, .ip = @intFromPtr(&trampoline), .rbx = @intFromPtr(self) };
+pub fn initRegs(sp: usize, fiber: *anyopaque, land: usize) Registers {
+    const entry_sp = sp - 8;
+    @as(*usize, @ptrFromInt(entry_sp)).* = 0;
+    return .{
+        .sp = entry_sp,
+        .ip = @intFromPtr(&trampoline),
+        .rbx = @intFromPtr(fiber),
+        .r12 = land,
+    };
 }

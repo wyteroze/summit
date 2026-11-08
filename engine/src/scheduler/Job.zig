@@ -13,8 +13,9 @@ priority: JobPriority = .normal,
 affinity: JobAffinity = .any,
 
 pub fn Wrap(comptime func: anytype) type {
+    const Args = std.meta.ArgsTuple(@TypeOf(func));
     return struct {
-        args: std.meta.ArgsTuple(@TypeOf(func)),
+        args: Args,
 
         pub fn submit(self: *const @This(), scheduler: *Scheduler, opts: struct {
             priority: JobPriority = .normal,
@@ -23,7 +24,7 @@ pub fn Wrap(comptime func: anytype) type {
         }) void {
             const wrapped = struct {
                 fn c(ctx: *anyopaque) void {
-                    const a: *@TypeOf(self.args) = @ptrCast(@alignCast(ctx));
+                    const a: *const Args = @ptrCast(@alignCast(ctx));
                     @call(.auto, func, a.*);
                 }
             }.c;
@@ -31,7 +32,7 @@ pub fn Wrap(comptime func: anytype) type {
             if (opts.counter) |c| c.add(1);
             scheduler.submit(.{
                 .func = wrapped,
-                .data = @ptrCast(&self.args),
+                .data = @ptrCast(@constCast(&self.args)),
                 .counter = opts.counter,
                 .priority = opts.priority,
                 .affinity = opts.affinity,
