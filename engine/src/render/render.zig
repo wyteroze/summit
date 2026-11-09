@@ -7,3 +7,4 @@ pub const resource = @import("resource.zig");
 pub const Renderer = @import("Renderer.zig");
 pub const RenderView = @import("RenderView.zig");
 pub const RenderGraph = @import("RenderGraph.zig");
+pub const Gizmos = @import("Gizmos.zig");

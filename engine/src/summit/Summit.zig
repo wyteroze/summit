@@ -112,13 +112,17 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     try self.audio.init(io, try self.getAlloc("Audio"), &self.platform);
     errdefer self.audio.deinit();
 
-    self.host = .{ .ecs = &self.ecs, .assets = &self.assets, .input = &self.input, .ui = &self.ui, .audio = &self.audio, .windowing = &self.windowing };
+    self.host = .{
+        .ecs = &self.ecs,
+        .assets = &self.assets,
+        .input = &self.input,
+        .ui = &self.ui,
+        .audio = &self.audio,
+        .windowing = &self.windowing,
+        .gizmos = &self.renderer.gizmos,
+    };
     self.runtime = try .init(try self.getAlloc("LuaRuntime"), &self.host);
     errdefer self.runtime.deinit();
-
-    // Register components
-    // TODO: Register these once somewhere, and access them there
-    // instead of having to do world.components.id() over and over again.
 
     // We don't need the connection, we don't disconnect the event during engine lifetime.
     _ = try self.platform.platform_event.connect(onPlatformEvent, self);

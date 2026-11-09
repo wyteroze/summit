@@ -8,6 +8,7 @@ const Input = @import("../../input/Input.zig");
 const Ui = @import("../../ui/Ui.zig");
 const Audio = @import("../../audio/Audio.zig");
 const Codec = @import("../../ecs/Codec.zig");
+const render = @import("../../render/render.zig");
 const Windowing = @import("../../windowing/Windowing.zig");
 
 var key: u8 = 0;
@@ -18,6 +19,7 @@ input: *Input,
 ui: *Ui,
 audio: *Audio,
 windowing: *Windowing,
+gizmos: *render.Gizmos,
 codecs: []const Codec = &.{},
 
 pub fn attach(self: *Host, l: *zlua.Lua) void {

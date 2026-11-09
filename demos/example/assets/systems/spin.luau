@@ -3,6 +3,7 @@
 
 const ENTITY_COLUMNS, ENTITY_ROWS = 1, 1
 local assets = require("@assets")
+local gizmos = require("@render/gizmos")
 local spin: System = {}
 spin.query = { "Spin" }
 
@@ -28,8 +29,9 @@ function spin.init()
 end
 
 function spin.update(entity: Entity, dt: number)
-    --local delta = Quat.fromEuler(entity.Spin:scale(dt))
-    --entity.Rotation = (entity.Rotation * delta):normalize()
+    -- local delta = Quat.fromEuler(entity.Spin:scale(dt))
+    -- entity.Rotation = (entity.Rotation * delta):normalize()
+    gizmos.box(entity.Position, Vec3.one, entity.Rotation, Color.fromName("Magenta"))
 end
 
 function spin.contactBegan(entity: Entity, other: Entity, contact: Contact)
