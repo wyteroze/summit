@@ -48,7 +48,7 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const backend = b.option(Backend, "backend", "Backend to use\n(default: gl)") orelse .gl;
+    const backend = b.option(Backend, "backend", "Backend to use\n(default: vulkan)") orelse .vulkan;
     const samples = b.option(bool, "samples", "Build samples") orelse false;
     const tests = b.option(bool, "tests", "Build tests") orelse false;
     const skip_cmake = b.option(bool, "skip_cmake", "Skip CMake builds (for ZLS check)") orelse false;
@@ -65,8 +65,8 @@ pub fn build(b: *std.Build) !void {
     }
 
     const src_path = b.path("src");
-    const build_path = b.path("build");
-    const install_path = b.path("install");
+    const build_path = b.path(b.fmt("build-{s}", .{@tagName(backend)}));
+    const install_path = b.path(b.fmt("install-{s}", .{@tagName(backend)}));
 
     // Building with debug info severely bloats .zig-cache (~1.5gb per build)
     const cmake_build_type = "Release";

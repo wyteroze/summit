@@ -15,7 +15,6 @@
     ],
 	"settings": {
         "clangd.fallbackFlags": [
-            "-I./engine/vendor/DiligentEngine/install/include",
             "-I./engine/vendor/slang/build/Release/include",
             "-I./engine/src/gpu/glue/diligent",
             "-I./engine/src/gpu/glue/slang"
