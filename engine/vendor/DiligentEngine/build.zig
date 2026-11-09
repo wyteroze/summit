@@ -66,6 +66,7 @@ pub fn build(b: *std.Build) !void {
 
     const src_path = b.path("src");
     const build_path = b.path("build");
+    const install_path = b.path("install");
 
     // Building with debug info severely bloats .zig-cache (~1.5gb per build)
     const cmake_build_type = "Release";
@@ -78,7 +79,7 @@ pub fn build(b: *std.Build) !void {
     cmake_configure.addDirectoryArg2(build_path, .{ .make_absolute = true });
     cmake_configure.addArgs(&.{ "-G", "Ninja" });
     cmake_configure.setCwd(src_path);
-    const install_out = cmake_configure.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "install");
+    cmake_configure.addDirectoryArg2(install_path, .{ .make_absolute = true, .prefix = "-DCMAKE_INSTALL_PREFIX=" });
 
     cmake_configure.addArgs(&.{
         "-DDILIGENT_BUILD_TOOLS=OFF",
@@ -107,8 +108,8 @@ pub fn build(b: *std.Build) !void {
     step.dependOn(&cmake_install.step);
     b.getInstallStep().dependOn(step);
 
-    b.addNamedLazyPath("include", install_out.path(b, "include"));
-    b.addNamedLazyPath("lib-core", install_out.path(b, b.pathJoin(&.{ "lib", "DiligentCore", cmake_build_type })));
+    b.addNamedLazyPath("include", install_path.path(b, "include"));
+    b.addNamedLazyPath("lib-core", install_path.path(b, b.pathJoin(&.{ "lib", "DiligentCore", cmake_build_type })));
 
     const lib_vk_static_path = try build_path.join(b.allocator, "DiligentCore/Graphics/GraphicsEngineVulkan");
     lib_vk_static_path.addStepDependencies(&cmake_install.step);
