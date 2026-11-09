@@ -7,3 +7,5 @@ install/
 .clangd-db/
 .cache/
 !engine/vendor/ziglua/build/
+engine/vendor/DiligentEngine/build-*
+engine/vendor/DiligentEngine/install-*

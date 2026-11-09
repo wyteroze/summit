@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) void {
     const sdk_path = b.option([]const u8, "sdk", "Path to macOS SDK (looks something like `MacOSX26.5.sdk`)") orelse
         std.zig.system.darwin.getSdk(b.allocator, b.graph.io, &target.result);
 
-    const backend = b.option(enum { gl, d3d11, d3d12, vulkan }, "backend", "Backend to use\n(default: gl)") orelse .gl;
+    const backend = b.option(enum { gl, d3d11, d3d12, vulkan }, "backend", "Backend to use\n(default: vulkan)") orelse .vulkan;
     const check_only = b.option(bool, "check_only", "Only build the `check` step (skips engine build)") orelse false;
 
     // For ZLS

@@ -22,6 +22,7 @@ pub fn build(b: *std.Build) !void {
 
     const src_path = b.path("src");
     const build_path = b.path("build");
+    const install_path = b.path("install");
 
     // Building with debug info severely bloats .zig-cache (~1.5gb per build)
     const cmake_build_type = "Release";
@@ -34,8 +35,7 @@ pub fn build(b: *std.Build) !void {
     cmake_configure.addDirectoryArg2(build_path, .{ .make_absolute = true });
     cmake_configure.addArgs(&.{ "-G", "Ninja" });
     cmake_configure.setCwd(src_path);
-
-    const install_out = cmake_configure.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "install");
+    cmake_configure.addDirectoryArg2(install_path, .{ .make_absolute = true, .prefix = "-DCMAKE_INSTALL_PREFIX=" });
 
     cmake_configure.addArgs(&.{
         b.fmt("-DCMAKE_BUILD_TYPE={s}", .{cmake_build_type}),
@@ -73,12 +73,10 @@ pub fn build(b: *std.Build) !void {
     cmake_install.addArgs(&.{ "--config", cmake_build_type });
     cmake_install.addArgs(&.{ "--component", "Unspecified" });
     cmake_install.step.dependOn(&cmake_build.step);
+    cmake_install.stdio = .inherit;
 
-    const include_path = install_out.path(b, "include");
-    include_path.addStepDependencies(&cmake_install.step);
-
-    const lib_path = install_out.path(b, "lib");
-    lib_path.addStepDependencies(&cmake_install.step);
+    const include_path = install_path.path(b, "include");
+    const lib_path = install_path.path(b, "lib");
 
     step.dependOn(&cmake_install.step);
     b.getInstallStep().dependOn(step);

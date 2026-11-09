@@ -176,7 +176,7 @@ pub fn build(b: *std.Build) !void {
 
     const sdk_path = b.option([]const u8, "sdk", "Path to macOS SDK (looks something like MacOSX26.5.sdk)") orelse std.zig.system.darwin.getSdk(b.allocator, b.graph.io, &target.result);
     const sdk: ?SdkPaths = .resolve(b, sdk_path);
-    const backend = b.option(diligent_vendor.Backend, "backend", "Backend to use\n(default: gl)") orelse .gl;
+    const backend = b.option(diligent_vendor.Backend, "backend", "Backend to use\n(default: vulkan)") orelse .vulkan;
     const skip_cmake = b.option(bool, "skip_cmake", "Skip CMake builds (for ZLS check)") orelse false;
 
     const dep_sdl3 = b.dependency("sdl3", .{ .target = target, .optimize = optimize, .ext_mixer = true });
@@ -287,7 +287,7 @@ pub fn build(b: *std.Build) !void {
                 b.fmt("{s}", .{backend.toCFlag()}),
             },
             .include_paths = &.{
-                b.path("vendor/DiligentEngine/install/include"),
+                b.path(b.fmt("vendor/DiligentEngine/install-{s}/include", .{@tagName(backend)})),
                 b.path("src/gpu/glue/diligent/"),
             },
         });
@@ -390,8 +390,10 @@ pub fn build(b: *std.Build) !void {
             engine_mod.addObjectFile(diligent_lib_dir.path(b, b.fmt("lib{s}.a", .{lib_name})));
         }
 
-        const diligent_vk_static_dir = dep_diligent.namedLazyPath("lib-vk-static-build");
-        engine_mod.addObjectFile(diligent_vk_static_dir.path(b, "libDiligent-GraphicsEngineVk-static.a"));
+        if (backend == .vulkan) {
+            const diligent_vk_static_dir = dep_diligent.namedLazyPath("lib-vk-static-build");
+            engine_mod.addObjectFile(diligent_vk_static_dir.path(b, "libDiligent-GraphicsEngineVk-static.a"));
+        }
     }
 
     // Slang
