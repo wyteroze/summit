@@ -163,6 +163,7 @@ const CompileCommands = struct {
         const write_cc = self.b.addWriteFile("compile_commands.json", try allocating_writer.toOwnedSlice());
         const update = self.b.addUpdateSourceFiles();
         update.addCopyFileToSource(write_cc.getDirectory().path(self.b, "compile_commands.json"), ".clangd-db/compile_commands.json");
+        update.step.dependOn(&write_cc.step);
         self.step.dependOn(&update.step);
     }
 };
