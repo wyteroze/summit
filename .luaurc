@@ -4,6 +4,7 @@
         "core": "./api/core",
         "assets": "./api/assets",
         "input": "./api/input",
-        "ui": "./api/ui"
+        "ui": "./api/ui",
+        "render": "./api/render",
     }
 }
