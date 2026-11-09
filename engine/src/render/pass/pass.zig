@@ -10,6 +10,7 @@ pub const DepthPrepassPass = @import("DepthPrepassPass.zig");
 pub const LightCullPass = @import("LightCullPass.zig");
 pub const SkyboxPass = @import("SkyboxPass.zig");
 pub const UiPass = @import("UiPass.zig");
+pub const GizmoPass = @import("GizmoPass.zig");
 
 pub const PassContext = struct {
     device: *gpu.GpuDevice,

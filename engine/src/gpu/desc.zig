@@ -81,7 +81,7 @@ pub const PipelineDesc = struct {
     layout: []const VertexAttr,
     resources: []const ResourceDesc,
     topology: PrimitiveTopology = .tris,
-    index_type: types.IndexType = .none,
+    index_type: types.IndexType = .uint32,
     cull_mode: CullMode = .none,
     depth_write: bool = false,
     color_write_mask: ColorWriteMask = .all(),

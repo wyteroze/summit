@@ -4,6 +4,7 @@ const std = @import("std");
 const core = @import("../core/core.zig");
 const math = core.math;
 const gpu = @import("../gpu/gpu.zig");
+const Gizmos = @import("Gizmos.zig");
 
 pub const Material = struct {
     image: gpu.GpuDevice.GpuImage,
@@ -77,6 +78,10 @@ pub const RenderScene = struct {
     lights: []const gpu.types.GpuLight,
     clear_color: core.Color = .fromRgbFloat(0, 0, 0, 1.0),
     ambient: core.Color = .fromRgbFloat(0.1, 0.1, 0.1, 1.0),
+    /// Not meant to be filled out by anyone other than Renderer.
+    gizmo_tested: []const Gizmos.Vertex = &.{},
+    /// Not meant to be filled out by anyone other than Renderer.
+    gizmo_overlay: []const Gizmos.Vertex = &.{},
 };
 
 pub const RenderFrame = struct {

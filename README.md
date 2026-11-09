@@ -34,7 +34,6 @@ Adapt your game to countless devices easily.
 These items aren't guaranteed, and priorities may change down the road.
 
 ### Next
-- Gizmo API for debugging
 - Renderer improvements: more control over lighting and textures, custom render passes
 - Less object-oriented, more data-oriented scripting API
 - Additional platforms: Linux, Windows, iOS, Android, Web

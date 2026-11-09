@@ -48,3 +48,11 @@ pub fn painterShaderDesc() desc.ShaderDesc {
         .{ .name = "PainterShader: fragment", .stage = .fragment, .source = source, .entrypoint = "fragmentMain" },
     } };
 }
+
+pub fn gizmoShaderDesc() desc.ShaderDesc {
+    const source = @embedFile("shaders/src/gizmo.slang");
+    return .{ .stages = &.{
+        .{ .name = "GizmoShader: vertex", .stage = .vertex, .source = source, .entrypoint = "vertexMain" },
+        .{ .name = "GizmoShader: fragment", .stage = .fragment, .source = source, .entrypoint = "fragmentMain" },
+    } };
+}

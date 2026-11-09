@@ -7,6 +7,7 @@ const types = @import("types.zig");
 const core = @import("../core/core.zig");
 const RenderGraph = @import("RenderGraph.zig");
 const RenderView = @import("RenderView.zig");
+const Gizmos = @import("Gizmos.zig");
 const resource = @import("resource.zig");
 const pass = @import("pass/pass.zig");
 const math = core.math;
@@ -33,6 +34,7 @@ default_quad: gpu.types.GpuMesh,
 lights_ssbo: gpu.GpuDevice.GpuBuffer,
 render_views: std.AutoHashMap(u64, RenderView),
 windows: std.AutoHashMap(u64, types.RenderWindow),
+gizmos: Gizmos,
 
 pub fn init(allocator: std.mem.Allocator, gpu_device: *gpu.GpuDevice, skybox_cubemap: gpu.GpuDevice.GpuImage) !Renderer {
     var scene_graph: RenderGraph = .init(allocator);
@@ -66,12 +68,18 @@ pub fn init(allocator: std.mem.Allocator, gpu_device: *gpu.GpuDevice, skybox_cub
     errdefer allocator.destroy(ui_pass);
     ui_pass.* = try .init(gpu_device, ui_shader, painter_shader);
 
+    const gizmo_shader = try gpu_device.createShader(gpu.shaders.gizmoShaderDesc());
+    const gizmo_pass = try allocator.create(pass.GizmoPass);
+    errdefer allocator.destroy(gizmo_pass);
+    gizmo_pass.* = try .init(gpu_device, gizmo_shader);
+
     gpu_device.releaseCompiler();
 
     try scene_graph.addNode(depth_prepass.node());
     try scene_graph.addNode(skybox_pass.node());
     try scene_graph.addNode(light_cull_pass.node());
     try scene_graph.addNode(forward_pass.node());
+    try scene_graph.addNode(gizmo_pass.node());
     try scene_graph.markExternal(resource.lights_buffer);
     try scene_graph.markExternal(resource.default_sampler);
     try scene_graph.markExternal(resource.default_image);
@@ -97,6 +105,7 @@ pub fn init(allocator: std.mem.Allocator, gpu_device: *gpu.GpuDevice, skybox_cub
         .ui_graph = ui_graph,
         .default_sampler = try gpu_device.createSampler(.{}),
         .windows = .init(allocator),
+        .gizmos = .init(allocator),
         .default_image = try gpu_device.createImage(.{
             .name = "Default image",
             .width = 1,
@@ -139,6 +148,7 @@ pub fn deinit(self: *Renderer) void {
     var rv_iter = self.render_views.valueIterator();
     while (rv_iter.next()) |rv| rv.deinit();
 
+    self.gizmos.deinit();
     self.windows.deinit();
     self.render_views.deinit();
     self.lights_ssbo.deinit();
@@ -152,8 +162,12 @@ pub fn deinit(self: *Renderer) void {
 
 pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: []types.RenderWindowRequest) !void {
     for (views) |req| {
-        std.debug.assert(req.scene.lights.len <= max_lights);
-        self.lights_ssbo.update(std.mem.sliceAsBytes(req.scene.lights));
+        var scene = req.scene;
+        scene.gizmo_tested = self.gizmos.tested.items;
+        scene.gizmo_overlay = self.gizmos.overlay.items;
+
+        std.debug.assert(scene.lights.len <= max_lights);
+        self.lights_ssbo.update(std.mem.sliceAsBytes(scene.lights));
 
         const rv = self.getView(req.render_view_id) orelse continue;
 
@@ -170,7 +184,7 @@ pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: 
         const ctx: pass.PassContext = .{
             .device = self.gpu_device,
             .view = &req.frame,
-            .scene = &req.scene,
+            .scene = &scene,
             .resources = &self.scene_graph.resources,
             .frame_allocator = self.frame_allocator.allocator(),
         };
@@ -210,9 +224,10 @@ pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: 
             .frame_allocator = self.frame_allocator.allocator(),
         });
     }
-
     for (rendered.items) |w| w.swapchain.present(w.vsync);
 
+    if (self.gizmos.dropped > 0) std.log.warn("Gizmos: dropped {d} vertices!", .{self.gizmos.dropped});
+    self.gizmos.clear();
     if (!self.frame_allocator.reset(.retain_capacity)) std.log.err("Frame allocator reset failed", .{});
 }
 
