@@ -15,12 +15,15 @@ Summit is fully free and open-source under the Apache-2.0 license.
 Summit is still in very early development. Some of what you'd expect from a game engine is present,
 but it's not fully developed, and many important pieces are still missing.
 
-**Zig/Luau version**: As both Zig and Luau are rapidly changing languages, Summit does not keep up with them.
-Zig is kept up to the latest stable release, and Luau is updated around monthly or sooner if a new major feature is released.
+**Zig/Luau version**: Summit is written in Zig, and it uses Luau for scripting.
+As these are rapidly changing languages, Summit does not keep up with them.
+Zig is kept up to the latest stable release, and Luau is updated around monthly 
+or sooner if a new major feature is released.
 
 ### Goals
 
-* **Cross platform**: Aims to let you export your game to desktop, mobile, and web. Adapt your game to countless devices easily.
+* **Cross platform**: Aims to let you export your game to desktop, mobile, and web. 
+Adapt your game to countless devices easily.
 * **Simple**: Easy to start with, complexity stays out of your way unless you need it.
 * **Scripting**: Luau, plus a C API planned.
 * **3D/2D**: Only 3D is supported at the moment, but dedicated 2D is planned.
@@ -37,6 +40,7 @@ These items aren't guaranteed, and priorities may change down the road.
 - Additional platforms: Linux, Windows, iOS, Android, Web
 
 ### Later
+- Editor (needed to decouple asset processing from the base runtime, unblocking platforms like web/mobile)
 - Input actions and gamepad/touch support
 - Multithreading, profiling, and performance work
 - IO, HTTP, and file scripting APIs
@@ -44,7 +48,6 @@ These items aren't guaranteed, and priorities may change down the road.
 - Video support
 - Particle and animation systems
 - C API and dedicated 2D
-- Editor
 
 ### Ideas
 - Asset system overhaul
@@ -55,7 +58,7 @@ These items aren't guaranteed, and priorities may change down the road.
 
 > [!NOTE]
 > macOS is only the currently supported OS, and aarch64/x86_64 are the only currently supported architectures.
-> This will change very soon in the future, and it's very easy to add new OS/arch support yourself.
+> This will change very soon in the future, and it's very easy to add new OS/arch support yourself if you want to contribute.
 
 1. Install latest stable version of Zig (https://ziglang.org/download/)
 2. Clone and open the repo (`git clone https://github.com/wyteroze/summit.git`, then `cd summit`)
@@ -80,3 +83,4 @@ These items aren't guaranteed, and priorities may change down the road.
 * **zphysics**: [MIT](https://github.com/zig-gamedev/zphysics/blob/main/LICENSE)
 * **zig-toml**: [MIT](https://github.com/sam701/zig-toml/blob/main/LICENSE)
 * **zig-assimp**: [BSD-3-Clause](https://github.com/allyourcodebase/assimp/blob/master/LICENCE)
+* **zig-sdl3**: [MIT](https://codeberg.org/7Games/zig-sdl3/src/branch/master/LICENSE)
