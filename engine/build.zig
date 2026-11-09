@@ -437,4 +437,12 @@ pub fn build(b: *std.Build) !void {
     }
 
     b.installArtifact(engine_lib);
+
+    const test_step = b.step("test", "Test the engine");
+    const test_artifact = b.addTest(.{ .root_module = engine_mod });
+
+    const run_test_cmd = b.addRunArtifact(test_artifact);
+
+    test_step.dependOn(&run_test_cmd.step);
+    run_test_cmd.step.dependOn(b.getInstallStep());
 }

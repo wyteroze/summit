@@ -81,8 +81,12 @@ pub fn build(b: *std.Build) void {
     run_cmd.step.dependOn(b.getInstallStep());
 
     const test_step = b.step("test", "Test the app");
+
     const test_cmd = b.addTest(.{ .root_module = exe_mod });
-    test_step.dependOn(&test_cmd.step);
-    test_cmd.step.dependOn(b.getInstallStep());
-    run_cmd.addPassthruArgs();
+    const run_test_cmd = b.addRunArtifact(test_cmd); // Required to actually execute tests
+    test_step.dependOn(&run_test_cmd.step);
+
+    if (dep_engine.builder.top_level_steps.get("test")) |tls| {
+        test_step.dependOn(&tls.step);
+    }
 }
