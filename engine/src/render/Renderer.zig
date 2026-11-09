@@ -3,7 +3,6 @@
 const std = @import("std");
 const gpu = @import("../gpu/gpu.zig");
 const Ecs = @import("../ecs/Ecs.zig");
-const assets = @import("../assets/Assets.zig");
 const types = @import("types.zig");
 const core = @import("../core/core.zig");
 const RenderGraph = @import("RenderGraph.zig");
@@ -30,7 +29,7 @@ scene_graph: RenderGraph,
 ui_graph: RenderGraph,
 default_sampler: gpu.GpuDevice.GpuSampler,
 default_image: gpu.GpuDevice.GpuImage,
-default_quad: assets.types.GpuMesh,
+default_quad: gpu.types.GpuMesh,
 lights_ssbo: gpu.GpuDevice.GpuBuffer,
 render_views: std.AutoHashMap(u64, RenderView),
 windows: std.AutoHashMap(u64, types.RenderWindow),
@@ -108,7 +107,7 @@ pub fn init(allocator: std.mem.Allocator, gpu_device: *gpu.GpuDevice, skybox_cub
         .default_quad = .{
             .vertex_buffer = try gpu_device.createBuffer(.{
                 .name = "Default quad vertex buffer",
-                .data = std.mem.sliceAsBytes(([_]assets.types.Vertex{
+                .data = std.mem.sliceAsBytes(([_]gpu.types.Vertex{
                     .{ .position = .{ -0.5, 0.5, 0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 0, 0 } },
                     .{ .position = .{ 0.5, 0.5, 0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 1, 0 } },
                     .{ .position = .{ -0.5, -0.5, 0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 0, 1 } },
