@@ -91,13 +91,13 @@ pub fn deinit(self: *World3D) void {
 }
 
 pub fn update(self: *World3D, dt: f32) void {
-    self.world.update(dt);
     self.physics.reconcile(dt) catch |e|
         std.log.err("Physics.reconcile() failed: {t}", .{e});
     self.physics.step(dt);
     self.physics.pull() catch |e|
         std.log.err("Physics.pull() failed: {t}", .{e});
     self.world.clearChanged();
+    self.world.update(dt);
 }
 
 pub fn raycast(self: *World3D, origin: math.Vec3, dir: math.Vec3, opts: Physics.RaycastOptions) ?Physics.RaycastHit {
