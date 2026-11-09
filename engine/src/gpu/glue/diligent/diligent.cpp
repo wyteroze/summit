@@ -525,6 +525,15 @@ SummitPipelineHandle diligent_create_pipeline(SummitDiligentDeviceHandle handle,
     psoCreateInfo.PSODesc.ResourceLayout.Variables = vars.data();
     psoCreateInfo.PSODesc.ResourceLayout.NumVariables = static_cast<uint32_t>(vars.size());
 
+    switch (desc.topology) {
+        case SUMMIT_PRIMITIVE_TOPOLOGY_TRIS: 
+            graphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            break;
+        case SUMMIT_PRIMITIVE_TOPOLOGY_LINES: 
+            graphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_LINE_LIST;
+            break;
+    }
+
     IPipelineState* pso = nullptr;
     handle->device->CreateGraphicsPipelineState(psoCreateInfo, &pso);
     if (!pso) {

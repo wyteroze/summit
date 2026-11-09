@@ -177,6 +177,11 @@ typedef enum {
     SUMMIT_COMPARISON_FUNC_NOT_EQUAL,
 } SummitCompareFunc;
 
+typedef enum {
+    SUMMIT_PRIMITIVE_TOPOLOGY_TRIS,
+    SUMMIT_PRIMITIVE_TOPOLOGY_LINES,
+} PrimitiveTopology;
+
 typedef struct {
     const char* name;
     SummitShaderHandle shader;
@@ -184,6 +189,7 @@ typedef struct {
     size_t layout_len;
     const SummitResourceDesc* resources;
     size_t resources_len;
+    PrimitiveTopology topology;
     /// DEFAULT: NONE
     SummitIndexType index_type;
     /// DEFAULT: NONE

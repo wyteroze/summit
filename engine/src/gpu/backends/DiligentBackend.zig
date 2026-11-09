@@ -110,6 +110,7 @@ pub fn createPipeline(self: DiligentBackend, d: desc.PipelineDesc) types.Pipelin
         .layout_len = d.layout.len,
         .resources = resources.ptr,
         .resources_len = resources.len,
+        .topology = @backingInt(d.topology),
         .color_write_mask = .{ .red = d.color_write_mask.red, .green = d.color_write_mask.green, .blue = d.color_write_mask.blue, .alpha = d.color_write_mask.alpha },
         .alpha_blend_enabled = d.alpha_blend_enabled,
         .depth_format = if (d.depth_format) |f| @backingInt(f) else 0,

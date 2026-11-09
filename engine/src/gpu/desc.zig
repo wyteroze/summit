@@ -74,11 +74,13 @@ pub const ColorWriteMask = packed struct {
     }
 };
 
+pub const PrimitiveTopology = enum { tris, lines };
 pub const PipelineDesc = struct {
     name: [:0]const u8,
     shader: types.ShaderHandle,
     layout: []const VertexAttr,
     resources: []const ResourceDesc,
+    topology: PrimitiveTopology = .tris,
     index_type: types.IndexType = .none,
     cull_mode: CullMode = .none,
     depth_write: bool = false,
