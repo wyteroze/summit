@@ -64,6 +64,9 @@ noinline fn workerMaybe() ?*Worker {
 pub noinline fn current() *Scheduler {
     return worker().scheduler;
 }
+pub noinline fn currentWorkerId() usize {
+    return worker().id;
+}
 pub noinline fn currentHomeFiber() *Fiber {
     return &worker().home;
 }

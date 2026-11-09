@@ -43,14 +43,8 @@ pub fn init(stack_size: usize) !Fiber {
     );
     errdefer std.posix.munmap(mem);
 
-    const rc = std.os.linux.mprotect(mem.ptr, mem.len, .{});
-    switch (std.posix.errno(rc)) {
-        .SUCCESS => {},
-        .INVAL => return error.InvalidArgument,
-        .ACCES => return error.AccessDenied,
-        .NOMEM => return error.OutOfMemory,
-        else => return error.Unexpected,
-    }
+    if (std.c.mprotect(mem.ptr, page, .{ .READ = false, .WRITE = false }) != 0)
+        return error.Unexpected;
 
     return .{ .stack = mem };
 }
@@ -80,12 +74,12 @@ pub fn trampolineLand(self: *Fiber) callconv(.c) noreturn {
     self.state = .finished;
 
     const home = Scheduler.currentHomeFiber();
-    summit_fiber_swap(&self.regs, &home.regs);
+    @call(.never_inline, summit_fiber_swap, .{ &self.regs, &home.regs });
     unreachable;
 }
 
 pub fn switchTo(self: *Fiber, target: *Fiber) void {
-    summit_fiber_swap(&self.regs, &target.regs);
+    @call(.never_inline, summit_fiber_swap, .{ &self.regs, &target.regs });
     // Runs on the thread that resumed us
     Scheduler.afterSwitch();
 }
