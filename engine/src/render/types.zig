@@ -4,16 +4,15 @@ const std = @import("std");
 const core = @import("../core/core.zig");
 const math = core.math;
 const gpu = @import("../gpu/gpu.zig");
-const assets = @import("../assets/Assets.zig");
 
 pub const Material = struct {
-    image: assets.types.GpuImage,
+    image: gpu.GpuDevice.GpuImage,
     sampler: gpu.GpuDevice.GpuSampler,
 };
 
 pub const RenderObject = struct {
     model: math.Mat4,
-    mesh: assets.types.GpuMesh,
+    mesh: gpu.types.GpuMesh,
     material: Material,
 };
 

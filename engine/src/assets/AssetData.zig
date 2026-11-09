@@ -95,8 +95,8 @@ pub const CpuAssetData = union(AssetType) {
 };
 
 pub const GpuAssetData = union(AssetType) {
-    mesh: types.GpuMesh,
-    image: types.GpuImage,
+    mesh: gpu.types.GpuMesh,
+    image: gpu.GpuDevice.GpuImage,
     font: render.text.FontAtlas,
 
     // Not supported

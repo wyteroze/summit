@@ -1,5 +1,6 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
+const gpu = @import("gpu.zig");
 pub const BufferHandle = struct { ptr: *anyopaque };
 pub const ImageHandle = struct { ptr: *anyopaque };
 pub const ShaderHandle = struct { ptr: *anyopaque };
@@ -31,6 +32,12 @@ pub const IndexType = enum { none, uint16, uint32 };
 pub const WrapType = enum { repeat, clamp };
 pub const FilterType = enum { linear, nearest };
 
+pub const Vertex = extern struct {
+    position: [3]f32,
+    normal: [3]f32,
+    uv: [2]f32,
+};
+
 pub const GpuLight = extern struct {
     position_or_dir: [3]f32,
     kind: u32, // 0 = point, 1 = directional
@@ -45,4 +52,16 @@ pub const GpuLightParams = extern struct {
     _pad: f32 = undefined,
     screen_size: [2]u32,
     tile_count: [2]u32,
+};
+
+pub const GpuMesh = struct {
+    vertex_buffer: gpu.GpuDevice.GpuBuffer,
+    index_buffer: gpu.GpuDevice.GpuBuffer,
+    vertex_count: u32,
+    index_count: u32,
+
+    pub fn deinit(self: GpuMesh) void {
+        self.vertex_buffer.deinit();
+        self.index_buffer.deinit();
+    }
 };

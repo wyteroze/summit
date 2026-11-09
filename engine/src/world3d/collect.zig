@@ -10,7 +10,7 @@ const World3D = @import("World3D.zig");
 const types = @import("types.zig");
 
 pub const Defaults = struct {
-    quad: Assets.types.GpuMesh,
+    quad: gpu.types.GpuMesh,
     image: gpu.GpuDevice.GpuImage,
     sampler: gpu.GpuDevice.GpuSampler,
 };

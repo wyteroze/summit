@@ -1,6 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
+const gpu = @import("../../gpu/gpu.zig");
 const types = @import("../types.zig");
 const ImportLocation = @import("importers.zig").ImportLocation;
 const assimp = @import("assimp");
@@ -28,7 +29,7 @@ pub fn importMesh(allocator: std.mem.Allocator, location: ImportLocation) !types
     // TODO: import all meshes in the scene instead of only first
     const ai_mesh = scene.*.mMeshes[0].*;
 
-    var vertices = try allocator.alloc(types.Vertex, ai_mesh.mNumVertices);
+    var vertices = try allocator.alloc(gpu.types.Vertex, ai_mesh.mNumVertices);
     errdefer allocator.free(vertices);
 
     for (0..ai_mesh.mNumVertices) |i| {

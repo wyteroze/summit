@@ -5,14 +5,8 @@ const gpu = @import("../gpu/gpu.zig");
 const math = @import("../core/math/math.zig");
 const text = @import("../render/text/text.zig");
 
-pub const Vertex = extern struct {
-    position: [3]f32,
-    normal: [3]f32,
-    uv: [2]f32,
-};
-
 pub const Mesh = struct {
-    vertices: []Vertex,
+    vertices: []gpu.types.Vertex,
     indices: []u32,
 
     pub fn deinit(self: *const Mesh, allocator: std.mem.Allocator) void {
@@ -96,20 +90,5 @@ pub const AudioStream = struct {
             .decoded => |s| allocator.free(s),
             .streamed => |s| allocator.free(s.bytes),
         }
-    }
-};
-
-// GPU-specific. Stored in GPU memory
-
-pub const GpuImage = gpu.GpuDevice.GpuImage;
-pub const GpuMesh = struct {
-    vertex_buffer: gpu.GpuDevice.GpuBuffer,
-    index_buffer: gpu.GpuDevice.GpuBuffer,
-    vertex_count: u32,
-    index_count: u32,
-
-    pub fn deinit(self: GpuMesh) void {
-        self.vertex_buffer.deinit();
-        self.index_buffer.deinit();
     }
 };

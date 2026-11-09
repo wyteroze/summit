@@ -6,7 +6,6 @@ const RenderGraph = @import("../RenderGraph.zig");
 const resource = @import("../resource.zig");
 const pass = @import("pass.zig");
 const core = @import("../../core/core.zig");
-const Assets = @import("../../assets/Assets.zig");
 const render_types = @import("../types.zig");
 const text = @import("../text/text.zig");
 const math = core.math;
@@ -49,7 +48,7 @@ ui_pipeline: gpu.GpuDevice.GpuPipeline,
 ui_shader: gpu.GpuDevice.GpuShader,
 ui_sampler: gpu.GpuDevice.GpuSampler,
 ui_vs_ubuf: gpu.GpuDevice.GpuBuffer,
-ui_quad: Assets.types.GpuMesh,
+ui_quad: gpu.types.GpuMesh,
 
 painter_pipeline: gpu.GpuDevice.GpuPipeline,
 painter_shader: gpu.GpuDevice.GpuShader,
@@ -108,7 +107,7 @@ pub fn init(device: *gpu.GpuDevice, ui_shader: gpu.GpuDevice.GpuShader, painter_
         .ui_quad = .{
             .vertex_buffer = try device.createBuffer(.{
                 .name = "Ui quad vertex buffer",
-                .data = std.mem.sliceAsBytes(([_]Assets.types.Vertex{
+                .data = std.mem.sliceAsBytes(([_]gpu.types.Vertex{
                     .{ .position = .{ 0.0, 0.0, 0.0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 0, 0 } },
                     .{ .position = .{ 1.0, 0.0, 0.0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 1, 0 } },
                     .{ .position = .{ 0.0, 1.0, 0.0 }, .normal = .{ 0, 0, 1 }, .uv = .{ 0, 1 } },

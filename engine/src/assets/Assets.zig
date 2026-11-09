@@ -73,8 +73,8 @@ pub const AssetHandle = struct {
     }
 
     pub fn gpuGet(self: AssetHandle, comptime asset_type: AssetData.AssetType) !switch (asset_type) {
-        .mesh => types.GpuMesh,
-        .image => types.GpuImage,
+        .mesh => gpu.types.GpuMesh,
+        .image => gpu.GpuDevice.GpuImage,
         .font => render.text.FontAtlas,
         .script_source, .audio => unreachable,
     } {
@@ -87,8 +87,8 @@ pub const AssetHandle = struct {
     }
 
     pub fn ensureGpuGet(self: AssetHandle, comptime asset_type: AssetData.AssetType, upload_ctx: UploadContext) !switch (asset_type) {
-        .mesh => types.GpuMesh,
-        .image => types.GpuImage,
+        .mesh => gpu.types.GpuMesh,
+        .image => gpu.GpuDevice.GpuImage,
         .font => render.text.FontAtlas,
         .script_source, .audio => unreachable,
     } {

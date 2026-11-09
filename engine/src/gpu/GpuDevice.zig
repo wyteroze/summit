@@ -135,7 +135,7 @@ pub const GpuComputePipeline = struct {
 
 // TODO: When we have the editor and an actual build process for games,
 // compile shaders beforehand instead of at runtime. The slang compiler is heavy
-// (uses about 130mb) and creating it is slow, so we can't just create it only when we need it.
+// (uses about 130mb) and creating it is slow, so we can't just create every time we need it.
 pub const GpuShader = struct {
     backend: Backend,
     handle: types.ShaderHandle,
