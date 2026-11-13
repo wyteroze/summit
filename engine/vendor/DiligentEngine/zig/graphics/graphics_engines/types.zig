@@ -1410,6 +1410,8 @@ pub const SwapchainUsageFlags = packed struct(u32) {
 
     /// Swap chain images can be used as a source of copy operation
     SWAP_CHAIN_USAGE_COPY_SOURCE: bool = false,
+
+    _padding: u28 = 0,
 };
 
 /// The transform applied to the image content prior to presentation.
@@ -2893,4 +2895,290 @@ pub const DeviceContextStats = extern struct {
     comptime {
         helpers.ensureSame(@This(), c.DeviceContextStats);
     }
+};
+
+/// Resource binding flags
+///
+/// [D3D11_BIND_FLAG]: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_bind_flag
+///
+/// This enumeration describes which parts of the pipeline a resource can be bound to.
+/// It generally mirrors [D3D11_BIND_FLAG][] enumeration. It is used by
+/// - BufferDesc to describe bind flags for a buffer
+/// - TextureDesc to describe bind flags for a texture
+pub const BindFlags = packed struct(u32) {
+    /// A buffer can be bound as a vertex buffer.
+    vertex_buffer: bool = false,
+
+    /// A buffer can be bound as an index buffer.
+    index_buffer: bool = false,
+
+    /// A buffer can be bound as a uniform buffer.
+    ///
+    /// **Warning:** This flag may not be combined with any other bind flag.
+    uniform_buffer: bool = false,
+
+    /// A buffer or a texture can be bound as a shader resource.
+    shader_resource: bool = false,
+
+    /// A buffer can be bound as a target for stream output stage.
+    stream_output: bool = false,
+
+    /// A texture can be bound as a render target.
+    render_target: bool = false,
+
+    /// A texture can be bound as a depth-stencil target.
+    depth_stencil: bool = false,
+
+    /// A buffer or a texture can be bound as an unordered access view.
+    unordered_access: bool = false,
+
+    /// A buffer can be bound as the source buffer for indirect draw commands.
+    indirect_draw_args: bool = false,
+
+    /// A texture can be used as render pass input attachment.
+    input_attachment: bool = false,
+
+    /// A buffer can be used as a scratch buffer or as the source of primitive data
+    /// for acceleration structure building.
+    ray_tracing: bool = false,
+
+    /// A texture can be used as shading rate texture.
+    shading_rate: bool = false,
+
+    _padding: u20 = 0,
+};
+
+/// Resource usage
+///
+/// [D3D11_USAGE]: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_usage
+/// This enumeration describes expected resource usage. It generally mirrors [D3D11_USAGE] enumeration.
+/// The enumeration is used by
+/// - BufferDesc to describe usage for a buffer
+/// - TextureDesc to describe usage for a texture
+pub const Usage = enum(u8) {
+    /// A resource that can only be read by the GPU. It cannot be written by the GPU,
+    /// and cannot be accessed at all by the CPU. This type of resource must be initialized
+    /// when it is created, since it cannot be changed after creation.
+    ///
+    /// D3D11 Counterpart: D3D11_USAGE_IMMUTABLE. OpenGL counterpart: GL_STATIC_DRAW
+    ///
+    /// **Remarks:** Static buffers do not allow CPU access and must use CPU_ACCESS_NONE flag.
+    immutable,
+
+    /// A resource that requires read and write access by the GPU and can also be occasionally
+    /// written by the CPU.
+    ///
+    /// D3D11 Counterpart: D3D11_USAGE_DEFAULT. OpenGL counterpart: GL_STREAM_DRAW.
+    ///
+    /// **Remarks:** Default buffers do not allow CPU access and must use CPU_ACCESS_NONE flag.
+    default,
+
+    /// A resource that can be read by the GPU and written at least once per frame by the CPU.
+    ///
+    /// D3D11 Counterpart: D3D11_USAGE_DYNAMIC. OpenGL counterpart: GL_DYNAMIC_DRAW
+    ///
+    /// **Remarks:** Dynamic buffers must use CPU_ACCESS_WRITE flag.
+    dynamic,
+
+    /// A resource that facilitates transferring data between GPU and CPU.
+    ///
+    /// D3D11 Counterpart: D3D11_USAGE_STAGING. OpenGL counterpart: GL_STREAM_READ or
+    /// GL_STREAM_DRAW depending on the CPU access flags.
+    ///
+    /// **Remarks:** Staging buffers must use exactly one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.
+    staging,
+
+    /// A resource residing in a unified memory (e.g. memory shared between CPU and GPU),
+    /// that can be read and written by GPU and can also be directly accessed by CPU.
+    ///
+    /// An application should check if unified memory is available on the device by querying
+    /// the adapter info (see Diligent::IRenderDevice::GetAdapterInfo().Memory and Diligent::AdapterMemoryInfo).
+    /// If there is no unified memory, an application should choose another usage type (typically, USAGE_DEFAULT).
+    ///
+    /// Unified resources must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.
+    /// An application should check supported unified memory CPU access types by querying the device caps.
+    /// (see Diligent::AdapterMemoryInfo::UnifiedMemoryCPUAccess).
+    unified,
+
+    /// A resource that can be partially committed to physical memory.
+    sparse,
+};
+
+/// Allowed CPU access mode flags when mapping a resource
+///
+/// The enumeration is used by
+/// - BufferDesc to describe CPU access mode for a buffer
+/// - TextureDesc to describe CPU access mode for a texture
+///
+/// **Note:** Only `Usage.dynamic` resources can be mapped
+///
+/// **Zig Usage:** The default value of CPUAccessFlags is equivalent to CPU_ACCESS_NONE in Diligent.
+pub const CPUAccessFlags = packed struct(u8) {
+    /// A resource can be mapped for reading
+    read: bool = false,
+    /// A resource can be mapped for writing
+    write: bool = false,
+
+    _padding: u6 = 0,
+};
+
+/// Describes the buffer access mode.
+///
+/// This enumeration is used by BufferDesc structure.
+pub const BufferMode = enum(u8) {
+    /// Undefined mode.
+    undefined,
+
+    /// Formatted buffer. Access to the buffer will use format conversion operations.
+    /// In this mode, ElementByteStride member of BufferDesc defines the buffer element size.
+    /// Buffer views can use different formats, but the format size must match ElementByteStride.
+    formatted,
+
+    /// Structured buffer.
+    /// In this mode, ElementByteStride member of BufferDesc defines the structure stride.
+    structured,
+
+    /// Raw buffer.
+    /// In this mode, the buffer is accessed as raw bytes. Formatted views of a raw
+    /// buffer can also be created similar to formatted buffer. If formatted views
+    /// are to be created, the ElementByteStride member of BufferDesc must specify the
+    /// size of the format.
+    raw,
+};
+
+/// Miscellaneous buffer flags.
+pub const MiscBufferFlags = packed struct(u8) {
+    /// For a sparse buffer, allow binding the same memory region in different buffer ranges
+    /// or in different sparse buffers.
+    sparse_aliasing: bool = false,
+
+    _padding: u7 = 0,
+};
+
+/// Buffer description
+pub const BufferDesc = extern struct {
+    /// Object name
+    name: ?[*:0]const u8 = null,
+
+    /// Size of the buffer, in bytes. For a uniform buffer, this must be a multiple of 16.
+    size: u64 = 0,
+
+    /// Buffer bind flags, see Diligent::BIND_FLAGS for details
+    /// The following bind flags are allowed:
+    /// Diligent::BIND_VERTEX_BUFFER, Diligent::BIND_INDEX_BUFFER, Diligent::BIND_UNIFORM_BUFFER,
+    /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_STREAM_OUTPUT, Diligent::BIND_UNORDERED_ACCESS,
+    /// Diligent::BIND_INDIRECT_DRAW_ARGS, Diligent::BIND_RAY_TRACING.
+    /// Use SparseResourceProperties::BufferBindFlags to get allowed bind flags for a sparse buffer.
+    bind_flags: BindFlags = .{},
+
+    /// Buffer usage, see Diligent::USAGE for details
+    usage: Usage = .default,
+
+    /// CPU access flags or 0 if no CPU access is allowed, see Diligent::CPU_ACCESS_FLAGS for details.
+    cpu_access_flags: CPUAccessFlags = .{},
+
+    /// Buffer mode, see Diligent::BUFFER_MODE
+    buffer_mode: BufferMode = .undefined,
+
+    /// Miscellaneous flags, see Diligent::MISC_BUFFER_FLAGS for details.
+    misc_buffer_flags: MiscBufferFlags = .{},
+
+    /// Buffer element stride, in bytes.
+    /// For a structured buffer (BufferDesc::Mode equals Diligent::BUFFER_MODE_STRUCTURED) this member
+    /// defines the size of each buffer element. For a formatted buffer
+    /// (BufferDesc::Mode equals Diligent::BUFFER_MODE_FORMATTED) and optionally for a raw buffer
+    /// (Diligent::BUFFER_MODE_RAW), this member defines the size of the format that will be used for views
+    /// created for this buffer.
+    element_byte_stride: u32 = 0,
+
+    /// Defines which immediate contexts are allowed to execute commands that use this buffer.
+    /// When ImmediateContextMask contains a bit at position n, the buffer may be
+    /// used in the immediate context with index n directly (see DeviceContextDesc::ContextId).
+    /// It may also be used in a command list recorded by a deferred context that will be executed
+    /// through that immediate context.
+    ///
+    /// \remarks    Only specify these bits that will indicate those immediate contexts where the buffer
+    ///             will actually be used. Do not set unnecessary bits as this will result in extra overhead.
+    immediate_context_mask: u64 = 1,
+
+    comptime {
+        helpers.ensureSame(@This(), c.BufferDesc);
+    }
+};
+
+/// Describes the buffer initial data
+pub const BufferData = extern struct {
+    /// Pointer to the data
+    data: ?*const anyopaque = null,
+
+    /// Data size, in bytes
+    data_size: u64 = 0,
+
+    /// The buffer will be in write state after the initialization.
+    /// If an application uses the buffer in another context afterwards, it
+    /// must synchronize the access to the buffer using fence.
+    /// When null is provided, the first context enabled by ImmediateContextMask
+    /// will be used.
+    context: ?*c.IDeviceContext = null,
+
+    comptime {
+        helpers.ensureSame(@This(), c.BufferData);
+    }
+};
+
+/// Resource mapping type
+///
+/// Describes how a mapped resource will be accessed. This enumeration generally
+/// mirrors [D3D11_MAP](https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_map) enumeration. It is used by
+/// - IBuffer::Map to describe buffer mapping type
+/// - ITexture::Map to describe texture mapping type
+pub const MapType = enum(u8) {
+    /// The resource is mapped for reading.
+    ///
+    /// D3D11 counterpart: D3D11_MAP_READ. OpenGL counterpart: GL_MAP_READ_BIT
+    read = 0x01,
+
+    /// The resource is mapped for writing.
+    ///
+    /// D3D11 counterpart: D3D11_MAP_WRITE. OpenGL counterpart: GL_MAP_WRITE_BIT
+    write = 0x02,
+
+    /// The resource is mapped for reading and writing.
+    ///
+    /// D3D11 counterpart: D3D11_MAP_READ_WRITE. OpenGL counterpart: GL_MAP_WRITE_BIT | GL_MAP_READ_BIT
+    read_write = 0x03,
+};
+
+/// Special map flags
+///
+/// Describes special arguments for a map operation.
+/// This enumeration is used by
+/// - IBuffer::Map to describe buffer mapping flags
+/// - ITexture::Map to describe texture mapping flags
+///
+/// **Zig Usage:** The default value of MapFlags is equivalent to `MAP_FLAG_NONE`.
+pub const MapFlags = packed struct(u8) {
+    /// Specifies that map operation should not wait until previous command that
+    /// using the same resource completes. Map returns null pointer if the resource
+    /// is still in use.
+    /// D3D11 counterpart:  D3D11_MAP_FLAG_DO_NOT_WAIT
+    ///
+    /// **Note:** OpenGL does not have corresponding flag, so a buffer will always be mapped
+    do_not_wait: bool = false,
+
+    /// Previous contents of the resource will be undefined. This flag is only compatible with MAP_WRITE
+    ///
+    /// D3D11 counterpart: D3D11_MAP_WRITE_DISCARD. OpenGL counterpart: GL_MAP_INVALIDATE_BUFFER_BIT
+    ///
+    /// **Note:** OpenGL implementation may orphan a buffer instead
+    discard: bool = false,
+
+    /// The system will not synchronize pending operations before mapping the buffer. It is responsibility
+    /// of the application to make sure that the buffer contents is not overwritten while it is in use by
+    /// the GPU.
+    ///
+    /// D3D11 counterpart:  D3D11_MAP_WRITE_NO_OVERWRITE. OpenGL counterpart: GL_MAP_UNSYNCHRONIZED_BIT
+    no_overwrite: bool = false,
+
+    _padding: u5 = 0,
 };

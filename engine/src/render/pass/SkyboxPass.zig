@@ -71,7 +71,7 @@ fn execute(self: *SkyboxPass, ctx: pass.PassContext) void {
     const inv_view = rotation_only_view.invertRT();
     const inv_proj = ctx.view.proj_matrix.invertPerspectiveReversedZInf();
     const inv_view_proj = inv_view.mul(inv_proj);
-    self.view_ubo.update(std.mem.asBytes(&inv_view_proj));
+    self.view_ubo.update(std.mem.asBytes(&inv_view_proj)) catch |e| std.log.err("{t}", .{e});
 
     self.pipeline.apply();
     self.pipeline.applyBindings(.{
@@ -80,7 +80,7 @@ fn execute(self: *SkyboxPass, ctx: pass.PassContext) void {
             .{ .name = "skyboxTexture", .handle = .{ .texture = self.cubemap.handle } },
             .{ .name = "skyboxSampler", .handle = .{ .sampler = self.sampler.handle } },
         },
-    });
+    }) catch |e| std.log.err("Failed to apply pipeline bindings: {t}", .{e});
     self.pipeline.draw(0, 3, 1);
 }
 

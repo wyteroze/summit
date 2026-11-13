@@ -8,13 +8,14 @@ const platforms = @import("../../platforms/platforms.zig");
 const helpers = @import("../../helpers.zig");
 
 pub const CreateInfo = types.EngineVkCreateInfo;
+pub const Factory = EngineFactoryVk;
 
 pub const EngineFactoryVk = struct {
     raw: *c.IEngineFactoryVk,
 
     /// Creates a render device and device contexts for Vulkan backend
     pub fn createDeviceAndContexts(
-        self: *EngineFactoryVk,
+        self: EngineFactoryVk,
         create_info: CreateInfo,
     ) !struct { graphics.RenderDevice, graphics.DeviceContext } {
         var device: [*c]c.IRenderDevice = null;
@@ -38,11 +39,11 @@ pub const EngineFactoryVk = struct {
 
     /// Creates a swap chain for Vulkan-based engine implementation
     pub fn createSwapchain(
-        self: *EngineFactoryVk,
-        device: *graphics.RenderDevice,
-        immediate_context: *graphics.DeviceContext,
-        swapchain_desc: *const types.SwapchainDesc,
-        window: *const platforms.NativeWindow,
+        self: EngineFactoryVk,
+        device: graphics.RenderDevice,
+        immediate_context: graphics.DeviceContext,
+        swapchain_desc: types.SwapchainDesc,
+        window: platforms.NativeWindow,
     ) !graphics.Swapchain {
         var swapchain: [*c]c.ISwapChain = null;
 
@@ -50,8 +51,8 @@ pub const EngineFactoryVk = struct {
             self.raw,
             device.raw,
             immediate_context.raw,
-            swapchain_desc.toC(),
-            @ptrCast(window),
+            @ptrCast(&swapchain_desc),
+            @ptrCast(&window),
             &swapchain,
         );
 
@@ -64,13 +65,13 @@ pub const EngineFactoryVk = struct {
     /// Use VK_DEVSIM_FILENAME environment variable to define the path to the .json file.
     ///
     /// **Remarks:** Use this function before calling EnumerateAdapters() and CreateDeviceAndContextsVk().
-    pub fn enableDeviceSimulation(self: *EngineFactoryVk) void {
+    pub fn enableDeviceSimulation(self: EngineFactoryVk) void {
         self.method("EnableDeviceSimulation")(self.raw);
     }
 
     /// Returns the supported Vulkan version. If Vulkan is not supported, returns `VulkanNotSupported`
     /// This function can be used to check whether Vulkan is supported on the platform.
-    pub fn getVulkanVersion(self: *EngineFactoryVk) error{VulkanNotSupported}!types.Version {
+    pub fn getVulkanVersion(self: EngineFactoryVk) error{VulkanNotSupported}!types.Version {
         const version: *const types.Version = @ptrCast(self.method("GetVulkanVersion")(self.raw));
         if (version.major == 0 and version.minor == 0) return error.VulkanNotSupported;
 

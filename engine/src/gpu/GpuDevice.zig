@@ -8,12 +8,12 @@ const desc = @import("desc.zig");
 const Backend = @import("backend.zig").Backend;
 
 pub const GpuBuffer = struct {
-    backend: Backend,
+    backend: *Backend,
     handle: types.BufferHandle,
     desc: desc.BufferDesc,
 
-    pub fn init(b: Backend, d: desc.BufferDesc) !GpuBuffer {
-        const handle = b.createBuffer(d);
+    pub fn init(b: *Backend, d: desc.BufferDesc) !GpuBuffer {
+        const handle = try b.createBuffer(d);
 
         return .{ .backend = b, .handle = handle, .desc = d };
     }
@@ -22,29 +22,29 @@ pub const GpuBuffer = struct {
         self.backend.deleteBuffer(self.handle);
     }
 
-    pub fn update(self: GpuBuffer, data: []const u8) void {
-        self.backend.updateBuffer(self.handle, data);
+    pub fn update(self: GpuBuffer, data: []const u8) !void {
+        try self.backend.updateBuffer(self.handle, data);
     }
 
     /// Grows the buffer to the needed size.
     /// Does nothing if the buffer is equal to or larger than the given size.
     /// Contents of the buffer are lost when this is called.
-    pub fn grow(self: *GpuBuffer, needed: usize) void {
+    pub fn grow(self: *GpuBuffer, needed: u32) !void {
         if (needed <= self.desc.size) return;
 
         const new_size = @max(needed, self.desc.size + self.desc.size / 2);
         self.backend.deleteBuffer(self.handle);
         self.desc.size = new_size;
-        self.handle = self.backend.createBuffer(self.desc);
+        self.handle = try self.backend.createBuffer(self.desc);
     }
 };
 
 pub const GpuSampler = struct {
-    backend: Backend,
+    backend: *Backend,
     handle: types.SamplerHandle,
 
-    pub fn init(b: Backend, d: desc.SamplerDesc) !GpuSampler {
-        const handle = b.createSampler(d);
+    pub fn init(b: *Backend, d: desc.SamplerDesc) !GpuSampler {
+        const handle = try b.createSampler(d);
 
         return .{ .backend = b, .handle = handle };
     }
@@ -55,13 +55,13 @@ pub const GpuSampler = struct {
 };
 
 pub const GpuImage = struct {
-    backend: Backend,
+    backend: *Backend,
     handle: types.ImageHandle,
     width: u32,
     height: u32,
 
-    pub fn init(b: Backend, d: desc.ImageDesc) !GpuImage {
-        const handle = b.createImage(d);
+    pub fn init(b: *Backend, d: desc.ImageDesc) !GpuImage {
+        const handle = try b.createImage(d);
 
         return .{ .backend = b, .handle = handle, .width = d.width, .height = d.height };
     }
@@ -80,11 +80,11 @@ pub const GpuImage = struct {
 };
 
 pub const GpuPipeline = struct {
-    backend: Backend,
+    backend: *Backend,
     handle: types.PipelineHandle,
 
-    pub fn init(b: Backend, d: desc.PipelineDesc) !GpuPipeline {
-        const handle = b.createPipeline(d);
+    pub fn init(b: *Backend, d: desc.PipelineDesc) !GpuPipeline {
+        const handle = try b.createPipeline(d);
 
         return .{ .backend = b, .handle = handle };
     }
@@ -97,8 +97,8 @@ pub const GpuPipeline = struct {
         self.backend.applyPipeline(self.handle);
     }
 
-    pub fn applyBindings(self: GpuPipeline, binds: desc.Bindings) void {
-        self.backend.applyPipelineBindings(self.handle, binds);
+    pub fn applyBindings(self: GpuPipeline, binds: desc.Bindings) !void {
+        try self.backend.applyPipelineBindings(self.handle, binds);
     }
 
     pub fn draw(self: GpuPipeline, base: u32, count: u32, instances: u32) void {
@@ -107,11 +107,11 @@ pub const GpuPipeline = struct {
 };
 
 pub const GpuComputePipeline = struct {
-    backend: Backend,
+    backend: *Backend,
     handle: types.ComputePipelineHandle,
 
-    pub fn init(b: Backend, d: desc.ComputePipelineDesc) !GpuComputePipeline {
-        const handle = b.createComputePipeline(d);
+    pub fn init(b: *Backend, d: desc.ComputePipelineDesc) !GpuComputePipeline {
+        const handle = try b.createComputePipeline(d);
 
         return .{ .backend = b, .handle = handle };
     }
@@ -137,10 +137,10 @@ pub const GpuComputePipeline = struct {
 // compile shaders beforehand instead of at runtime. The slang compiler is heavy
 // (uses about 130mb) and creating it is slow, so we can't just create every time we need it.
 pub const GpuShader = struct {
-    backend: Backend,
+    backend: *Backend,
     handle: types.ShaderHandle,
 
-    pub fn init(b: Backend, compiler: *slang.Compiler, d: desc.ShaderDesc) !GpuShader {
+    pub fn init(b: *Backend, compiler: *slang.Compiler, d: desc.ShaderDesc) !GpuShader {
         var compiled_stages: [8]desc.ShaderStageDesc = undefined;
         var results: [8]slang.CompileResult = undefined;
         var count: usize = 0;
@@ -168,7 +168,7 @@ pub const GpuShader = struct {
             count += 1;
         }
 
-        const handle = b.createShader(.{ .stages = compiled_stages[0..d.stages.len] });
+        const handle = try b.createShader(.{ .stages = compiled_stages[0..d.stages.len] });
         return .{ .backend = b, .handle = handle };
     }
 
@@ -178,11 +178,11 @@ pub const GpuShader = struct {
 };
 
 pub const GpuSwapchain = struct {
-    backend: Backend,
+    backend: *Backend,
     handle: types.SwapchainHandle,
 
-    pub fn init(b: Backend, d: desc.SwapchainDesc) !GpuSwapchain {
-        const handle = b.createSwapchain(d);
+    pub fn init(b: *Backend, d: desc.SwapchainDesc) !GpuSwapchain {
+        const handle = try b.createSwapchain(d);
         return .{ .backend = b, .handle = handle };
     }
 
@@ -205,16 +205,16 @@ pub const GpuSwapchain = struct {
 
 const GpuDevice = @This();
 allocator: std.mem.Allocator,
-backend: Backend,
+backend: *Backend,
 compiler: ?*slang.Compiler = null,
 
-pub fn init(allocator: std.mem.Allocator, b: Backend) !GpuDevice {
+pub fn init(allocator: std.mem.Allocator, b: *Backend) !GpuDevice {
     return .{ .allocator = allocator, .backend = b };
 }
 
 pub fn deinit(self: *GpuDevice) void {
     self.releaseCompiler();
-    self.backend.deinit();
+    self.backend.deinit(self.allocator);
 }
 
 pub fn createBuffer(self: GpuDevice, d: desc.BufferDesc) !GpuBuffer {
