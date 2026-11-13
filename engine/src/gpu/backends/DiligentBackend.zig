@@ -36,6 +36,33 @@ const build_opts = @import("build_options");
 //     return buf[0..resources.len];
 // }
 
+fn summitFilterToDiligent(filter: types.FilterType) graphics.types.FilterType {
+    return switch (filter) {
+        .linear => .linear,
+        .nearest => .point,
+    };
+}
+
+fn summitComparisonFuncToDiligent(func: types.ComparisonFunc) graphics.types.ComparisonFunction {
+    return switch (func) {
+        .less => .less,
+        .less_equal => .less_equal,
+        .greater => .greater,
+        .greater_equal => .greater_equal,
+        .always => .always,
+        .never => .never,
+        .equal => .equal,
+        .not_equal => .not_equal,
+    };
+}
+
+fn summitWrapToDiligent(wrap: types.WrapType) graphics.types.TextureAddressMode {
+    return switch (wrap) {
+        .clamp => .clamp,
+        .repeat => .wrap,
+    };
+}
+
 const engine = switch (build_opts.backend) {
     .vulkan => graphics.engines.GraphicsEngineVulkan,
     .d3d11 => graphics.engines.GraphicsEngineD3D11,
@@ -160,7 +187,7 @@ pub fn destroyBuffer(_: *DiligentBackend, h: types.BufferHandle) void {
 
 // Sampler
 
-pub fn createSampler(_: DiligentBackend, _: desc.SamplerDesc) types.SamplerHandle {
+pub fn createSampler(self: *DiligentBackend, d: desc.SamplerDesc) !types.SamplerHandle {
     // const sam_h = c.diligent_create_sampler(self.handle, .{
     //     .wrap_u = @backingInt(d.wrap_u),
     //     .wrap_v = @backingInt(d.wrap_v),
@@ -169,12 +196,21 @@ pub fn createSampler(_: DiligentBackend, _: desc.SamplerDesc) types.SamplerHandl
     //     .mip_filter = @backingInt(d.mip_filter),
     // });
 
+    const sampler = try self.device.createSampler(.{
+        .min_filter = summitFilterToDiligent(d.min_filter),
+        .mag_filter = summitFilterToDiligent(d.mag_filter),
+        .mip_filter = summitFilterToDiligent(d.mip_filter),
+        .address_u = summitWrapToDiligent(d.wrap_u),
+        .address_v = summitWrapToDiligent(d.wrap_v),
+    });
+
     // return .{ .ptr = sam_h.ptr.? };
-    return .{ .ptr = @ptrFromInt(1) };
+    return .{ .ptr = sampler.raw };
 }
 
-pub fn destroySampler(_: DiligentBackend, _: types.SamplerHandle) void {
-    // c.diligent_destroy_sampler(self.handle, .{ .ptr = h.ptr });
+pub fn destroySampler(_: DiligentBackend, h: types.SamplerHandle) void {
+    const sampler: graphics.Sampler = .{ .raw = @ptrCast(@alignCast(h.ptr)) };
+    sampler.release();
 }
 
 // Image
