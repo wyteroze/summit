@@ -79,6 +79,8 @@ pub fn deinit(self: DiligentBackend) void {
     self.alloc.allocator.destroy(self.alloc);
 }
 
+// Buffer
+
 pub fn createBuffer(self: *DiligentBackend, d: desc.BufferDesc) !types.BufferHandle {
     // const buf_h = c.diligent_create_buffer(self.handle, .{
     //     .name = d.name.ptr,
@@ -124,11 +126,6 @@ pub fn createBuffer(self: *DiligentBackend, d: desc.BufferDesc) !types.BufferHan
     return .{ .ptr = b.raw };
 }
 
-pub fn destroyBuffer(_: *DiligentBackend, h: types.BufferHandle) void {
-    const buffer: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(h.ptr)) };
-    buffer.release();
-}
-
 pub fn updateBuffer(self: *DiligentBackend, h: types.BufferHandle, data: []const u8) !void {
     const buffer: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(h.ptr)) };
     const d = buffer.getDesc();
@@ -156,6 +153,13 @@ pub fn updateBuffer(self: *DiligentBackend, h: types.BufferHandle, data: []const
     }
 }
 
+pub fn destroyBuffer(_: *DiligentBackend, h: types.BufferHandle) void {
+    const buffer: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(h.ptr)) };
+    buffer.release();
+}
+
+// Sampler
+
 pub fn createSampler(_: DiligentBackend, _: desc.SamplerDesc) types.SamplerHandle {
     // const sam_h = c.diligent_create_sampler(self.handle, .{
     //     .wrap_u = @backingInt(d.wrap_u),
@@ -168,6 +172,12 @@ pub fn createSampler(_: DiligentBackend, _: desc.SamplerDesc) types.SamplerHandl
     // return .{ .ptr = sam_h.ptr.? };
     return .{ .ptr = @ptrFromInt(1) };
 }
+
+pub fn destroySampler(_: DiligentBackend, _: types.SamplerHandle) void {
+    // c.diligent_destroy_sampler(self.handle, .{ .ptr = h.ptr });
+}
+
+// Image
 
 pub fn createImage(_: DiligentBackend, _: desc.ImageDesc) types.ImageHandle {
     // const img_h = c.diligent_create_image(self.handle, .{
@@ -187,6 +197,8 @@ pub fn createImage(_: DiligentBackend, _: desc.ImageDesc) types.ImageHandle {
 pub fn destroyImage(_: DiligentBackend, _: types.ImageHandle) void {
     // c.diligent_destroy_image(self.handle, .{ .ptr = h.ptr });
 }
+
+// Pipeline
 
 pub fn createPipeline(_: DiligentBackend, _: desc.PipelineDesc) types.PipelineHandle {
     // std.debug.assert(d.resources.len <= 16);
@@ -217,17 +229,37 @@ pub fn createPipeline(_: DiligentBackend, _: desc.PipelineDesc) types.PipelineHa
     return .{ .ptr = @ptrFromInt(1) };
 }
 
+pub fn applyPipeline(_: DiligentBackend, _: types.PipelineHandle) void {
+    // c.diligent_apply_pipeline(self.handle, .{ .ptr = h.ptr });
+}
+
+pub fn applyPipelineBindings(_: DiligentBackend, _: types.PipelineHandle, _: desc.Bindings) void {
+    // var vertex_buffers: [4]c.SummitBufferHandle = undefined;
+    // for (d.vertex_buffers, 0..) |vb, i| {
+    //     vertex_buffers[i] = .{ .ptr = if (vb) |handle| handle.ptr else @ptrFromInt(0) };
+    // }
+
+    // std.debug.assert(d.resources.len <= 16);
+    // var resource_buf: [16]c.SummitBoundResource = undefined;
+    // const resources = buildBoundResources(&resource_buf, d.resources);
+
+    // c.diligent_pipeline_apply_bindings(self.handle, .{ .ptr = h.ptr }, .{
+    //     .vertex_buffers = vertex_buffers,
+    //     .index_buffer = .{ .ptr = if (d.index_buffer) |handle| handle.ptr else @ptrFromInt(0) },
+    //     .resources = resources.ptr,
+    //     .resources_len = resources.len,
+    // });
+}
+
+pub fn drawPipeline(_: DiligentBackend, _: types.PipelineHandle, _: u32, _: u32, _: u32) void {
+    // c.diligent_draw_pipeline(self.handle, .{ .ptr = h.ptr }, base, count, instances);
+}
+
 pub fn destroyPipeline(_: DiligentBackend, _: types.PipelineHandle) void {
     // c.diligent_destroy_pipeline(self.handle, .{ .ptr = h.ptr });
 }
 
-pub fn destroySampler(_: DiligentBackend, _: types.SamplerHandle) void {
-    // c.diligent_destroy_sampler(self.handle, .{ .ptr = h.ptr });
-}
-
-pub fn destroyShader(_: DiligentBackend, _: types.ShaderHandle) void {
-    // c.diligent_destroy_shader(self.handle, .{ .ptr = h.ptr });
-}
+// Compute pipeline
 
 pub fn createComputePipeline(_: DiligentBackend, _: desc.ComputePipelineDesc) !types.ComputePipelineHandle {
     // std.debug.assert(d.resources.len <= 16);
@@ -245,10 +277,6 @@ pub fn createComputePipeline(_: DiligentBackend, _: desc.ComputePipelineDesc) !t
     return .{ .ptr = @ptrFromInt(1) };
 }
 
-pub fn destroyComputePipeline(_: DiligentBackend, _: types.ComputePipelineHandle) void {
-    // c.diligent_destroy_compute_pipeline(self.handle, .{ .ptr = h.ptr });
-}
-
 pub fn applyComputePipeline(_: DiligentBackend, _: types.ComputePipelineHandle) void {
     // c.diligent_apply_compute_pipeline(self.handle, .{ .ptr = h.ptr });
 }
@@ -256,6 +284,25 @@ pub fn applyComputePipeline(_: DiligentBackend, _: types.ComputePipelineHandle) 
 pub fn dispatchCompute(_: DiligentBackend, _: types.ComputePipelineHandle, _: u32, _: u32, _: u32) void {
     // c.diligent_dispatch_compute(self.handle, .{ .ptr = h.ptr }, groups_x, groups_y, groups_z);
 }
+
+pub fn applyComputeBindings(_: DiligentBackend, _: types.ComputePipelineHandle, _: desc.Bindings) void {
+    // std.debug.assert(d.resources.len <= 16);
+    // var resource_buf: [16]c.SummitBoundResource = undefined;
+    // const resources = buildBoundResources(&resource_buf, d.resources);
+
+    // c.diligent_apply_compute_bindings(self.handle, .{ .ptr = h.ptr }, .{
+    //     .vertex_buffers = @splat(.{ .ptr = @ptrFromInt(0) }),
+    //     .index_buffer = .{ .ptr = @ptrFromInt(0) },
+    //     .resources = resources.ptr,
+    //     .resources_len = resources.len,
+    // });
+}
+
+pub fn destroyComputePipeline(_: DiligentBackend, _: types.ComputePipelineHandle) void {
+    // c.diligent_destroy_compute_pipeline(self.handle, .{ .ptr = h.ptr });
+}
+
+// Shader
 
 pub fn createShader(_: DiligentBackend, _: desc.ShaderDesc) types.ShaderHandle {
     // // might need to bump this up in the future
@@ -277,6 +324,12 @@ pub fn createShader(_: DiligentBackend, _: desc.ShaderDesc) types.ShaderHandle {
     return .{ .ptr = @ptrFromInt(1) };
 }
 
+pub fn destroyShader(_: DiligentBackend, _: types.ShaderHandle) void {
+    // c.diligent_destroy_shader(self.handle, .{ .ptr = h.ptr });
+}
+
+// Pass
+
 pub fn beginPass(_: DiligentBackend, _: desc.PassDesc) void {
     // c.diligent_begin_pass(self.handle, .{
     //     .width = d.width,
@@ -292,44 +345,11 @@ pub fn beginPass(_: DiligentBackend, _: desc.PassDesc) void {
     // });
 }
 
-pub fn applyPipeline(_: DiligentBackend, _: types.PipelineHandle) void {
-    // c.diligent_apply_pipeline(self.handle, .{ .ptr = h.ptr });
+pub fn endPass(_: DiligentBackend) void {
+    // c.diligent_end_pass(self.handle);
 }
 
-pub fn drawPipeline(_: DiligentBackend, _: types.PipelineHandle, _: u32, _: u32, _: u32) void {
-    // c.diligent_draw_pipeline(self.handle, .{ .ptr = h.ptr }, base, count, instances);
-}
-
-pub fn applyPipelineBindings(_: DiligentBackend, _: types.PipelineHandle, _: desc.Bindings) void {
-    // var vertex_buffers: [4]c.SummitBufferHandle = undefined;
-    // for (d.vertex_buffers, 0..) |vb, i| {
-    //     vertex_buffers[i] = .{ .ptr = if (vb) |handle| handle.ptr else @ptrFromInt(0) };
-    // }
-
-    // std.debug.assert(d.resources.len <= 16);
-    // var resource_buf: [16]c.SummitBoundResource = undefined;
-    // const resources = buildBoundResources(&resource_buf, d.resources);
-
-    // c.diligent_pipeline_apply_bindings(self.handle, .{ .ptr = h.ptr }, .{
-    //     .vertex_buffers = vertex_buffers,
-    //     .index_buffer = .{ .ptr = if (d.index_buffer) |handle| handle.ptr else @ptrFromInt(0) },
-    //     .resources = resources.ptr,
-    //     .resources_len = resources.len,
-    // });
-}
-
-pub fn applyComputeBindings(_: DiligentBackend, _: types.ComputePipelineHandle, _: desc.Bindings) void {
-    // std.debug.assert(d.resources.len <= 16);
-    // var resource_buf: [16]c.SummitBoundResource = undefined;
-    // const resources = buildBoundResources(&resource_buf, d.resources);
-
-    // c.diligent_apply_compute_bindings(self.handle, .{ .ptr = h.ptr }, .{
-    //     .vertex_buffers = @splat(.{ .ptr = @ptrFromInt(0) }),
-    //     .index_buffer = .{ .ptr = @ptrFromInt(0) },
-    //     .resources = resources.ptr,
-    //     .resources_len = resources.len,
-    // });
-}
+// Swapchain
 
 pub fn createSwapchain(self: DiligentBackend, d: desc.SwapchainDesc) !types.SwapchainHandle {
     // const swapchain_h = c.diligent_create_swapchain(self.handle, .{
@@ -368,9 +388,7 @@ pub fn destroySwapchain(_: DiligentBackend, h: types.SwapchainHandle) void {
     swapchain.release();
 }
 
-pub fn endPass(_: DiligentBackend) void {
-    // c.diligent_end_pass(self.handle);
-}
+// Misc
 
 pub fn imageGetRtv(_: DiligentBackend, _: types.ImageHandle) types.RenderTargetHandle {
     // const rt_h = c.diligent_image_get_rtv(self.handle, .{ .ptr = h.ptr });
