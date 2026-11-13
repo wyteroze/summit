@@ -95,9 +95,9 @@ pub fn createTexture(self: *RenderDevice, tex_desc: *const graphics.types.Textur
 /// as an existing interface, the same interface will be returned.
 ///
 /// In D3D11, 4096 unique sampler state objects can be created on a device at a time.
-pub fn createSampler(self: *RenderDevice, sam_desc: *const graphics.types.SamplerDesc) !graphics.Sampler {
+pub fn createSampler(self: *RenderDevice, sam_desc: graphics.types.SamplerDesc) !graphics.Sampler {
     var sampler: [*c]c.ISampler = null;
-    self.method("CreateSampler")(self.raw, @ptrCast(sam_desc), &sampler);
+    self.method("CreateSampler")(self.raw, @ptrCast(&sam_desc), &sampler);
     if (sampler == null) return error.SamplerCreationFailed;
     return .{ .raw = sampler.? };
 }

@@ -1,5 +1,6 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
+const std = @import("std");
 const c = @import("c");
 const helpers = @import("../../helpers.zig");
 const constants = @import("constants.zig");
@@ -3181,4 +3182,236 @@ pub const MapFlags = packed struct(u8) {
     no_overwrite: bool = false,
 
     _padding: u5 = 0,
+};
+
+/// Filter type
+///
+/// This enumeration defines filter type. It is used by SamplerDesc structure to define min, mag and mip filters.
+///
+/// **Note:** On D3D11, comparison filters only work with textures that have the following formats:
+/// R32_FLOAT_X8X24_TYPELESS, R32_FLOAT, R24_UNORM_X8_TYPELESS, R16_UNORM.
+pub const FilterType = enum(u8) {
+    /// Unknown filter type
+    unknown,
+    /// Point filtering
+    point,
+    /// Linear filtering
+    linear,
+    /// Anisotropic filtering
+    anisotropic,
+    /// Comparison-point filtering
+    comparison_point,
+    /// Comparison-linear filtering
+    comparison_linear,
+    /// Comparison-anisotropic filtering
+    comparison_anisotropic,
+    /// Minimum-point filtering (DX12 only)
+    minimum_point,
+    /// Minimum-linear filtering (DX12 only)
+    minimum_linear,
+    /// Minimum-anisotropic filtering (DX12 only)
+    minimum_anisotropic,
+    /// Maximum-point filtering (DX12 only)
+    maximum_point,
+    /// Maximum-linear filtering (DX12 only)
+    maximum_linear,
+    /// Maximum-anisotropic filtering (DX12 only)
+    maximum_anisotropic,
+};
+
+/// Texture address mode
+///
+/// Defines a technique for resolving texture coordinates that are outside of
+/// the boundaries of a texture. The enumeration generally mirrors [D3D11_TEXTURE_ADDRESS_MODE](https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_texture_address_mode)/[D3D12_TEXTURE_ADDRESS_MODE](https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode) enumeration.
+/// It is used by SamplerDesc structure to define the address mode for U,V and W texture coordinates.
+pub const TextureAddressMode = enum(u8) {
+    /// Unknown mode
+    unknown = 0,
+
+    /// Tile the texture at every integer junction.
+    ///
+    /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_WRAP/D3D12_TEXTURE_ADDRESS_MODE_WRAP. OpenGL counterpart: GL_REPEAT
+    wrap = 1,
+
+    /// Flip the texture at every integer junction.
+    ///
+    /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_MIRROR/D3D12_TEXTURE_ADDRESS_MODE_MIRROR. OpenGL counterpart: GL_MIRRORED_REPEAT
+    mirror = 2,
+
+    /// Texture coordinates outside the range [0.0, 1.0] are set to the
+    /// texture color at 0.0 or 1.0, respectively.
+    ///
+    /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_CLAMP/D3D12_TEXTURE_ADDRESS_MODE_CLAMP. OpenGL counterpart: GL_CLAMP_TO_EDGE
+    clamp = 3,
+
+    /// Texture coordinates outside the range [0.0, 1.0] are set to the border color
+    /// specified in SamplerDesc structure.
+    ///
+    /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_BORDER/D3D12_TEXTURE_ADDRESS_MODE_BORDER. OpenGL counterpart: GL_CLAMP_TO_BORDER
+    border = 4,
+
+    /// Similar to TEXTURE_ADDRESS_MIRROR and TEXTURE_ADDRESS_CLAMP. Takes the absolute
+    /// value of the texture coordinate (thus, mirroring around 0), and then clamps to
+    /// the maximum value.
+    ///
+    /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_MIRROR_ONCE/D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE. OpenGL counterpart: GL_MIRROR_CLAMP_TO_EDGE
+    /// **Note:** GL_MIRROR_CLAMP_TO_EDGE is only available in OpenGL4.4+, and is not available until at least OpenGLES3.1
+    mirror_once = 5,
+};
+
+/// Sampler flags
+///
+/// **Zig Usage:** The default value of SamplerFlags is equivalent to `SAMPLER_FLAG_NONE`.
+pub const SamplerFlags = packed struct(u8) {
+    /// Specifies that the sampler will read from a subsampled texture created with MISC_TEXTURE_FLAG_SUBSAMPLED flag.
+    /// Requires SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET capability.
+    subsampled: bool = false,
+
+    /// Specifies that the GPU is allowed to use fast approximation when reconstructing full-resolution value from
+    /// the subsampled texture accessed by the sampler.
+    /// Requires SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET capability.
+    subsampled_coarse_reconstruction: bool = false,
+
+    _padding: u6 = 0,
+};
+
+/// Comparison function
+///
+/// This enumeration defines a comparison function. It generally mirrors [D3D11_COMPARISON_FUNC](https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_comparison_func)/[D3D12_COMPARISON_FUNC](https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_comparison_func) enum and is used by
+/// - SamplerDesc to define a comparison function if one of the comparison mode filters is used
+/// - StencilOpDesc to define a stencil function
+/// - DepthStencilStateDesc to define a depth function
+pub const ComparisonFunction = enum(u8) {
+    /// Unknown comparison function
+    unknown = 0,
+
+    /// Comparison never passes.
+    ///
+    /// Direct3D counterpart: D3D11_COMPARISON_NEVER/D3D12_COMPARISON_FUNC_NEVER. OpenGL counterpart: GL_NEVER.
+    never,
+
+    /// Comparison passes if the source data is less than the destination data.
+    ///
+    /// Direct3D counterpart: D3D11_COMPARISON_LESS/D3D12_COMPARISON_FUNC_LESS. OpenGL counterpart: GL_LESS.
+    less,
+
+    /// Comparison passes if the source data is equal to the destination data.
+    ///
+    /// Direct3D counterpart: D3D11_COMPARISON_EQUAL/D3D12_COMPARISON_FUNC_EQUAL. OpenGL counterpart: GL_EQUAL.
+    equal,
+
+    /// Comparison passes if the source data is less than or equal to the destination data.
+    ///
+    /// Direct3D counterpart: D3D11_COMPARISON_LESS_EQUAL/D3D12_COMPARISON_FUNC_LESS_EQUAL. OpenGL counterpart: GL_LEQUAL.
+    less_equal,
+
+    /// Comparison passes if the source data is greater than the destination data.
+    ///
+    /// Direct3D counterpart: 3D11_COMPARISON_GREATER/D3D12_COMPARISON_FUNC_GREATER. OpenGL counterpart: GL_GREATER.
+    greater,
+
+    /// Comparison passes if the source data is not equal to the destination data.
+    ///
+    /// Direct3D counterpart: D3D11_COMPARISON_NOT_EQUAL/D3D12_COMPARISON_FUNC_NOT_EQUAL. OpenGL counterpart: GL_NOTEQUAL.
+    not_equal,
+
+    /// Comparison passes if the source data is greater than or equal to the destination data.
+    ///
+    /// Direct3D counterpart: D3D11_COMPARISON_GREATER_EQUAL/D3D12_COMPARISON_FUNC_GREATER_EQUAL. OpenGL counterpart: GL_GEQUAL.
+    greater_equal,
+
+    /// Comparison always passes.
+    ///
+    /// Direct3D counterpart: D3D11_COMPARISON_ALWAYS/D3D12_COMPARISON_FUNC_ALWAYS. OpenGL counterpart: GL_ALWAYS.
+    always,
+};
+
+/// Sampler description
+///
+/// This structure describes the sampler state which is used in a call to
+/// IRenderDevice::CreateSampler() to create a sampler object.
+///
+/// To create an anisotropic filter, all three filters must either be Diligent::FILTER_TYPE_ANISOTROPIC
+/// or Diligent::FILTER_TYPE_COMPARISON_ANISOTROPIC.
+///
+/// `MipFilter` cannot be comparison filter except for Diligent::FILTER_TYPE_ANISOTROPIC if all
+/// three filters have that value.
+///
+/// Both `MinFilter` and `MagFilter` must either be regular filters or comparison filters.
+/// Mixing comparison and regular filters is an error.
+pub const SamplerDesc = extern struct {
+    /// Object name
+    name: ?[*:0]const u8 = null,
+
+    /// Texture minification filter, see Diligent::FILTER_TYPE for details.
+    ///
+    /// Default value: Diligent::FILTER_TYPE_LINEAR.
+    min_filter: FilterType = .linear,
+
+    /// Texture magnification filter, see Diligent::FILTER_TYPE for details.
+    /// Default value: Diligent::FILTER_TYPE_LINEAR.
+    mag_filter: FilterType = .linear,
+
+    /// Mip filter, see Diligent::FILTER_TYPE for details.
+    /// Only FILTER_TYPE_POINT, FILTER_TYPE_LINEAR, FILTER_TYPE_ANISOTROPIC, and
+    /// FILTER_TYPE_COMPARISON_ANISOTROPIC are allowed.
+    /// Default value: Diligent::FILTER_TYPE_LINEAR.
+    mip_filter: FilterType = .linear,
+
+    /// Texture address mode for U coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
+    /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
+    address_u: TextureAddressMode = .clamp,
+
+    /// Texture address mode for V coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
+    /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
+    address_v: TextureAddressMode = .clamp,
+
+    /// Texture address mode for W coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
+    /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
+    address_w: TextureAddressMode = .clamp,
+
+    /// Sampler flags, see Diligent::SAMPLER_FLAGS for details.
+    flags: SamplerFlags = .{},
+
+    /// Indicates whether to use unnormalized texture coordinates.
+    /// When set to `True`, the range of the image coordinates used to lookup
+    /// the texel is in the range of 0 to the image size in each dimension.
+    /// When set to `False`, the range of image coordinates is 0.0 to 1.0.
+    ///
+    /// Unnormalized coordinates are only supported in Vulkan and Metal.
+    unnormalized_coords: bool = false,
+
+    /// Offset from the calculated mipmap level.
+    /// For example, if a sampler calculates that a texture should be sampled at mipmap
+    /// level 1.2 and MipLODBias is 2.3, then the texture will be sampled at
+    /// mipmap level 3.5.
+    ///
+    /// Default value: 0.
+    mip_lod_bias: f32 = 0,
+
+    /// Maximum anisotropy level for the anisotropic filter. Default value: 0.
+    max_anisotropy: u32 = 0,
+
+    /// A function that compares sampled data against existing sampled data when comparison filter is used.
+    /// Default value: Diligent::COMPARISON_FUNC_NEVER.
+    comparison_func: ComparisonFunction = .never,
+
+    /// Border color to use if TEXTURE_ADDRESS_BORDER is specified for `AddressU`, `AddressV`, or `AddressW`.
+    /// Default value: `{0, 0, 0, 0}`
+    border_color: [4]f32 = @splat(0),
+
+    /// Specifies the minimum value that LOD is clamped to before accessing the texture MIP levels.
+    /// Must be less than or equal to `MaxLOD`.
+    ///
+    /// Default value: 0.
+    min_lod: f32 = 0,
+
+    /// Specifies the maximum value that LOD is clamped to before accessing the texture MIP levels.
+    /// Must be greater than or equal to `MinLOD`.
+    /// Default value: `+FLT_MAX`.
+    max_lod: f32 = std.math.floatMax(f32),
+
+    comptime {
+        helpers.ensureSame(@This(), c.SamplerDesc);
+    }
 };
