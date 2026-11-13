@@ -82,7 +82,11 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     errdefer self.ecs.deinit();
     self.ui = try .init(&self.ecs, try self.getAlloc("Ui"));
     errdefer self.ui.deinit();
-    self.gpu_device = try .init(try self.getAlloc("Gpu"), try .initDiligent());
+    self.gpu_device = try .init(
+        try self.getAlloc("Gpu"),
+        // Uses the same memory allocator as the one above
+        try .initDiligent(try self.getAlloc("Gpu")),
+    );
     errdefer self.gpu_device.deinit();
     self.assets = try .init(try self.getAlloc("Assets"), io, &self.gpu_device, project_path);
     errdefer self.assets.deinit();
