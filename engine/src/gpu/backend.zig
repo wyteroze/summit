@@ -9,8 +9,8 @@ const DiligentBackend = @import("backends/DiligentBackend.zig");
 pub const Backend = union(enum) {
     diligent: DiligentBackend,
 
-    pub fn initDiligent() Backend {
-        return .{ .diligent = .init() };
+    pub fn initDiligent() !Backend {
+        return .{ .diligent = try .init() };
     }
 
     pub fn deinit(self: Backend) void {

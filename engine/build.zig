@@ -176,6 +176,7 @@ pub fn build(b: *std.Build) !void {
 
     const sdk_path = b.option([]const u8, "sdk", "Path to macOS SDK (looks something like MacOSX26.5.sdk)") orelse std.zig.system.darwin.getSdk(b.allocator, b.graph.io, &target.result);
     const sdk: ?SdkPaths = .resolve(b, sdk_path);
+    // TODO: Allow enabling multiple backends
     const backend = b.option(diligent_vendor.Backend, "backend", "Backend to use\n(default: vulkan)") orelse .vulkan;
     const skip_cmake = b.option(bool, "skip_cmake", "Skip CMake builds (for ZLS check)") orelse false;
 
@@ -184,15 +185,13 @@ pub fn build(b: *std.Build) !void {
     const dep_toml = b.dependency("toml", .{ .target = target, .optimize = optimize });
     const dep_zigimg = b.dependency("zigimg", .{ .target = target, .optimize = optimize });
     const dep_translate_c = b.dependency("translate_c", .{});
-    const dep_diligent = b.dependency("diligent_engine", .{ .optimize = optimize, .backend = backend, .skip_cmake = skip_cmake });
+    const dep_diligent = b.dependency("diligent_engine", .{ .optimize = optimize, .backend = backend });
     const dep_slang = b.dependency("slang", .{ .optimize = optimize, .skip_cmake = skip_cmake });
     const dep_freetype = b.dependency("freetype", .{ .optimize = optimize, .skip_cmake = skip_cmake });
     const dep_dr_libs = b.dependency("dr_libs", .{});
     const dep_assimp = b.dependency("zig_assimp", .{ .target = target, .optimize = optimize, .formats = "STL,Obj,FBX,glTF,glTF2", .double = false, .zlib = false });
     const dep_zphysics = b.dependency("zphysics", .{});
 
-    // Runs cmake for diligent engine
-    const diligent_step = dependencyStep(dep_diligent, "diligent");
     // Runs cmake for slang
     const slang_step = dependencyStep(dep_slang, "slang");
     // Runs cmake for freetype
@@ -250,56 +249,6 @@ pub fn build(b: *std.Build) !void {
     var compile_commands: CompileCommands = .init(b);
     defer compile_commands.finalize() catch @panic("Out of memory");
 
-    const diligent_mod = blk: {
-        if (skip_cmake) {
-            break :blk b.createModule(.{
-                .root_source_file = null,
-                .target = target,
-                .optimize = optimize,
-            });
-        }
-
-        const diligent_glue_translate: Translator = .init(dep_translate_c, .{
-            .c_source_file = b.path("src/gpu/glue/diligent/diligent.h"),
-            .target = target,
-            .optimize = optimize,
-        });
-        const diligent_glue_cpp_path = b.path("src/gpu/glue/diligent/diligent.cpp");
-
-        diligent_glue_translate.addIncludePath(b.path("src/gpu/glue/diligent"));
-        diligent_glue_translate.addIncludePath(dep_diligent.namedLazyPath("include"));
-        diligent_glue_translate.mod.link_libcpp = true;
-        diligent_glue_translate.mod.addCSourceFile(.{
-            .file = diligent_glue_cpp_path,
-            .flags = &.{
-                b.fmt("-D{s}=1", .{diligent_vendor.targetToCFlag(target)}),
-                b.fmt("-D{s}", .{backend.toCFlag()}),
-                "-std=c++17",
-            },
-        });
-
-        compile_commands.addCommand(.{
-            .cmd = "clang++",
-            .std = "c++17",
-            .file_path = diligent_glue_cpp_path,
-            .cxx_args = &.{
-                b.fmt("{s}=1", .{diligent_vendor.targetToCFlag(target)}),
-                b.fmt("{s}", .{backend.toCFlag()}),
-            },
-            .include_paths = &.{
-                b.path(b.fmt("vendor/DiligentEngine/install-{s}/include", .{@tagName(backend)})),
-                b.path("src/gpu/glue/diligent/"),
-            },
-        });
-
-        if (target.result.os.tag == .macos and sdk != null) {
-            sdk.?.applyToTranslator(diligent_glue_translate);
-        }
-
-        diligent_glue_translate.run.step.dependOn(diligent_step);
-        break :blk diligent_glue_translate.mod;
-    };
-
     const slang_mod = blk: {
         if (skip_cmake) {
             break :blk b.createModule(.{
@@ -342,6 +291,10 @@ pub fn build(b: *std.Build) !void {
         break :blk slang_glue_translate.mod;
     };
 
+    // Options exposed to the engine
+    const engine_options = b.addOptions();
+    engine_options.addOption(diligent_vendor.Backend, "backend", backend);
+
     const engine_mod = b.addModule("engine", .{
         .root_source_file = b.path("src/engine.zig"),
         .target = target,
@@ -354,12 +307,13 @@ pub fn build(b: *std.Build) !void {
             .{ .name = "zphysics", .module = dep_zphysics.module("root") },
             .{ .name = "c", .module = translator.mod },
             .{ .name = "assimp", .module = assimp_translator.mod },
-            .{ .name = "diligent", .module = diligent_mod },
             .{ .name = "slang", .module = slang_mod },
             .{ .name = "freetype", .module = freetype_translator.mod },
             .{ .name = "dr_libs", .module = dr_libs_translator.mod },
+            .{ .name = "diligent", .module = dep_diligent.module("diligent") },
         },
     });
+    engine_mod.addOptions("build_options", engine_options);
 
     const engine_lib = b.addLibrary(.{
         .name = "engine",
@@ -378,22 +332,6 @@ pub fn build(b: *std.Build) !void {
         engine_mod.addIncludePath(dep_freetype.namedLazyPath("include"));
         engine_mod.addLibraryPath(dep_freetype.namedLazyPath("lib"));
         engine_mod.linkSystemLibrary("freetype", .{});
-    }
-
-    // DiligentEngine (Core)
-    if (!skip_cmake) {
-        engine_mod.addIncludePath(dep_diligent.namedLazyPath("include"));
-        engine_mod.addLibraryPath(dep_diligent.namedLazyPath("lib-core"));
-
-        const diligent_lib_dir = dep_diligent.namedLazyPath("lib-core");
-        for (diligent_vendor.static_libs) |lib_name| {
-            engine_mod.addObjectFile(diligent_lib_dir.path(b, b.fmt("lib{s}.a", .{lib_name})));
-        }
-
-        if (backend == .vulkan) {
-            const diligent_vk_static_dir = dep_diligent.namedLazyPath("lib-vk-static-build");
-            engine_mod.addObjectFile(diligent_vk_static_dir.path(b, "libDiligent-GraphicsEngineVk-static.a"));
-        }
     }
 
     // Slang
