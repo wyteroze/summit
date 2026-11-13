@@ -21,10 +21,11 @@ raw: *c.IRenderDevice,
 ///
 /// Stride of a formatted buffer will be computed automatically from the format if
 /// ElementByteStride member of buffer description is set to default value (0).
-pub fn createBuffer(self: *RenderDevice, buff_desc: *const graphics.types.BufferDesc, buff_data: ?*const graphics.types.BufferData) !graphics.Buffer {
+pub fn createBuffer(self: *RenderDevice, buff_desc: graphics.types.BufferDesc, buff_data: ?graphics.types.BufferData) !graphics.Buffer {
     var buffer: [*c]c.IBuffer = null;
 
-    self.method("CreateBuffer")(self.raw, @ptrCast(buff_desc), @ptrCast(buff_data), &buffer);
+    const data_ptr = if (buff_data) |*bd| bd else null;
+    self.method("CreateBuffer")(self.raw, @ptrCast(&buff_desc), @ptrCast(data_ptr), &buffer);
     if (buffer == null) return error.BufferCreationFailed;
 
     return .{ .raw = buffer.? };

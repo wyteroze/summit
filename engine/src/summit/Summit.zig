@@ -140,12 +140,12 @@ pub fn deinit(self: *Summit) void {
     self.ui.deinit();
     self.audio.deinit();
     self.renderer.deinit();
-    self.gpu_device.deinit();
     self.world_3d.deinit();
     self.input.deinit();
     self.scheduler.deinit();
     self.runtime.deinit();
     self.assets.deinit();
+    self.gpu_device.deinit();
     self.windowing.deinit();
     self.platform.deinit();
     self.memory.deinit();

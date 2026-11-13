@@ -138,6 +138,5 @@ pub fn objectMethods(comptime Self: type) type {
         pub fn release(self: Self) void {
             _ = method(self.raw, "Object", "Release")(@ptrCast(self.raw));
         }
-        // queryInterface, getReferenceCounters, ... as needed
     };
 }

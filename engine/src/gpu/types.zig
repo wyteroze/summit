@@ -11,7 +11,7 @@ pub const SwapchainHandle = struct { ptr: *anyopaque };
 pub const RenderTargetHandle = struct { ptr: *anyopaque };
 pub const DepthTargetHandle = struct { ptr: *anyopaque };
 
-pub const BufferUsage = enum { default, immutable, dynamic, stream };
+pub const BufferUsage = enum { default, immutable, dynamic, stream, readback };
 pub const BufferType = enum { vertex, index, uniform, storage };
 pub const ComparisonFunc = enum { less, less_equal, greater, greater_equal, always, never, equal, not_equal };
 

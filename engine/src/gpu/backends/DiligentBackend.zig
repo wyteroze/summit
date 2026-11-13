@@ -79,7 +79,7 @@ pub fn deinit(self: DiligentBackend) void {
     self.alloc.allocator.destroy(self.alloc);
 }
 
-pub fn createBuffer(_: DiligentBackend, _: desc.BufferDesc) types.BufferHandle {
+pub fn createBuffer(self: *DiligentBackend, d: desc.BufferDesc) !types.BufferHandle {
     // const buf_h = c.diligent_create_buffer(self.handle, .{
     //     .name = d.name.ptr,
     //     .type = @backingInt(d.type),
@@ -89,16 +89,71 @@ pub fn createBuffer(_: DiligentBackend, _: desc.BufferDesc) types.BufferHandle {
     //     .data = if (d.data) |data| data.ptr else @ptrFromInt(0),
     // });
 
-    // return .{ .ptr = buf_h.ptr.? };
-    return .{ .ptr = @ptrFromInt(1) };
+    if (d.type == .storage and d.stride == 0)
+        return error.InvalidStride;
+
+    const size = if (d.data) |data| data.len else d.size;
+
+    const b = try self.device.createBuffer(.{
+        .name = d.name,
+        .size = size,
+        .bind_flags = switch (d.type) {
+            .index => .{ .index_buffer = true },
+            .vertex => .{ .vertex_buffer = true },
+            .uniform => .{ .uniform_buffer = true },
+            .storage => .{ .shader_resource = true, .unordered_access = true },
+        },
+        .usage = switch (d.usage) {
+            .default => .default,
+            .immutable => .immutable,
+            .dynamic, .stream => .dynamic,
+            .readback => .staging,
+        },
+        .cpu_access_flags = switch (d.usage) {
+            .default, .immutable => .{},
+            .dynamic, .stream => .{ .write = true },
+            .readback => .{ .read = true },
+        },
+        .element_byte_stride = d.stride,
+        .buffer_mode = if (d.type == .storage) .structured else .undefined,
+    }, if (d.data) |data| .{
+        .data = data.ptr,
+        .data_size = data.len,
+    } else null);
+
+    return .{ .ptr = b.raw };
 }
 
-pub fn destroyBuffer(_: DiligentBackend, _: types.BufferHandle) void {
-    // c.diligent_destroy_buffer(self.handle, .{ .ptr = h.ptr });
+pub fn destroyBuffer(_: *DiligentBackend, h: types.BufferHandle) void {
+    const buffer: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(h.ptr)) };
+    buffer.release();
 }
 
-pub fn updateBuffer(_: DiligentBackend, _: types.BufferHandle, _: []const u8) void {
-    // c.diligent_update_buffer(self.handle, .{ .ptr = h.ptr }, data.ptr, data.len);
+pub fn updateBuffer(self: *DiligentBackend, h: types.BufferHandle, data: []const u8) !void {
+    const buffer: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(h.ptr)) };
+    const d = buffer.getDesc();
+
+    switch (d.usage) {
+        .default => self.context.updateBuffer(buffer, 0, data, .transition),
+        .dynamic => {
+            const mapped = self.context.mapBuffer(buffer, .write, .{ .discard = true }) orelse return error.BufferMapFailed;
+            defer self.context.unmapBuffer(buffer, .write);
+
+            const dest: [*]u8 = @ptrCast(mapped);
+            @memcpy(dest[0..data.len], data);
+        },
+        .staging => {
+            if (!d.cpu_access_flags.write) return error.BufferNotWritable;
+
+            const mapped = self.context.mapBuffer(buffer, .write, .{}) orelse return error.BufferMapFailed;
+            defer self.context.unmapBuffer(buffer, .write);
+
+            const dest: [*]u8 = @ptrCast(mapped);
+            @memcpy(dest[0..data.len], data);
+        },
+        .immutable => return error.UnableToUpdateImmutableBuffer,
+        .unified, .sparse => return error.UnsupportedBufferUsage,
+    }
 }
 
 pub fn createSampler(_: DiligentBackend, _: desc.SamplerDesc) types.SamplerHandle {
@@ -174,7 +229,7 @@ pub fn destroyShader(_: DiligentBackend, _: types.ShaderHandle) void {
     // c.diligent_destroy_shader(self.handle, .{ .ptr = h.ptr });
 }
 
-pub fn createComputePipeline(_: DiligentBackend, _: desc.ComputePipelineDesc) types.ComputePipelineHandle {
+pub fn createComputePipeline(_: DiligentBackend, _: desc.ComputePipelineDesc) !types.ComputePipelineHandle {
     // std.debug.assert(d.resources.len <= 16);
     // var resource_buf: [16]c.SummitResourceDesc = undefined;
     // const resources = buildResourceDescs(&resource_buf, d.resources);
@@ -276,22 +331,30 @@ pub fn applyComputeBindings(_: DiligentBackend, _: types.ComputePipelineHandle, 
     // });
 }
 
-pub fn createSwapchain(_: DiligentBackend, _: desc.SwapchainDesc) types.SwapchainHandle {
+pub fn createSwapchain(self: DiligentBackend, d: desc.SwapchainDesc) !types.SwapchainHandle {
     // const swapchain_h = c.diligent_create_swapchain(self.handle, .{
     //     .surface_handle = d.surface_handle,
     //     .size = d.size,
     // });
 
+    const factory: engine.Factory = .fromBase(self.factory);
+    const swapchain = try factory.createSwapchain(self.device, self.context, .{
+        .depth_buffer_format = .unknown,
+        .width = d.size[0],
+        .height = d.size[1],
+    }, .init(d.surface_handle));
+
     // return .{ .ptr = swapchain_h.ptr.? };
-    return .{ .ptr = @ptrFromInt(1) };
+    return .{ .ptr = swapchain.raw };
 }
 
 pub fn resizeSwapchain(_: DiligentBackend, _: types.SwapchainHandle, _: [2]u32) void {
     // c.diligent_resize_swapchain(self.handle, .{ .ptr = h.ptr }, size[0], size[1]);
 }
 
-pub fn presentSwapchain(_: DiligentBackend, _: types.SwapchainHandle, _: bool) void {
-    // c.diligent_present_swapchain(self.handle, .{ .ptr = h.ptr }, @intCast(@intFromBool(vsync)));
+pub fn presentSwapchain(_: DiligentBackend, h: types.SwapchainHandle, vsync: bool) void {
+    const swapchain: graphics.Swapchain = .{ .raw = @ptrCast(@alignCast(h.ptr)) };
+    swapchain.present(if (vsync) 1 else 0);
 }
 
 pub fn getSwapchainBackbuffer(_: DiligentBackend, _: types.SwapchainHandle) types.RenderTargetHandle {
@@ -300,8 +363,9 @@ pub fn getSwapchainBackbuffer(_: DiligentBackend, _: types.SwapchainHandle) type
     return .{ .ptr = @ptrFromInt(1) };
 }
 
-pub fn destroySwapchain(_: DiligentBackend, _: types.SwapchainHandle) void {
-    // c.diligent_destroy_swapchain(self.handle, .{ .ptr = h.ptr });
+pub fn destroySwapchain(_: DiligentBackend, h: types.SwapchainHandle) void {
+    const swapchain: graphics.Swapchain = .{ .raw = @ptrCast(@alignCast(h.ptr)) };
+    swapchain.release();
 }
 
 pub fn endPass(_: DiligentBackend) void {

@@ -30,9 +30,9 @@ pub const BufferDesc = struct {
     type: types.BufferType = .vertex,
     usage: types.BufferUsage = .default,
     data: ?[]const u8 = null,
-    size: usize = 0,
+    size: u32 = 0,
     /// This usually isn't needed unless type == .storage, otherwise it's the byte size of one element.
-    stride: usize = 0,
+    stride: u32 = 0,
 };
 
 pub const SamplerDesc = struct {

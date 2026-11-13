@@ -52,7 +52,7 @@ pub fn execute(self: *DepthPrepassPass, ctx: pass.PassContext) void {
 
     for (ctx.scene.objects) |obj| {
         const vs_params: [3][4][4]f32 = .{ obj.model.m, ctx.view.view_matrix.m, ctx.view.proj_matrix.m };
-        self.vs_ubuf.update(std.mem.asBytes(&vs_params));
+        self.vs_ubuf.update(std.mem.asBytes(&vs_params)) catch |e| std.log.err("{t}", .{e});
 
         self.pipeline.applyBindings(.{
             .vertex_buffers = .{ obj.mesh.vertex_buffer.handle, null, null, null },
@@ -60,7 +60,7 @@ pub fn execute(self: *DepthPrepassPass, ctx: pass.PassContext) void {
             .resources = &.{
                 .{ .name = "VSParams", .handle = .{ .uniform_buffer = self.vs_ubuf.handle } },
             },
-        });
+        }) catch |e| std.log.err("Failed to apply pipeline bindings: {t}", .{e});
 
         self.pipeline.draw(0, obj.mesh.index_count, 1);
     }

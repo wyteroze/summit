@@ -63,7 +63,7 @@ pub fn execute(self: *LightCullPass, ctx: pass.PassContext) void {
         .tile_count = tile_count,
         .light_count = @intCast(ctx.scene.lights.len),
     };
-    self.cull_ubuf.update(std.mem.asBytes(&cull_params));
+    self.cull_ubuf.update(std.mem.asBytes(&cull_params)) catch |e| std.log.err("{t}", .{e});
 
     self.compute_pipeline.apply();
     self.compute_pipeline.applyBindings(.{

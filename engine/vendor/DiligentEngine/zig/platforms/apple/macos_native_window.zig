@@ -13,4 +13,8 @@ pub const MacOSNativeWindow = extern struct {
 
         return _GetLayer(self);
     }
+
+    pub fn init(ns_view: ?*anyopaque) MacOSNativeWindow {
+        return .{ .ns_view = ns_view };
+    }
 };

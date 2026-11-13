@@ -76,7 +76,7 @@ pub fn execute(self: *ForwardPass, ctx: pass.PassContext) void {
         .screen_size = ctx.view.viewport_size,
         .tile_count = tile_count,
     };
-    self.light_ubuf.update(std.mem.asBytes(&light_params));
+    self.light_ubuf.update(std.mem.asBytes(&light_params)) catch |e| std.log.err("{t}", .{e});
 
     for (ctx.scene.objects) |obj| {
         const vs_params: [3][4][4]f32 = .{
@@ -84,7 +84,7 @@ pub fn execute(self: *ForwardPass, ctx: pass.PassContext) void {
             ctx.view.view_matrix.m,
             ctx.view.proj_matrix.m,
         };
-        self.vs_ubuf.update(std.mem.asBytes(&vs_params));
+        self.vs_ubuf.update(std.mem.asBytes(&vs_params)) catch |e| std.log.err("{t}", .{e});
 
         self.pipeline.applyBindings(.{
             .vertex_buffers = .{ obj.mesh.vertex_buffer.handle, null, null, null },
@@ -98,7 +98,7 @@ pub fn execute(self: *ForwardPass, ctx: pass.PassContext) void {
                 .{ .name = "lightGrid", .handle = .{ .storage_buffer = light_grid_handle } },
                 .{ .name = "lightIndexList", .handle = .{ .storage_buffer = light_index_list_handle } },
             },
-        });
+        }) catch |e| std.log.err("Failed to apply pipeline bindings: {t}", .{e});
 
         self.pipeline.draw(0, obj.mesh.index_count, 1);
     }

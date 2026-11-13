@@ -167,7 +167,7 @@ pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: 
         scene.gizmo_overlay = self.gizmos.overlay.items;
 
         std.debug.assert(scene.lights.len <= max_lights);
-        self.lights_ssbo.update(std.mem.sliceAsBytes(scene.lights));
+        self.lights_ssbo.update(std.mem.sliceAsBytes(scene.lights)) catch |e| std.log.err("{t}", .{e});
 
         const rv = self.getView(req.render_view_id) orelse continue;
 

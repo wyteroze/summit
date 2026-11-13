@@ -6,4 +6,8 @@ pub const IOSNativeWindow = extern struct {
     pub fn getLayer(self: *const IOSNativeWindow) ?*anyopaque {
         return self.ca_layer;
     }
+
+    pub fn init(ca_layer: ?*anyopaque) IOSNativeWindow {
+        return .{ .ca_layer = ca_layer };
+    }
 };

@@ -82,14 +82,14 @@ fn execute(self: *GizmoPass, ctx: pass.PassContext) void {
     const verts = ctx.frame_allocator.alloc(Gizmos.Vertex, total) catch return;
     @memcpy(verts[0..tested.len], tested);
     @memcpy(verts[tested.len..], overlay);
-    self.vbuf.grow(total * @sizeOf(Gizmos.Vertex));
-    self.vbuf.update(std.mem.sliceAsBytes(verts));
+    self.vbuf.grow(@as(u32, @intCast(total)) * @sizeOf(Gizmos.Vertex)) catch |e| std.log.err("Failed to grow vbuf: {t}", .{e});
+    self.vbuf.update(std.mem.sliceAsBytes(verts)) catch |e| std.log.err("{t}", .{e});
 
     const vs_params: [2][4][4]f32 = .{
         ctx.view.view_matrix.m,
         ctx.view.proj_matrix.m,
     };
-    self.vs_ubuf.update(std.mem.asBytes(&vs_params));
+    self.vs_ubuf.update(std.mem.asBytes(&vs_params)) catch |e| std.log.err("{t}", .{e});
 
     ctx.device.beginPass(.{
         .width = ctx.view.viewport_size[0],
@@ -105,7 +105,7 @@ fn execute(self: *GizmoPass, ctx: pass.PassContext) void {
             .resources = &.{
                 .{ .name = "vsParams", .handle = .{ .uniform_buffer = self.vs_ubuf.handle } },
             },
-        });
+        }) catch |e| std.log.err("Failed to apply pipeline bindings: {t}", .{e});
         self.tested_pipeline.draw(0, @intCast(tested.len), 1);
     }
     if (overlay.len > 0) {
@@ -115,7 +115,7 @@ fn execute(self: *GizmoPass, ctx: pass.PassContext) void {
             .resources = &.{
                 .{ .name = "vsParams", .handle = .{ .uniform_buffer = self.vs_ubuf.handle } },
             },
-        });
+        }) catch |e| std.log.err("Failed to apply pipeline bindings: {t}", .{e});
         self.overlay_pipeline.draw(@intCast(tested.len), @intCast(overlay.len), 1);
     }
 }

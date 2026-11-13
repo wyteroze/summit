@@ -188,11 +188,11 @@ fn execute(self: *UiPass, ctx: pass.PassContext) void {
                 else => {},
             };
 
-            self.painter_vbuf.grow(vert_count * @sizeOf(render_types.PainterVertex));
-            self.painter_ibuf.grow(idx_count * @sizeOf(u32));
+            self.painter_vbuf.grow(@as(u32, @intCast(vert_count)) * @sizeOf(render_types.PainterVertex)) catch |e| std.log.err("Failed to grow vbuf: {t}", .{e});
+            self.painter_ibuf.grow(@as(u32, @intCast(idx_count)) * @sizeOf(u32)) catch |e| std.log.err("Failed to grow ibuf: {t}", .{e});
 
-            self.painter_vbuf.update(std.mem.sliceAsBytes(verts));
-            self.painter_ibuf.update(std.mem.sliceAsBytes(idxs));
+            self.painter_vbuf.update(std.mem.sliceAsBytes(verts)) catch |e| std.log.err("{t}", .{e});
+            self.painter_ibuf.update(std.mem.sliceAsBytes(idxs)) catch |e| std.log.err("{t}", .{e});
         }
     }
 
@@ -243,7 +243,7 @@ fn execute(self: *UiPass, ctx: pass.PassContext) void {
                 .border_color = obj.border_color.toArr(),
             };
 
-            self.ui_vs_ubuf.update(std.mem.asBytes(&vs_params));
+            self.ui_vs_ubuf.update(std.mem.asBytes(&vs_params)) catch |e| std.log.err("{t}", .{e});
 
             const texture_handle = obj.texture orelse default_image_handle;
             const sampler_handle = obj.sampler orelse default_sampler_handle;
@@ -256,7 +256,7 @@ fn execute(self: *UiPass, ctx: pass.PassContext) void {
                     .{ .name = "atlasTexture", .handle = .{ .texture = texture_handle } },
                     .{ .name = "atlasSampler", .handle = .{ .sampler = sampler_handle } },
                 },
-            });
+            }) catch |e| std.log.err("Failed to apply pipeline bindings: {t}", .{e});
             self.ui_pipeline.draw(0, self.ui_quad.index_count, 1);
         },
         .painter => |p| {
@@ -274,7 +274,7 @@ fn execute(self: *UiPass, ctx: pass.PassContext) void {
                 .clip = @intCast(@intFromBool(p.clip)),
                 .antialiased = @intCast(@intFromBool(p.antialiased)),
             };
-            self.painter_vs_ubuf.update(std.mem.asBytes(&params));
+            self.painter_vs_ubuf.update(std.mem.asBytes(&params)) catch |e| std.log.err("{t}", .{e});
 
             self.painter_pipeline.applyBindings(.{
                 .vertex_buffers = .{ self.painter_vbuf.handle, null, null, null },
@@ -282,7 +282,7 @@ fn execute(self: *UiPass, ctx: pass.PassContext) void {
                 .resources = &.{
                     .{ .name = "vsParams", .handle = .{ .uniform_buffer = self.painter_vs_ubuf.handle } },
                 },
-            });
+            }) catch |e| std.log.err("Failed to apply pipeline bindings: {t}", .{e});
             self.painter_pipeline.draw(first_idx[i], @intCast(p.indices.len), 1);
         },
     };
