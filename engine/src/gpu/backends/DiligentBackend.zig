@@ -5,6 +5,7 @@ const desc = @import("../desc.zig");
 const types = @import("../types.zig");
 const diligent = @import("diligent");
 const graphics = diligent.graphics;
+const primitives = diligent.primitives;
 const build_opts = @import("build_options");
 
 // fn buildResourceDescs(buf: []c.SummitResourceDesc, resources: []const desc.ResourceDesc) []c.SummitResourceDesc {
@@ -39,7 +40,7 @@ const engine = switch (build_opts.backend) {
     .vulkan => graphics.engines.GraphicsEngineVulkan,
     .d3d11 => graphics.engines.GraphicsEngineD3D11,
     .d3d12 => graphics.engines.GraphicsEngineD3D12,
-    .gl => diligent.graphics.engines.GraphicsEngineOpenGL,
+    .gl => graphics.engines.GraphicsEngineOpenGL,
 };
 
 comptime {
@@ -50,12 +51,22 @@ const DiligentBackend = @This();
 factory: graphics.EngineFactory,
 device: graphics.RenderDevice,
 context: graphics.DeviceContext,
+alloc: *primitives.MemoryAllocator.ZigAllocator,
 
-pub fn init() !DiligentBackend {
-    var factory = try engine.loadAndGetFactory();
+pub fn init(allocator: std.mem.Allocator) !DiligentBackend {
+    const zig_alloc = try allocator.create(primitives.MemoryAllocator.ZigAllocator);
+    errdefer allocator.destroy(zig_alloc);
+    zig_alloc.* = .init(allocator);
+
+    var factory = try engine.loadAndGetFactory(zig_alloc);
     const device, const context = try factory.createDeviceAndContexts(.{});
 
-    return .{ .factory = factory.asBase(), .device = device, .context = context };
+    return .{
+        .factory = factory.asBase(),
+        .device = device,
+        .context = context,
+        .alloc = zig_alloc,
+    };
 }
 
 pub fn deinit(self: DiligentBackend) void {
@@ -65,6 +76,7 @@ pub fn deinit(self: DiligentBackend) void {
     self_mut.context.waitForIdle();
     self_mut.context.release();
     self_mut.device.release();
+    self.alloc.allocator.destroy(self.alloc);
 }
 
 pub fn createBuffer(_: DiligentBackend, _: desc.BufferDesc) types.BufferHandle {

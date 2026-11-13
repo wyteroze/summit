@@ -640,7 +640,8 @@ pub const DeviceFeaturesVk = extern struct {
 
 /// Attributes specific to Vulkan engine
 pub const EngineVkCreateInfo = extern struct {
-    engine_create_info: EngineCreateInfo = .{},
+    /// Base `EngineCreateInfo`.
+    base: EngineCreateInfo = .{},
 
     /// Vulkan-specific device features, see Diligent::DeviceFeaturesVk.
     features_vk: DeviceFeaturesVk = .{},

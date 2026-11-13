@@ -2,3 +2,4 @@
 
 pub const Object = @import("Object.zig");
 pub const InterfaceID = @import("interface_id.zig").InterfaceID;
+pub const MemoryAllocator = @import("MemoryAllocator.zig");

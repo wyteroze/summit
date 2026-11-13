@@ -3,6 +3,7 @@
 const c = @import("c");
 const types = @import("types.zig");
 const graphics = @import("../graphics.zig");
+const primitives = @import("../../primitives/primitives.zig");
 const platforms = @import("../../platforms/platforms.zig");
 const helpers = @import("../../helpers.zig");
 
@@ -81,7 +82,13 @@ pub const EngineFactoryVk = struct {
     pub const fromBase = helpers.baseHelper(graphics.EngineFactory, EngineFactoryVk);
 };
 
-pub fn loadAndGetFactory() !EngineFactoryVk {
+/// If an allocator is passed as the first argument, it will be set as the factory's allocator.
+/// Note that the allocator must stay alive for the lifetime of the factory.
+pub fn loadAndGetFactory(maybe_allocator: ?*primitives.MemoryAllocator.ZigAllocator) !EngineFactoryVk {
     const f = c.Diligent_LoadAndGetEngineFactoryVk() orelse return error.FactoryUnavailable;
+    if (maybe_allocator) |allocator| {
+        (graphics.EngineFactory{ .raw = @ptrCast(f) }).setMemoryAllocator(allocator.memoryAllocator());
+    }
+
     return .{ .raw = f };
 }
