@@ -34,6 +34,10 @@
             .url = "git+https://github.com/mackron/dr_libs.git#dfe8377631000664666519fdb83da193fd8037f4",
             .hash = "N-V-__8AAF4wEwDaaKSf7jM1_5eaPrvP9U4s4YPN7WSgNWeX",
         },
+        .zslang = .{
+            .url = "git+https://github.com/zig-gamedev/zslang.git#b596cff7ac714c53832be5fa236e7e55aa5abca1",
+            .hash = "zslang-2026.14.0-dev-c7-3i8uIAQAoRc4Zp-WzdhZ4VCjTxMZGEDIMe67gTjXk",
+        },
     },
 
     .paths = .{ "build.zig", "build.zig.zon", "src", "vendor" },
