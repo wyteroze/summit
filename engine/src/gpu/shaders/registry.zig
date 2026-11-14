@@ -1,10 +1,11 @@
 const std = @import("std");
 
-const module_sources = std.StaticStringMap([:0]const u8).initComptime(&.{
-    .{ "lighting", @embedFile("src/lighting.slang") },
-    .{ "basic", @embedFile("src/basic.slang") },
-});
+pub const ShaderModule = struct {
+    /// Module name: `import <name>;`
+    name: [:0]const u8,
+    source: [:0]const u8,
+};
 
-pub fn lookupShaderModule(name: []const u8) ?[:0]const u8 {
-    return module_sources.get(name);
-}
+pub const engine_modules = [_]ShaderModule{
+    .{ .name = "lighting", .source = @embedFile("src/lighting.slang") },
+};

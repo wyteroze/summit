@@ -1,7 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
-const slang = @import("slang.zig");
+const ShaderCompiler = @import("ShaderCompiler.zig");
 const shader_registry = @import("shaders/registry.zig");
 const types = @import("types.zig");
 const desc = @import("desc.zig");
@@ -140,9 +140,9 @@ pub const GpuShader = struct {
     backend: *Backend,
     handle: types.ShaderHandle,
 
-    pub fn init(b: *Backend, compiler: *slang.Compiler, d: desc.ShaderDesc) !GpuShader {
+    pub fn init(b: *Backend, compiler: *ShaderCompiler, d: desc.ShaderDesc) !GpuShader {
         var compiled_stages: [8]desc.ShaderStageDesc = undefined;
-        var results: [8]slang.CompileResult = undefined;
+        var results: [8]ShaderCompiler.CompileResult = undefined;
         var count: usize = 0;
         defer for (results[0..count]) |*r| r.deinit();
 
@@ -152,12 +152,11 @@ pub const GpuShader = struct {
                 "shader",
                 s.source,
                 s.entrypoint,
-                switch (s.stage) {
-                    .vertex => .vertex,
-                    .fragment => .fragment,
-                    .compute => .compute,
+                switch (b.queryBackend()) {
+                    .direct3d11, .direct3d12 => .hlsl,
+                    .opengl => .glsl,
+                    .vulkan => .spirv,
                 },
-                .fromBackend(b.queryBackend()),
             );
             compiled_stages[i] = .{
                 .name = s.name,
@@ -206,7 +205,7 @@ pub const GpuSwapchain = struct {
 const GpuDevice = @This();
 allocator: std.mem.Allocator,
 backend: *Backend,
-compiler: ?*slang.Compiler = null,
+compiler: ?*ShaderCompiler = null,
 
 pub fn init(allocator: std.mem.Allocator, b: *Backend) !GpuDevice {
     return .{ .allocator = allocator, .backend = b };
@@ -265,13 +264,12 @@ pub fn present(self: GpuDevice) void {
     self.backend.present();
 }
 
-pub fn getCompiler(self: *GpuDevice) !*slang.Compiler {
+pub fn getCompiler(self: *GpuDevice) !*ShaderCompiler {
     if (self.compiler) |c| return c;
 
-    const c = try self.allocator.create(slang.Compiler);
+    const c = try self.allocator.create(ShaderCompiler);
     errdefer self.allocator.destroy(c);
-    c.* = .init();
-    c.setModuleLookup(shader_registry.lookupShaderModule);
+    c.* = try .init();
 
     self.compiler = c;
     return c;

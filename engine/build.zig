@@ -3,7 +3,6 @@
 const std = @import("std");
 const Translator = @import("translate_c").Translator;
 const diligent_vendor = @import("diligent_engine");
-const slang_vendor = @import("slang");
 
 // The newlines are needed for these headers so concatenating doesn't break them
 const assimp_headers =
@@ -186,14 +185,12 @@ pub fn build(b: *std.Build) !void {
     const dep_zigimg = b.dependency("zigimg", .{ .target = target, .optimize = optimize });
     const dep_translate_c = b.dependency("translate_c", .{});
     const dep_diligent = b.dependency("diligent_engine", .{ .optimize = optimize, .backend = backend });
-    const dep_slang = b.dependency("slang", .{ .optimize = optimize, .skip_cmake = skip_cmake });
     const dep_freetype = b.dependency("freetype", .{ .optimize = optimize, .skip_cmake = skip_cmake });
     const dep_dr_libs = b.dependency("dr_libs", .{});
     const dep_assimp = b.dependency("zig_assimp", .{ .target = target, .optimize = optimize, .formats = "STL,Obj,FBX,glTF,glTF2", .double = false, .zlib = false });
     const dep_zphysics = b.dependency("zphysics", .{});
+    const dep_zslang = b.dependency("zslang", .{ .target = target, .optimize = .fast });
 
-    // Runs cmake for slang
-    const slang_step = dependencyStep(dep_slang, "slang");
     // Runs cmake for freetype
     const freetype_step = dependencyStep(dep_freetype, "freetype");
 
@@ -249,48 +246,6 @@ pub fn build(b: *std.Build) !void {
     var compile_commands: CompileCommands = .init(b);
     defer compile_commands.finalize() catch @panic("Out of memory");
 
-    const slang_mod = blk: {
-        if (skip_cmake) {
-            break :blk b.createModule(.{
-                .root_source_file = null,
-                .target = target,
-                .optimize = optimize,
-            });
-        }
-
-        const slang_glue_translate: Translator = .init(dep_translate_c, .{
-            .c_source_file = b.path("src/gpu/glue/slang/glue_slang.h"),
-            .target = target,
-            .optimize = optimize,
-        });
-        const slang_glue_cpp_path = b.path("src/gpu/glue/slang/slang.cpp");
-
-        slang_glue_translate.addIncludePath(b.path("src/gpu/glue/slang"));
-        slang_glue_translate.addIncludePath(dep_slang.namedLazyPath("include"));
-        slang_glue_translate.mod.link_libcpp = true;
-        slang_glue_translate.mod.addCSourceFile(.{
-            .file = slang_glue_cpp_path,
-            .flags = &.{"-std=c++17"},
-        });
-
-        compile_commands.addCommand(.{
-            .cmd = "clang++",
-            .std = "c++17",
-            .file_path = slang_glue_cpp_path,
-            .include_paths = &.{
-                b.path("vendor/slang/build/Release/include"),
-                b.path("src/gpu/glue/slang/"),
-            },
-        });
-
-        if (target.result.os.tag == .macos and sdk != null) {
-            sdk.?.applyToTranslator(slang_glue_translate);
-        }
-
-        slang_glue_translate.run.step.dependOn(slang_step);
-        break :blk slang_glue_translate.mod;
-    };
-
     // Options exposed to the engine
     const engine_options = b.addOptions();
     engine_options.addOption(diligent_vendor.Backend, "backend", backend);
@@ -307,7 +262,7 @@ pub fn build(b: *std.Build) !void {
             .{ .name = "zphysics", .module = dep_zphysics.module("root") },
             .{ .name = "c", .module = translator.mod },
             .{ .name = "assimp", .module = assimp_translator.mod },
-            .{ .name = "slang", .module = slang_mod },
+            .{ .name = "slang", .module = dep_zslang.module("slang") },
             .{ .name = "freetype", .module = freetype_translator.mod },
             .{ .name = "dr_libs", .module = dr_libs_translator.mod },
             .{ .name = "diligent", .module = dep_diligent.module("diligent") },
@@ -334,20 +289,12 @@ pub fn build(b: *std.Build) !void {
         engine_mod.linkSystemLibrary("freetype", .{});
     }
 
-    // Slang
-    if (!skip_cmake) {
-        engine_mod.addIncludePath(dep_slang.namedLazyPath("include"));
-        engine_mod.addLibraryPath(dep_slang.namedLazyPath("lib"));
-
-        const slang_lib_dir = dep_slang.namedLazyPath("lib-build");
-        for (slang_vendor.static_libs) |lib_name| {
-            engine_mod.addObjectFile(slang_lib_dir.path(b, b.fmt("lib{s}.a", .{lib_name})));
-        }
-
-        engine_mod.addObjectFile(dep_slang.namedLazyPath("lib-miniz"));
-        engine_mod.addObjectFile(dep_slang.namedLazyPath("lib-cmark"));
-        engine_mod.addObjectFile(dep_slang.namedLazyPath("lib-lz4"));
-    }
+    // zslang
+    b.installDirectory(.{
+        .source_dir = dep_zslang.namedLazyPath("slang-runtime-dir"),
+        .install_dir = if (target.result.os.tag == .windows) .bin else .lib,
+        .install_subdir = "",
+    });
 
     // dr_libs
     dr_libs_translator.addIncludePath(dep_dr_libs.path(""));
