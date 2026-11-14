@@ -11,7 +11,6 @@
         // Original repo credit to https://github.com/fathonyfath/assimp
         .zig_assimp = .{ .path = "vendor/zig_assimp" },
         .diligent_engine = .{ .path = "vendor/DiligentEngine" },
-        .slang = .{ .path = "vendor/slang" },
         .zlua = .{ .path = "vendor/ziglua" },
         // Original repo credit to https://github.com/kcbanner/zphysics/tree/0.16.x_io
         .zphysics = .{ .path = "vendor/zphysics" },
