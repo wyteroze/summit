@@ -88,85 +88,6 @@ fn dependencyStep(dependency: *std.Build.Dependency, step_name: []const u8) *std
     return &found.step;
 }
 
-const CompileCommands = struct {
-    const Command = struct {
-        b: *std.Build = undefined, // This gets set when CompileCommands.addCommand is called
-        cmd: []const u8,
-        std: []const u8,
-        file_path: std.Build.LazyPath,
-        cxx_args: []const []const u8 = &.{},
-        include_paths: []const std.Build.LazyPath = &.{},
-
-        pub fn format(
-            self: Command,
-            writer: *std.Io.Writer,
-        ) !void {
-            //  {{
-            //      "directory": "{s}",
-            //      "file": "{s}",
-            //      "arguments": [
-            //          "clang++", "-std=c++17",
-            //          "-D{s}=1", "-D{s}",
-            //          "-I{s}", "-I{s}",
-            //          "-c", "{s}"
-            //      ]
-            //  }}
-
-            try writer.writeAll("{");
-            {
-                try writer.print("\"directory\": \"{f}\",", .{self.b.root});
-                try writer.print("\"file\": \"{f}\",", .{self.file_path});
-
-                try writer.writeAll("\"arguments\": [");
-                {
-                    try writer.print("\"{s}\", \"-std={s}\"", .{ self.cmd, self.std });
-                    for (self.cxx_args) |a| try writer.print(", \"-D{s}\"", .{a});
-                    for (self.include_paths) |path| try writer.print(", \"-I{f}\"", .{path});
-                    try writer.print(", \"-c\", \"{f}\"", .{self.file_path});
-                }
-                try writer.writeAll("]");
-            }
-            try writer.writeAll("}");
-        }
-    };
-
-    b: *std.Build,
-    commands: std.ArrayList(Command),
-    step: *std.Build.Step,
-
-    pub fn init(b: *std.Build) CompileCommands {
-        return .{ .b = b, .commands = .empty, .step = b.step("compile_commands", "Generate compile_commands.json") };
-    }
-
-    pub fn addCommand(self: *CompileCommands, command: Command) void {
-        const cmd = self.b.allocator.create(Command) catch @panic("Out of memory");
-        cmd.* = command;
-        cmd.b = self.b;
-
-        self.commands.append(self.b.allocator, cmd.*) catch @panic("Out of memory");
-    }
-
-    pub fn finalize(self: *CompileCommands) !void {
-        if (self.b.pkg_hash.len != 0) return;
-
-        var allocating_writer: std.Io.Writer.Allocating = .init(self.b.allocator);
-        const writer = &allocating_writer.writer;
-
-        try writer.writeAll("[");
-        for (self.commands.items, 0..) |cmd, i| {
-            if (i != 0) try writer.writeAll(",");
-            try writer.print("{f}", .{cmd});
-        }
-        try writer.writeAll("]");
-
-        const write_cc = self.b.addWriteFile("compile_commands.json", try allocating_writer.toOwnedSlice());
-        const update = self.b.addUpdateSourceFiles();
-        update.addCopyFileToSource(write_cc.getDirectory().path(self.b, "compile_commands.json"), ".clangd-db/compile_commands.json");
-        update.step.dependOn(&write_cc.step);
-        self.step.dependOn(&update.step);
-    }
-};
-
 // There is like a 99% chance this does not compile on anything other than mac because of missing libraries
 // It shouldn't be too hard to fix though. I'm just focused on the engine for now
 pub fn build(b: *std.Build) !void {
@@ -233,9 +154,6 @@ pub fn build(b: *std.Build) !void {
             .target = target,
             .optimize = optimize,
         });
-
-    var compile_commands: CompileCommands = .init(b);
-    defer compile_commands.finalize() catch @panic("Out of memory");
 
     // Options exposed to the engine
     const engine_options = b.addOptions();
