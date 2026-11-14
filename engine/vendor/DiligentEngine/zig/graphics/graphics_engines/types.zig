@@ -60,7 +60,7 @@ pub const CommandQueueType = packed struct(u8) {
     /// Command queue that supports sparse binding commands.
     sparse_binding: bool = false,
 
-    _padding: u4 = 0,
+    _: u4 = 0,
 
     /// Queue type is unknown.
     pub const unknown: CommandQueueType = .{};
@@ -130,7 +130,7 @@ pub const ValidationFlags = packed struct(u32) {
     /// This option is currently supported by Vulkan backend only.
     check_shader_buffer_size: bool = false,
 
-    _padding: u31 = 0,
+    _: u31 = 0,
 };
 
 /// Query type.
@@ -1412,7 +1412,7 @@ pub const SwapchainUsageFlags = packed struct(u32) {
     /// Swap chain images can be used as a source of copy operation
     SWAP_CHAIN_USAGE_COPY_SOURCE: bool = false,
 
-    _padding: u28 = 0,
+    _: u28 = 0,
 };
 
 /// The transform applied to the image content prior to presentation.
@@ -1582,6 +1582,8 @@ pub const SetVertexBuffersFlags = packed struct(u8) {
     /// Reset the vertex buffers to only the buffers specified in this
     /// call. All buffers previously bound to the pipeline will be unbound.
     reset: bool = false,
+
+    _: u7 = 0,
 };
 
 /// Describes the viewport.
@@ -1684,7 +1686,7 @@ pub const DrawFlags = packed struct(u8) {
     /// No inline constants used by the draw command have been modified by the CPU since the last command.
     inline_constants_intact: bool = false,
 
-    _padding: u4 = 0,
+    _: u4 = 0,
 
     /// Perform all state validation checks.
     pub const verify_all: DrawFlags = .{
@@ -1711,7 +1713,7 @@ pub const ClearDepthStencilFlags = packed struct(u32) {
     /// Clear the stencil part of the buffer.
     stencil: bool = false,
 
-    _padding: u30 = 0,
+    _: u30 = 0,
 
     comptime {
         helpers.ensureSame(@This(), c.CLEAR_DEPTH_STENCIL_FLAGS);
@@ -1732,7 +1734,7 @@ pub const RaytracingInstanceFlags = packed struct(u8) {
     /// Acts as if `RaytracingGeometryFlags.@"opaque"` were not specified on all geometries of this instance.
     force_no_opaque: bool = false,
 
-    _padding: u4 = 0,
+    _: u4 = 0,
 
     comptime {
         helpers.ensureSame(@This(), c.RAYTRACING_INSTANCE_FLAGS);
@@ -1747,7 +1749,7 @@ pub const RaytracingGeometryFlags = packed struct(u8) {
     /// The any-hit shader is invoked only once per primitive in this geometry.
     no_duplicate_any_hit_invocation: bool = false,
 
-    _padding: u6 = 0,
+    _: u6 = 0,
 
     comptime {
         helpers.ensureSame(@This(), c.RAYTRACING_GEOMETRY_FLAGS);
@@ -1767,7 +1769,7 @@ pub const StateTransitionFlags = packed struct(u8) {
     /// created with the aliasing flag.
     aliasing: bool = false,
 
-    _padding: u5 = 0,
+    _: u5 = 0,
 
     comptime {
         helpers.ensureSame(@This(), c.STATE_TRANSITION_FLAGS);
@@ -2946,7 +2948,7 @@ pub const BindFlags = packed struct(u32) {
     /// A texture can be used as shading rate texture.
     shading_rate: bool = false,
 
-    _padding: u20 = 0,
+    _: u20 = 0,
 };
 
 /// Resource usage
@@ -3020,7 +3022,7 @@ pub const CPUAccessFlags = packed struct(u8) {
     /// A resource can be mapped for writing
     write: bool = false,
 
-    _padding: u6 = 0,
+    _: u6 = 0,
 };
 
 /// Describes the buffer access mode.
@@ -3053,7 +3055,7 @@ pub const MiscBufferFlags = packed struct(u8) {
     /// or in different sparse buffers.
     sparse_aliasing: bool = false,
 
-    _padding: u7 = 0,
+    _: u7 = 0,
 };
 
 /// Buffer description
@@ -3181,7 +3183,7 @@ pub const MapFlags = packed struct(u8) {
     /// D3D11 counterpart:  D3D11_MAP_WRITE_NO_OVERWRITE. OpenGL counterpart: GL_MAP_UNSYNCHRONIZED_BIT
     no_overwrite: bool = false,
 
-    _padding: u5 = 0,
+    _: u5 = 0,
 };
 
 /// Filter type
@@ -3272,7 +3274,7 @@ pub const SamplerFlags = packed struct(u8) {
     /// Requires SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET capability.
     subsampled_coarse_reconstruction: bool = false,
 
-    _padding: u6 = 0,
+    _: u6 = 0,
 };
 
 /// Comparison function
@@ -3470,7 +3472,7 @@ pub const MiscTextureFlags = packed struct(u8) {
     /// **Note:** Copy operations are not supported for subsampled textures.
     subsampled: bool = false,
 
-    _padding: u4 = 0,
+    _: u4 = 0,
 };
 
 /// Defines optimized depth-stencil clear value.
@@ -3636,5 +3638,1893 @@ pub const TextureData = extern struct {
 
     comptime {
         helpers.ensureSame(@This(), c.TextureData);
+    }
+};
+
+/// Blend factors
+/// [D3D11_BLEND]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476086(v=vs.85).aspx
+/// [D3D12_BLEND]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770338(v=vs.85).aspx
+/// [glBlendFuncSeparate]: https://www.opengl.org/wiki/GLAPI/glBlendFuncSeparate
+/// This enumeration defines blend factors for alpha-blending.
+/// It generally mirrors [D3D11_BLEND][] and [D3D12_BLEND][] enumerations and is used by RenderTargetBlendDesc structure
+/// to define source and destination blend factors for color and alpha channels.
+/// \sa [D3D11_BLEND on MSDN][D3D11_BLEND], [D3D12_BLEND on MSDN][D3D12_BLEND], [glBlendFuncSeparate on OpenGL.org][glBlendFuncSeparate]
+pub const BlendFactor = enum(i8) {
+    /// Undefined blend factor
+    undefined = 0,
+
+    /// The blend factor is zero.\n
+    /// Direct3D counterpart: D3D11_BLEND_ZERO/D3D12_BLEND_ZERO. OpenGL counterpart: GL_ZERO.
+    zero,
+
+    /// The blend factor is one.\n
+    /// Direct3D counterpart: D3D11_BLEND_ONE/D3D12_BLEND_ONE. OpenGL counterpart: GL_ONE.
+    one,
+
+    /// The blend factor is RGB data from a pixel shader.\n
+    /// Direct3D counterpart: D3D11_BLEND_SRC_COLOR/D3D12_BLEND_SRC_COLOR. OpenGL counterpart: GL_SRC_COLOR.
+    src_color,
+
+    /// The blend factor is 1-RGB, where RGB is the data from a pixel shader.\n
+    /// Direct3D counterpart: D3D11_BLEND_INV_SRC_COLOR/D3D12_BLEND_INV_SRC_COLOR. OpenGL counterpart: GL_ONE_MINUS_SRC_COLOR.
+    inv_src_color,
+
+    /// The blend factor is alpha (A) data from a pixel shader.\n
+    /// Direct3D counterpart: D3D11_BLEND_SRC_ALPHA/D3D12_BLEND_SRC_ALPHA. OpenGL counterpart: GL_SRC_ALPHA.
+    src_alpha,
+
+    /// The blend factor is 1-A, where A is alpha data from a pixel shader.\n
+    /// Direct3D counterpart: D3D11_BLEND_INV_SRC_ALPHA/D3D12_BLEND_INV_SRC_ALPHA. OpenGL counterpart: GL_ONE_MINUS_SRC_ALPHA.
+    inv_src_alpha,
+
+    /// The blend factor is alpha (A) data from a render target.\n
+    /// Direct3D counterpart: D3D11_BLEND_DEST_ALPHA/D3D12_BLEND_DEST_ALPHA. OpenGL counterpart: GL_DST_ALPHA.
+    dest_alpha,
+
+    /// The blend factor is 1-A, where A is alpha data from a render target.\n
+    /// Direct3D counterpart: D3D11_BLEND_INV_DEST_ALPHA/D3D12_BLEND_INV_DEST_ALPHA. OpenGL counterpart: GL_ONE_MINUS_DST_ALPHA.
+    inv_dest_alpha,
+
+    /// The blend factor is RGB data from a render target.\n
+    /// Direct3D counterpart: D3D11_BLEND_DEST_COLOR/D3D12_BLEND_DEST_COLOR. OpenGL counterpart: GL_DST_COLOR.
+    dest_color,
+
+    /// The blend factor is 1-RGB, where RGB is the data from a render target.\n
+    /// Direct3D counterpart: D3D11_BLEND_INV_DEST_COLOR/D3D12_BLEND_INV_DEST_COLOR. OpenGL counterpart: GL_ONE_MINUS_DST_COLOR.
+    inv_dest_color,
+
+    /// The blend factor is (f,f,f,1), where f = min(As, 1-Ad),
+    /// As is alpha data from a pixel shader, and Ad is alpha data from a render target.\n
+    /// Direct3D counterpart: D3D11_BLEND_SRC_ALPHA_SAT/D3D12_BLEND_SRC_ALPHA_SAT. OpenGL counterpart: GL_SRC_ALPHA_SATURATE.
+    src_alpha_sat,
+
+    /// The blend factor is the constant blend factor set with IDeviceContext::SetBlendFactors().\n
+    /// Direct3D counterpart: D3D11_BLEND_BLEND_FACTOR/D3D12_BLEND_BLEND_FACTOR. OpenGL counterpart: GL_CONSTANT_COLOR.
+    blend_factor,
+
+    /// The blend factor is one minus constant blend factor set with IDeviceContext::SetBlendFactors().\n
+    /// Direct3D counterpart: D3D11_BLEND_INV_BLEND_FACTOR/D3D12_BLEND_INV_BLEND_FACTOR. OpenGL counterpart: GL_ONE_MINUS_CONSTANT_COLOR.
+    inv_blend_factor,
+
+    /// The blend factor is the second RGB data output from a pixel shader.\n
+    /// Direct3D counterpart: D3D11_BLEND_SRC1_COLOR/D3D12_BLEND_SRC1_COLOR. OpenGL counterpart: GL_SRC1_COLOR.
+    src1_color,
+
+    /// The blend factor is 1-RGB, where RGB is the second RGB data output from a pixel shader.\n
+    /// Direct3D counterpart: D3D11_BLEND_INV_SRC1_COLOR/D3D12_BLEND_INV_SRC1_COLOR. OpenGL counterpart: GL_ONE_MINUS_SRC1_COLOR.
+    inv_src1_color,
+
+    /// The blend factor is the second alpha (A) data output from a pixel shader.\n
+    /// Direct3D counterpart: D3D11_BLEND_SRC1_ALPHA/D3D12_BLEND_SRC1_ALPHA. OpenGL counterpart: GL_SRC1_ALPHA.
+    src1_alpha,
+
+    /// The blend factor is 1-A, where A is the second alpha data output from a pixel shader.\n
+    /// Direct3D counterpart: D3D11_BLEND_INV_SRC1_ALPHA/D3D12_BLEND_INV_SRC1_ALPHA. OpenGL counterpart: GL_ONE_MINUS_SRC1_ALPHA.
+    inv_src1_alpha,
+};
+
+/// Blending operation
+/// [D3D11_BLEND_OP]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476088(v=vs.85).aspx
+/// [D3D12_BLEND_OP]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770340(v=vs.85).aspx
+/// [glBlendEquationSeparate]: https://www.opengl.org/wiki/GLAPI/glBlendEquationSeparate
+/// This enumeration describes blending operation for RGB or Alpha channels and generally mirrors
+/// [D3D11_BLEND_OP][] and [D3D12_BLEND_OP][] enums. It is used by RenderTargetBlendDesc structure to define RGB and Alpha
+/// blending operations
+/// \sa [D3D11_BLEND_OP on MSDN][D3D11_BLEND_OP], [D3D12_BLEND_OP on MSDN][D3D12_BLEND_OP], [glBlendEquationSeparate on OpenGL.org][glBlendEquationSeparate]
+pub const BlendOperation = enum(i8) {
+    /// Undefined blend operation
+    undefined,
+
+    /// Add source and destination color components.\n
+    /// Direct3D counterpart: D3D11_BLEND_OP_ADD/D3D12_BLEND_OP_ADD. OpenGL counterpart: GL_FUNC_ADD.
+    add,
+
+    /// Subtract destination color components from source color components.\n
+    /// Direct3D counterpart: D3D11_BLEND_OP_SUBTRACT/D3D12_BLEND_OP_SUBTRACT. OpenGL counterpart: GL_FUNC_SUBTRACT.
+    subtract,
+
+    /// Subtract source color components from destination color components.\n
+    /// Direct3D counterpart: D3D11_BLEND_OP_REV_SUBTRACT/D3D12_BLEND_OP_REV_SUBTRACT. OpenGL counterpart: GL_FUNC_REVERSE_SUBTRACT.
+    rev_subtract,
+
+    /// Compute the minimum of source and destination color components.\n
+    /// Direct3D counterpart: D3D11_BLEND_OP_MIN/D3D12_BLEND_OP_MIN. OpenGL counterpart: GL_MIN.
+    min,
+
+    /// Compute the maximum of source and destination color components.\n
+    /// Direct3D counterpart: D3D11_BLEND_OP_MAX/D3D12_BLEND_OP_MAX. OpenGL counterpart: GL_MAX.
+    max,
+};
+
+/// Logic operation
+/// [D3D12_LOGIC_OP]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770379(v=vs.85).aspx
+/// This enumeration describes logic operation and generally mirrors [D3D12_LOGIC_OP][] enum.
+/// It is used by RenderTargetBlendDesc structure to define logic operation.
+/// Only available on D3D12 engine
+/// \sa [D3D12_LOGIC_OP on MSDN][D3D12_LOGIC_OP]
+pub const LogicOperation = enum(i8) {
+    /// Clear the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_CLEAR.
+    clear = 0,
+
+    /// Set the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_SET.
+    set,
+
+    /// Copy the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_COPY.
+    copy,
+
+    /// Perform an inverted-copy of the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_COPY_INVERTED.
+    copy_inverted,
+
+    /// No operation is performed on the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_NOOP.
+    noop,
+
+    /// Invert the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_INVERT.
+    invert,
+
+    /// Perform a logical AND operation on the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_AND.
+    @"and",
+
+    /// Perform a logical NAND operation on the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_NAND.
+    nand,
+
+    /// Perform a logical OR operation on the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_OR.
+    @"or",
+
+    /// Perform a logical NOR operation on the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_NOR.
+    nor,
+
+    /// Perform a logical XOR operation on the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_XOR.
+    xor,
+
+    /// Perform a logical equal operation on the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_EQUIV.
+    equiv,
+
+    /// Perform a logical AND and reverse operation on the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_AND_REVERSE.
+    and_reverse,
+
+    /// Perform a logical AND and invert operation on the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_AND_INVERTED.
+    and_inverted,
+
+    /// Perform a logical OR and reverse operation on the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_OR_REVERSE.
+    or_reverse,
+
+    /// Perform a logical OR and invert operation on the render target.\n
+    /// Direct3D12 counterpart: D3D12_LOGIC_OP_OR_INVERTED.
+    or_inverted,
+
+    /// Helper value that stores the total number of logical operations in the enumeration.
+    num_operations,
+};
+
+/// Color component write flags
+///
+/// These flags are used by RenderTargetBlendDesc structure to define
+/// writable components of the render target
+///
+/// **Zig Usage:** Default value is equivalent to `COLOR_MASK_NONE`.
+pub const ColorMask = packed struct(u8) {
+    /// Allow data to be stored in the red component.
+    red: bool = false,
+
+    /// Allow data to be stored in the green component.
+    green: bool = false,
+
+    /// Allow data to be stored in the blue component.
+    blue: bool = false,
+
+    /// Allow data to be stored in the alpha component.
+    alpha: bool = false,
+
+    _: u4 = 0,
+
+    pub const rgb: ColorMask = .{ .red = true, .green = true, .blue = true };
+    pub const all: ColorMask = .{ .red = true, .green = true, .blue = true, .alpha = true };
+};
+
+/// Describes a blend state for a single render target
+///
+/// This structure is used by BlendStateDesc to describe
+/// blend states for render targets
+pub const RenderTargetBlendDesc = extern struct {
+    /// Enable or disable blending for this render target. Default value: False.
+    blend_enable: bool = false,
+
+    /// Enable or disable a logical operation for this render target. Default value: False.
+    logic_operation_enable: bool = false,
+
+    /// Specifies the blend factor to apply to the RGB value output from the pixel shader
+    /// Default value: Diligent::BLEND_FACTOR_ONE.
+    src_blend: BlendFactor = .one,
+
+    /// Specifies the blend factor to apply to the RGB value in the render target
+    /// Default value: Diligent::BLEND_FACTOR_ZERO.
+    dest_blend: BlendFactor = .zero,
+
+    /// Defines how to combine the source and destination RGB values
+    /// after applying the SrcBlend and DestBlend factors.
+    /// Default value: Diligent::BLEND_OPERATION_ADD.
+    blend_op: BlendOperation = .add,
+
+    /// Specifies the blend factor to apply to the alpha value output from the pixel shader.
+    /// Blend factors that end in _COLOR are not allowed.
+    /// Default value: Diligent::BLEND_FACTOR_ONE.
+    src_blend_alpha: BlendFactor = .one,
+
+    /// Specifies the blend factor to apply to the alpha value in the render target.
+    /// Blend factors that end in _COLOR are not allowed.
+    /// Default value: Diligent::BLEND_FACTOR_ZERO.
+    dest_blend_alpha: BlendFactor = .zero,
+
+    /// Defines how to combine the source and destination alpha values
+    /// after applying the SrcBlendAlpha and DestBlendAlpha factors.
+    /// Default value: Diligent::BLEND_OPERATION_ADD.
+    blend_op_alpha: BlendOperation = .add,
+
+    /// Defines logical operation for the render target.
+    /// Default value: Diligent::LOGIC_OP_NOOP.
+    logic_op: LogicOperation = .noop,
+
+    /// Render target write mask.
+    /// Default value: Diligent::COLOR_MASK_ALL.
+    render_target_write_mask: ColorMask = .all,
+
+    comptime {
+        helpers.ensureSame(@This(), c.RenderTargetBlendDesc);
+    }
+};
+
+/// Blend state description
+///
+/// This structure describes the blend state and is part of the GraphicsPipelineDesc.
+pub const BlendStateDesc = extern struct {
+    /// Specifies whether to use alpha-to-coverage as a multisampling technique
+    /// when setting a pixel to a render target. Default value: False.
+    alpha_to_coverage_enable: bool = false,
+
+    /// Specifies whether to enable independent blending in simultaneous render targets.
+    /// If set to False, only RenderTargets[0] is used. Default value: False.
+    independent_blend_enable: bool = false,
+
+    /// An array of RenderTargetBlendDesc structures that describe the blend
+    /// states for render targets
+    render_targets: [c.DILIGENT_MAX_RENDER_TARGETS]RenderTargetBlendDesc = @splat(.{}),
+
+    comptime {
+        helpers.ensureSame(@This(), c.BlendStateDesc);
+    }
+};
+
+/// Fill mode
+///
+/// [D3D11_FILL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476131(v=vs.85).aspx
+/// [D3D12_FILL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770366(v=vs.85).aspx
+/// This enumeration determines the fill mode to use when rendering triangles and mirrors the
+/// [D3D11_FILL_MODE][]/[D3D12_FILL_MODE][] enum. It is used by RasterizerStateDesc structure to define the fill mode.
+pub const FillMode = enum(i8) {
+    /// Undefined fill mode.
+    undefined,
+
+    /// Rasterize triangles using wireframe fill. \n
+    /// Direct3D counterpart: D3D11_FILL_WIREFRAME/D3D12_FILL_MODE_WIREFRAME. OpenGL counterpart: GL_LINE.
+    wireframe,
+
+    /// Rasterize triangles using solid fill. \n
+    /// Direct3D counterpart: D3D11_FILL_SOLID/D3D12_FILL_MODE_SOLID. OpenGL counterpart: GL_FILL.
+    solid,
+};
+
+/// Cull mode
+///
+/// [D3D11_CULL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476108(v=vs.85).aspx
+/// [D3D12_CULL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770354(v=vs.85).aspx
+/// This enumeration defines which triangles are not drawn during the rasterization and mirrors
+/// [D3D11_CULL_MODE][]/[D3D12_CULL_MODE][] enum. It is used by RasterizerStateDesc structure to define the polygon cull mode.
+pub const CullMode = enum(i8) {
+    /// Undefined cull mode.
+    undefined,
+
+    /// Draw all triangles.
+    ///
+    /// Direct3D counterpart: D3D11_CULL_NONE/D3D12_CULL_MODE_NONE. OpenGL counterpart: glDisable( GL_CULL_FACE ).
+    none,
+
+    /// Do not draw triangles that are front-facing. Front- and back-facing triangles are determined
+    /// by the RasterizerStateDesc::FrontCounterClockwise member.
+    ///
+    /// Direct3D counterpart: D3D11_CULL_FRONT/D3D12_CULL_MODE_FRONT. OpenGL counterpart: GL_FRONT.
+    front,
+
+    /// Do not draw triangles that are back-facing. Front- and back-facing triangles are determined
+    /// by the RasterizerStateDesc::FrontCounterClockwise member.
+    ///
+    /// Direct3D counterpart: D3D11_CULL_BACK/D3D12_CULL_MODE_BACK. OpenGL counterpart: GL_BACK.
+    back,
+};
+
+/// Rasterizer state description
+/// This structure describes the rasterizer state and is part of the GraphicsPipelineDesc.
+pub const RasterizerStateDesc = extern struct {
+    /// Determines triangle fill mode, see FillMode for details.
+    ///
+    /// Default value: .solid.
+    fill_mode: FillMode = .solid,
+
+    /// Determines triangle cull mode, see CullMode for details.
+    ///
+    /// Default value: .back.
+    cull_mode: CullMode = .back,
+
+    /// Determines if a triangle is front- or back-facing.
+    ///
+    /// If this parameter is true, a triangle will be considered front-facing if
+    /// its vertices are counter-clockwise
+    /// on the render target and considered back-facing if they are clockwise.
+    /// If this parameter is false, the opposite is true.
+    /// Default value: false.
+    front_counter_clockwise: bool = false,
+
+    /// Enable clipping against near and far clip planes.
+    ///
+    /// Default value: true.
+    ///
+    /// By default polygon faces are clipped against the near and far planes of the view
+    /// frustum. If depth clipping is disabled, the depth of the fragments that would be
+    /// clipped is clamped to the near/far plane instead of discarding them.
+    ///
+    /// To check if the device supports depth clamping, use the DepthClamp device feature.
+    /// If it is not supported, the value of this member must be true.
+    depth_clip_enable: bool = true,
+
+    /// Enable scissor-rectangle culling. All pixels outside an active scissor rectangle are culled.
+    ///
+    /// Default value: false.
+    scissor_enable: bool = false,
+
+    /// Specifies whether to enable line antialiasing.
+    ///
+    /// Default value: false.
+    antialiased_line_enable: bool = false,
+
+    /// Constant value added to the depth of a given pixel.
+    ///
+    /// Default value: 0.
+    depth_bias: i32 = 0,
+
+    /// Maximum depth bias of a pixel.
+    ///
+    /// **Warning:** Depth bias clamp is not available in OpenGL
+    ///
+    /// Default value: 0.
+    depth_bias_clamp: f32 = 0.0,
+
+    /// Scalar that scales the given pixel's slope before adding to the pixel's depth.
+    ///
+    /// Default value: 0.
+    slope_scaled_depth_bias: f32 = 0.0,
+
+    comptime {
+        helpers.ensureSame(@This(), c.RasterizerStateDesc);
+    }
+};
+
+/// Stencil operation
+///
+/// [D3D11_STENCIL_OP]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476219(v=vs.85).aspx
+/// [D3D12_STENCIL_OP]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770409(v=vs.85).aspx
+/// This enumeration describes the stencil operation and generally mirrors
+/// [D3D11_STENCIL_OP][]/[D3D12_STENCIL_OP][] enumeration.
+/// It is used by Diligent::StencilOpDesc structure to describe the stencil fail, depth fail
+/// and stencil pass operations
+pub const StencilOp = enum(i8) {
+    /// Undefined operation.
+    undefined,
+
+    /// Keep the existing stencil data.\n
+    /// Direct3D counterpart: D3D11_STENCIL_OP_KEEP/D3D12_STENCIL_OP_KEEP. OpenGL counterpart: GL_KEEP.
+    keep,
+
+    /// Set the stencil data to 0.\n
+    /// Direct3D counterpart: D3D11_STENCIL_OP_ZERO/D3D12_STENCIL_OP_ZERO. OpenGL counterpart: GL_ZERO.
+    zero,
+
+    /// Set the stencil data to the reference value set by calling IDeviceContext::SetStencilRef().\n
+    /// Direct3D counterpart: D3D11_STENCIL_OP_REPLACE/D3D12_STENCIL_OP_REPLACE. OpenGL counterpart: GL_REPLACE.
+    replace,
+
+    /// Increment the current stencil value, and clamp to the maximum representable unsigned value.\n
+    /// Direct3D counterpart: D3D11_STENCIL_OP_INCR_SAT/D3D12_STENCIL_OP_INCR_SAT. OpenGL counterpart: GL_INCR.
+    incr_sat,
+
+    /// Decrement the current stencil value, and clamp to 0.\n
+    /// Direct3D counterpart: D3D11_STENCIL_OP_DECR_SAT/D3D12_STENCIL_OP_DECR_SAT. OpenGL counterpart: GL_DECR.
+    decr_sat,
+
+    /// Bitwise invert the current stencil buffer value.\n
+    /// Direct3D counterpart: D3D11_STENCIL_OP_INVERT/D3D12_STENCIL_OP_INVERT. OpenGL counterpart: GL_INVERT.
+    invert,
+
+    /// Increment the current stencil value, and wrap the value to zero when incrementing
+    /// the maximum representable unsigned value. \n
+    /// Direct3D counterpart: D3D11_STENCIL_OP_INCR/D3D12_STENCIL_OP_INCR. OpenGL counterpart: GL_INCR_WRAP.
+    incr_wrap,
+
+    /// Decrement the current stencil value, and wrap the value to the maximum representable
+    /// unsigned value when decrementing a value of zero.\n
+    /// Direct3D counterpart: D3D11_STENCIL_OP_DECR/D3D12_STENCIL_OP_DECR. OpenGL counterpart: GL_DECR_WRAP.
+    decr_wrap,
+};
+
+/// Describes stencil operations that are performed based on the results of depth test.
+///
+/// [D3D11_DEPTH_STENCILOP_DESC]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476109(v=vs.85).aspx
+/// [D3D12_DEPTH_STENCILOP_DESC]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770355(v=vs.85).aspx
+/// The structure generally mirrors [D3D11_DEPTH_STENCILOP_DESC][]/[D3D12_DEPTH_STENCILOP_DESC][] structure.
+/// It is used by Diligent::DepthStencilStateDesc structure to describe the stencil
+/// operations for the front and back facing polygons.
+pub const StencilOpDesc = extern struct {
+    /// The stencil operation to perform when stencil testing fails.
+    /// Default value: Diligent::STENCIL_OP_KEEP.
+    stencil_fail_op: StencilOp = .keep,
+
+    /// The stencil operation to perform when stencil testing passes and depth testing fails.
+    /// Default value: Diligent::STENCIL_OP_KEEP.
+    stencil_depth_fail_op: StencilOp = .keep,
+
+    /// The stencil operation to perform when stencil testing and depth testing both pass.
+    /// Default value: Diligent::STENCIL_OP_KEEP.
+    stencil_pass_op: StencilOp = .keep,
+
+    /// A function that compares stencil data against existing stencil data.
+    /// Default value: Diligent::COMPARISON_FUNC_ALWAYS. See Diligent::COMPARISON_FUNCTION.
+    stencil_func: ComparisonFunction = .always,
+
+    comptime {
+        helpers.ensureSame(@This(), c.StencilOpDesc);
+    }
+};
+
+/// Depth stencil state description
+///
+/// [D3D11_DEPTH_STENCIL_DESC]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476110(v=vs.85).aspx
+/// [D3D12_DEPTH_STENCIL_DESC]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770356(v=vs.85).aspx
+/// This structure describes the depth stencil state and is part of the GraphicsPipelineDesc.
+/// The structure generally mirrors [D3D11_DEPTH_STENCIL_DESC][]/[D3D12_DEPTH_STENCIL_DESC][]
+/// structure.
+pub const DepthStencilStateDesc = extern struct {
+    /// Enable depth-stencil operations. When it is set to False,
+    /// depth test always passes, depth writes are disabled,
+    /// and no stencil operations are performed. Default value: True.
+    depth_enable: bool = true,
+
+    /// Enable or disable writes to a depth buffer. Default value: True.
+    depth_write_enable: bool = true,
+
+    /// A function that compares depth data against existing depth data.
+    /// See Diligent::COMPARISON_FUNCTION for details.
+    /// Default value: Diligent::COMPARISON_FUNC_LESS.
+    depth_func: ComparisonFunction = .less,
+
+    /// Enable stencil operations. Default value: False.
+    stencil_enable: bool = false,
+
+    /// Identify which bits of the depth-stencil buffer are accessed when reading stencil data.
+    /// Default value: 0xFF.
+    stencil_read_mask: u8 = 0xFF,
+
+    /// Identify which bits of the depth-stencil buffer are accessed when writing stencil data.
+    /// Default value: 0xFF.
+    stencil_write_mask: u8 = 0xFF,
+
+    /// Identify stencil operations for the front-facing triangles, see Diligent::StencilOpDesc.
+    front_face: StencilOpDesc = .{},
+
+    /// Identify stencil operations for the back-facing triangles, see Diligent::StencilOpDesc.
+    back_face: StencilOpDesc = .{},
+
+    comptime {
+        helpers.ensureSame(@This(), c.DepthStencilStateDesc);
+    }
+};
+
+/// Input frequency
+pub const InputElementFrequency = enum(u8) {
+    /// Frequency is undefined.
+    undefined,
+
+    /// Input data is per-vertex data.
+    per_vertex,
+
+    /// Input data is per-instance data.
+    per_instance,
+};
+
+/// Value type
+///
+/// This enumeration describes value type. It is used by
+/// - BufferDesc structure to describe value type of a formatted buffer
+/// - DrawAttribs structure to describe index type for an indexed draw call
+pub const ValueType = enum(u8) {
+    /// Undefined type
+    undefined,
+    /// Signed 8-bit integer
+    int8,
+    /// Signed 16-bit integer
+    int16,
+    /// Signed 32-bit integer
+    int32,
+    /// Unsigned 8-bit integer
+    uint8,
+    /// Unsigned 16-bit integer
+    uint16,
+    /// Unsigned 32-bit integer
+    uint32,
+    /// Half-precision 16-bit floating point
+    float16,
+    /// Full-precision 32-bit floating point
+    float32,
+    /// Double-precision 64-bit floating point
+    float64,
+};
+
+/// Description of a single element of the input layout
+pub const LayoutElement = extern struct {
+    /// HLSL semantic.
+    /// Default value (`"ATTRIB"`) allows HLSL shaders to be converted
+    /// to GLSL and used in OpenGL backend as well as compiled to SPIRV and used
+    /// in Vulkan backend.
+    /// Any value other than default will only work in Direct3D11 and Direct3D12 backends.
+    hlsl_semantic: [*:0]const u8 = "ATTRIB",
+
+    /// Input index of the element that is specified in the vertex shader.
+    /// In Direct3D11 and Direct3D12 backends this is the semantic index.
+    input_index: u32 = 0,
+
+    /// Buffer slot index that this element is read from.
+    buffer_slot: u32 = 0,
+
+    /// Number of components in the element. Allowed values are 1, 2, 3, and 4.
+    num_components: u32 = 0,
+
+    /// Type of the element components, see Diligent::VALUE_TYPE for details.
+    value_type: ValueType = .float32,
+
+    /// Indicates if the value should be normalized.
+    /// For signed and unsigned integer value types
+    /// (`VT_INT8`, `VT_INT16`, `VT_INT32`, `VT_UINT8`, `VT_UINT16`, `VT_UINT32`)
+    /// indicates if the value should be normalized to [-1,+1] or
+    /// [0, 1] range respectively.
+    ///
+    /// For floating point types (`VT_FLOAT16` and `VT_FLOAT32`), this member is ignored.
+    is_normalized: bool = true,
+
+    /// Relative offset, in bytes, to the element bits.
+    /// If this value is set to `LAYOUT_ELEMENT_AUTO_OFFSET` (default value), the offset will
+    /// be computed automatically by placing the element right after the previous one.
+    relative_offset: u32 = c.LAYOUT_ELEMENT_AUTO_OFFSET,
+
+    /// Stride, in bytes, between two elements, for this buffer slot.
+    /// If this value is set to `LAYOUT_ELEMENT_AUTO_STRIDE`, the stride will be
+    /// computed automatically assuming that all elements in the same buffer slot are
+    /// packed one after another. If the buffer slot contains multiple layout elements,
+    /// they all must specify the same stride or use LAYOUT_ELEMENT_AUTO_STRIDE value.
+    stride: u32 = c.LAYOUT_ELEMENT_AUTO_STRIDE,
+
+    /// Frequency of the input data, see Diligent::INPUT_ELEMENT_FREQUENCY for details.
+    frequency: InputElementFrequency = .per_vertex,
+
+    /// The number of instances to draw using the same per-instance data before advancing
+    /// in the buffer by one element.
+    instance_data_step_rate: u32 = 1,
+
+    comptime {
+        helpers.ensureSame(@This(), c.LayoutElement);
+    }
+};
+
+/// Layout description
+///
+/// This structure is used by IRenderDevice::CreateGraphicsPipelineState().
+pub const InputLayoutDesc = extern struct {
+    /// Array of layout elements.
+    layout_elements: ?[*]const LayoutElement = null,
+
+    /// The number of layout elements in `LayoutElements` array.
+    num_elements: u32 = 0,
+
+    comptime {
+        helpers.ensureSame(@This(), c.InputLayoutDesc);
+    }
+};
+
+/// Input primitive topology.
+///
+/// This enumeration is used by GraphicsPipelineDesc structure to define input primitive topology.
+pub const PrimitiveTopology = enum(u8) {
+    /// Undefined topology
+    undefined,
+
+    /// Interpret the vertex data as a list of triangles.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST. OpenGL counterpart: GL_TRIANGLES.
+    triangle_list,
+
+    /// Interpret the vertex data as a triangle strip.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP. OpenGL counterpart: GL_TRIANGLE_STRIP.
+    triangle_strip,
+
+    /// Interpret the vertex data as a list of points.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_POINTLIST. OpenGL counterpart: GL_POINTS.
+    point_list,
+
+    /// Interpret the vertex data as a list of lines.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_LINELIST. OpenGL counterpart: GL_LINES.
+    line_list,
+
+    /// Interpret the vertex data as a line strip.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_LINESTRIP. OpenGL counterpart: GL_LINE_STRIP.
+    line_strip,
+
+    /// Interpret the vertex data as a list of triangles with adjacency data.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ. OpenGL counterpart: GL_TRIANGLES_ADJACENCY.
+    triangle_list_adj,
+
+    /// Interpret the vertex data as a triangle strip with adjacency data.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ. OpenGL counterpart: GL_TRIANGLE_STRIP_ADJACENCY.
+    triangle_strip_adj,
+
+    /// Interpret the vertex data as a list of lines with adjacency data.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ. OpenGL counterpart: GL_LINES_ADJACENCY.
+    line_list_adj,
+
+    /// Interpret the vertex data as a line strip with adjacency data.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ. OpenGL counterpart: GL_LINE_STRIP_ADJACENCY.
+    line_strip_adj,
+
+    /// Interpret the vertex data as a list of one control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"1_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of two control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"2_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of three control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"3_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of four control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"4_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of five control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_5_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"5_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of six control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_6_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"6_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of seven control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_7_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"7_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of eight control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_8_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"8_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of nine control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_9_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"9_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of ten control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_10_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"10_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 11 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_11_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"11_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 12 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"12_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 13 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_13_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"13_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 14 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_14_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"14_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 15 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_15_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"15_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 16 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"16_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 17 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_17_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"17_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 18 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_18_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"18_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 19 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_19_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"19_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 20 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_20_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"20_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 21 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_21_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"21_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 22 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_22_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"22_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 23 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_23_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"23_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 24 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_24_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"24_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 25 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"25_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 26 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_26_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"26_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 27 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_27_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"27_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 28 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_28_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"28_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 29 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_29_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"29_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 30 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_30_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"30_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 31 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_31_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"31_control_point_patchlist",
+
+    /// Interpret the vertex data as a list of 32 control point patches.
+    ///
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    @"32_control_point_patchlist",
+};
+
+/// Pipeline state shading rate flags.
+/// **Zig Usage:** Default value is equivalent to `PIPELINE_SHADING_RATE_FLAG_NONE`
+pub const PipelineShadingRateFlags = packed struct(u8) {
+    /// Indicates that the pipeline state will be used with per draw or per primitive shading rate.
+    /// See IDeviceContext::SetShadingRate().
+    per_primitive: bool = false,
+
+    /// Indicates that the pipeline state will be used with texture-based shading rate.
+    /// See IDeviceContext::SetShadingRate() and IDeviceContext::SetRenderTargetsExt().
+    texture_based: bool = false,
+
+    _: u6 = 0,
+};
+
+/// Sample description
+///
+/// This structure is used by GraphicsPipelineDesc to describe multisampling parameters
+pub const SampleDesc = extern struct {
+    /// Sample count
+    count: u8 = 1,
+
+    /// Quality
+    quality: u8 = 0,
+
+    comptime {
+        helpers.ensureSame(@This(), c.SampleDesc);
+    }
+};
+
+/// Graphics pipeline state description
+///
+/// This structure describes the graphics pipeline state and is part of the GraphicsPipelineStateCreateInfo structure.
+pub const GraphicsPipelineDesc = extern struct {
+    /// Blend state description.
+    blend_desc: BlendStateDesc = .{},
+
+    /// Sample mask.
+    /// 32-bit sample mask that determines which samples get updated
+    /// in all the active render targets. A sample mask is always applied;
+    /// it is independent of whether multisampling is enabled, and does not
+    /// depend on whether an application uses multisample render targets.
+    sample_mask: u32 = 0xFFFFFFFF,
+
+    /// Rasterizer state description.
+    rasterizer_desc: RasterizerStateDesc = .{},
+
+    /// Depth-stencil state description.
+    depth_stencil_desc: DepthStencilStateDesc = .{},
+
+    /// Input layout, ignored in a mesh pipeline.
+    input_layout: InputLayoutDesc = .{},
+
+    /// Primitive topology type, ignored in a mesh pipeline.
+    primitive_topology: PrimitiveTopology = .triangle_list,
+
+    /// The number of viewports used by this pipeline
+    num_viewports: u8 = 1,
+
+    /// The number of render targets in the RTVFormats array.
+    /// Must be 0 when `pRenderPass` is not `null`.
+    num_render_targets: u8 = 0,
+
+    /// When `pRenderPass` is not `null`, the subpass
+    /// index within the render pass.
+    /// When `pRenderPass` is `null`, this member must be 0.
+    subpass_index: u8 = 0,
+
+    /// Shading rate flags that specify which type of the shading rate will be used with this pipeline.
+    shading_rate_flags: PipelineShadingRateFlags = .{},
+
+    /// Render target formats.
+    /// All formats must be Diligent::TEX_FORMAT_UNKNOWN when `pRenderPass` is not `null`.
+    rtv_formats: [c.DILIGENT_MAX_RENDER_TARGETS]TextureFormat = @splat(.unknown),
+
+    /// Depth-stencil format.
+    /// Must be Diligent::TEX_FORMAT_UNKNOWN when `pRenderPass` is not `null`.
+    dsv_format: TextureFormat = .unknown,
+
+    /// Indicates that the pipeline will be used with read-only depth-stencil buffer.
+    /// Must be `false` when `pRenderPass` is not `null`.
+    read_only_dsv: bool = false,
+
+    /// Multisampling parameters.
+    sample_desc: SampleDesc = .{},
+
+    /// Pointer to the render pass object.
+    /// When non-null render pass is specified, `NumRenderTargets` must be 0,
+    /// and all RTV formats as well as DSV format must be Diligent::TEX_FORMAT_UNKNOWN.
+    render_pass: ?*c.IRenderPass = null,
+
+    /// Node mask.
+    node_mask: u32 = 0,
+
+    comptime {
+        helpers.ensureSame(@This(), c.GraphicsPipelineDesc);
+    }
+};
+
+/// Pipeline type
+pub const PipelineType = enum(u8) {
+    /// Graphics pipeline, which is used by IDeviceContext::Draw(), IDeviceContext::DrawIndexed(),
+    /// IDeviceContext::DrawIndirect(), IDeviceContext::DrawIndexedIndirect().
+    graphics,
+
+    /// Compute pipeline, which is used by IDeviceContext::DispatchCompute(), IDeviceContext::DispatchComputeIndirect().
+    compute,
+
+    /// Mesh pipeline, which is used by IDeviceContext::DrawMesh(), IDeviceContext::DrawMeshIndirect().
+    mesh,
+
+    /// Ray tracing pipeline, which is used by IDeviceContext::TraceRays().
+    ray_tracing,
+
+    /// Tile pipeline, which is used by IDeviceContext::DispatchTile().
+    tile,
+
+    _,
+
+    pub const invalid: PipelineType = @fromBackingInt(0xFF);
+};
+
+/// Pipeline layout description
+pub const PipelineResourceLayoutDesc = extern struct {
+    /// Default shader resource variable type.
+    /// This type will be used if shader variable description is not found in the `Variables` array
+    /// or if `Variables == nullptr`
+    default_variable_type: ShaderResourceVariableType = .static,
+
+    /// Default shader variable merge stages.
+    ///
+    /// By default, all variables not found in the Variables array define separate resources.
+    /// For example, if there is resource `"g_Texture"` in the vertex and pixel shader stages, there
+    /// will be two separate resources in both stages. This member defines shader stages
+    /// in which default variables will be combined.
+    /// For example, if `DefaultVariableMergeStages == SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL`,
+    /// then both resources in the example above will be combined into a single one.
+    /// If there is another `"g_Texture"` in geometry shader, it will be separate from combined
+    /// vertex-pixel "g_Texture".
+    /// This member has no effect on variables defined in Variables array.
+    default_variable_merge_stages: ShaderType = .{},
+
+    /// Number of elements in Variables array
+    num_variables: u32 = 0,
+
+    /// Array of shader resource variable descriptions
+    ///
+    /// There may be multiple variables with the same name that use different shader stages,
+    /// but the stages must not overlap.
+    variables: ?[*]const ShaderResourceVariableDesc = null,
+
+    /// Number of immutable samplers in ImmutableSamplers array
+    num_immutable_samplers: u32 = 0,
+
+    /// Array of immutable sampler descriptions
+    immutable_samplers: ?[*]const c.ImmutableSamplerDesc = null,
+
+    comptime {
+        helpers.ensureSame(@This(), c.PipelineResourceLayoutDesc);
+    }
+};
+
+/// Pipeline state description
+pub const PipelineStateDesc = extern struct {
+    /// Object name
+    name: ?[*:0]const u8 = null,
+
+    /// Pipeline type
+    pipeline_type: PipelineType = .graphics,
+
+    /// Shader resource binding allocation granularity
+    /// This member defines allocation granularity for internal resources required by the shader resource
+    /// binding object instances.
+    /// Has no effect if the PSO is created with explicit pipeline resource signature(s).
+    srb_allocation_granularity: u32 = 1,
+
+    /// Defines which immediate contexts are allowed to execute commands that use this pipeline state.
+    ///
+    /// When `ImmediateContextMask` contains a bit at position n, the pipeline state may be
+    /// used in the immediate context with index n directly (see DeviceContextDesc::ContextId).
+    /// It may also be used in a command list recorded by a deferred context that will be executed
+    /// through that immediate context.
+    ///
+    /// **Remarks:** Only specify those bits that will indicate the immediate contexts where the PSO
+    /// will actually be used. Do not set unnecessary bits as this will result in extra overhead.
+    immediate_context_mask: u64 = 1,
+
+    /// Pipeline layout description
+    resource_layout: PipelineResourceLayoutDesc = .{},
+
+    comptime {
+        helpers.ensureSame(@This(), c.PipelineStateDesc);
+    }
+};
+
+/// Pipeline state creation flags
+/// **Zig Usage:** Default is equivalent to PSO_CREATE_FLAG_NONE
+pub const PSOCreateFlags = packed struct(u32) {
+    /// Ignore missing variables.
+    /// By default, the engine outputs a warning for every variable
+    /// provided as part of the pipeline resource layout description
+    /// that is not found in any of the designated shader stages.
+    /// Use this flag to silence these warnings.
+    ignore_missing_variables: bool = false,
+
+    /// Ignore missing immutable samplers.
+    /// By default, the engine outputs a warning for every immutable sampler
+    /// provided as part of the pipeline resource layout description
+    /// that is not found in any of the designated shader stages.
+    /// Use this flag to silence these warnings.
+    ignore_missing_immutable_samplers: bool = false,
+
+    /// Do not remap shader resources when creating the pipeline.
+    /// Resource bindings in all shaders must match the bindings expected
+    /// by the PSO's resource signatures.
+    dont_remap_shader_resources: bool = false,
+
+    /// Create the pipeline state asynchronously.
+    /// When this flag is set to true and if the devices supports
+    /// AsyncShaderCompilation feature, the pipeline will be created
+    /// asynchronously in the background. An application should use
+    /// the IPipelineState::GetStatus() method to check the pipeline status.
+    /// If the device does not support asynchronous shader compilation,
+    /// the flag is ignored and the pipeline is created synchronously.
+    asynchronous: bool = false,
+
+    _: u28 = 0,
+};
+
+pub const PipelineStateCreateInfo = extern struct {
+    /// Pipeline state description
+    pso_desc: PipelineStateDesc = .{},
+
+    /// Pipeline state creation flags, see Diligent::PSO_CREATE_FLAGS.
+    flags: PSOCreateFlags = .{},
+
+    /// The number of elements in `ppResourceSignatures` array.
+    resource_signatures_count: u32 = 0,
+
+    /// An array of `ResourceSignaturesCount` shader resource signatures that
+    /// define the layout of shader resources in this pipeline state object.
+    /// See Diligent::IPipelineResourceSignature.
+    ///
+    /// When this member is null, the pipeline resource layout will be defined
+    /// by `PSODesc.ResourceLayout` member. In this case the PSO will implicitly
+    /// create a resource signature that can be queried through IPipelineState::GetResourceSignature()
+    /// method.
+    /// When `ppResourceSignatures` is not null, `PSODesc.ResourceLayout` is ignored and
+    /// should be in it default state.
+    resource_signatures: ?[*]*c.IPipelineResourceSignature = null,
+
+    /// The number of specialization constants.
+    num_specialization_constants: u32 = 0,
+
+    /// Pointer to an array of NumSpecializationConstants SpecializationConstant
+    /// elements that define the values of specialization constants for the pipeline.
+    /// Specialization constants allow applications to set constant values at pipeline
+    /// creation time, enabling the driver to optimize the compiled shader code.
+    ///
+    /// This feature requires DeviceFeatures.SpecializationConstants to be enabled.
+    /// If the device does not support specialization constants, non-empty arrays
+    /// will be rejected during pipeline creation.
+    ///
+    /// **See also:** SpecializationConstant
+    specialization_constants: ?[*]const c.SpecializationConstant = null,
+
+    /// Optional pipeline state cache that is used to accelerate
+    /// PSO creation. If `PSODesc.Name` is found in the cache, the cache
+    /// data is used to create the PSO. Otherwise, the PSO
+    /// is added to the cache.
+    pso_cache: ?*c.IPipelineStateCache = null,
+
+    /// For internal use only. Must always be `null`.
+    internal_data: ?*anyopaque = null,
+
+    comptime {
+        helpers.ensureSame(@This(), c.PipelineStateCreateInfo);
+    }
+};
+
+/// Graphics pipeline state initialization information.
+pub const GraphicsPipelineStateCreateInfo = extern struct {
+    base: PipelineStateCreateInfo = .{},
+
+    /// Graphics pipeline state description.
+    graphics_pipeline: GraphicsPipelineDesc = .{},
+
+    /// Vertex shader to be used with the pipeline.
+    vertex_shader: ?*c.IShader = null,
+
+    /// Pixel shader to be used with the pipeline.
+    pixel_shader: ?*c.IShader = null,
+
+    /// Domain shader to be used with the pipeline.
+    domain_shader: ?*c.IShader = null,
+
+    /// Hull shader to be used with the pipeline.
+    hull_shader: ?*c.IShader = null,
+
+    /// Geometry shader to be used with the pipeline.
+    geometry_shader: ?*c.IShader = null,
+
+    /// Amplification shader to be used with the pipeline.
+    amplification_shader: ?*c.IShader = null,
+
+    /// Mesh shader to be used with the pipeline.
+    mesh_shader: ?*c.IShader = null,
+
+    comptime {
+        helpers.ensureSame(@This(), c.GraphicsPipelineStateCreateInfo);
+    }
+};
+
+/// Describes the shader type
+/// **Zig Usage:** Default value is equivalent to `SHADER_TYPE_UNKNOWN`.
+pub const ShaderType = packed struct(u32) {
+    /// Vertex shader
+    vertex: bool = false,
+    /// Pixel (fragment) shader
+    pixel: bool = false,
+    /// Geometry shader
+    geometry: bool = false,
+    /// Hull (tessellation control) shader
+    hull: bool = false,
+    /// Domain (tessellation evaluation) shader
+    domain: bool = false,
+    /// Compute shader
+    compute: bool = false,
+    /// Amplification (task) shader
+    amplification: bool = false,
+    /// Mesh shader
+    mesh: bool = false,
+    /// Ray generation shader
+    ray_gren: bool = false,
+    /// Ray miss shader
+    ray_miss: bool = false,
+    /// Ray closest hit shader
+    ray_closest_hit: bool = false,
+    /// Ray any hit shader
+    ray_any_hit: bool = false,
+    /// Ray intersection shader
+    ray_intersection: bool = false,
+    /// Callable shader
+    callable: bool = false,
+    /// Tile shader (Only for Metal backend)
+    tile: bool = false,
+
+    _: u17 = 0,
+
+    /// Vertex and pixel shader stages
+    pub const vs_ps: ShaderType = .{ .vertex = true, .pixel = true };
+
+    /// All graphics pipeline shader stages
+    pub const all_graphics: ShaderType = .{
+        .vertex = true,
+        .pixel = true,
+        .geometry = true,
+        .hull = true,
+        .domain = true,
+    };
+
+    /// All mesh shading pipeline stages
+    pub const all_mesh: ShaderType = .{
+        .amplification = true,
+        .mesh = true,
+        .pixel = true,
+    };
+
+    /// All ray-tracing pipeline shader stages
+    pub const all_ray_tracing: ShaderType = .{
+        .ray_gen = true,
+        .ray_miss = true,
+        .ray_closest_hit = true,
+        .ray_any_hit = true,
+        .ray_intersection = true,
+        .callable = true,
+    };
+};
+
+/// Describes the type of the shader resource variable
+pub const ShaderResourceVariableType = enum(u8) {
+    /// Shader resource bound to the variable is the same for all SRB instances.
+    /// It must be set *once* directly through Pipeline State object.
+    static = 0,
+
+    /// Shader resource bound to the variable is specific to the shader resource binding
+    /// instance (see Diligent::IShaderResourceBinding). It must be set *once* through
+    /// Diligent::IShaderResourceBinding interface. It cannot be set through Diligent::IPipelineState
+    /// interface and cannot be change once bound.
+    mutable,
+
+    /// Shader variable binding is dynamic. It can be set multiple times for every instance of shader resource
+    /// binding (see Diligent::IShaderResourceBinding). It cannot be set through Diligent::IPipelineState interface.
+    dynamic,
+};
+
+/// Shader variable property flags.
+/// **Zig Usage:** Default is equivalent to `SHADER_VARIABLE_FLAG_NONE`.
+pub const ShaderVariableFlags = packed struct(u8) {
+    /// Indicates that dynamic buffers will never be bound to the resource
+    /// variable. Applies to Diligent::SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
+    /// Diligent::SHADER_RESOURCE_TYPE_BUFFER_UAV, Diligent::SHADER_RESOURCE_TYPE_BUFFER_SRV resources.
+    ///
+    /// **Remarks:** This flag directly translates to the Diligent::PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS
+    /// flag in the internal pipeline resource signature.
+    no_dynamic_buffers: bool = false,
+
+    /// Indicates that the resource consists of inline constants
+    /// (also known as push constants in Vulkan or root constants in Direct3D12).
+    /// Applies to Diligent::SHADER_RESOURCE_TYPE_CONSTANT_BUFFER only.
+    ///
+    /// **Remarks:** This flag directly translates to the Diligent::PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS
+    /// flag in the internal pipeline resource signature.
+    ///
+    /// See Diligent::PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS for more details.
+    inline_constants: bool = false,
+
+    /// Indicates that the resource is an input attachment in general layout, which allows simultaneously
+    /// reading from the resource through the input attachment and writing to it via color or depth-stencil
+    /// attachment.
+    ///
+    /// **Note:** This flag is only valid in Vulkan.
+    general_input_attachment_vk: bool = false,
+
+    /// Indicates that the resource is an unfilterable-float texture.
+    ///
+    /// **Note:** This flag is only valid in WebGPU and ignored in other backends.
+    unfilterable_float_texture_webgpu: bool = false,
+
+    /// Indicates that the resource is a non-filtering sampler.
+    ///
+    /// **Note:** This flag is only valid in WebGPU and ignored in other backends.
+    non_filtering_sampler_webgpu: bool = false,
+
+    _: u3 = 0,
+};
+
+/// Describes shader variable
+pub const ShaderResourceVariableDesc = extern struct {
+    /// Shader variable name
+    name: ?[*:0]const u8 = null,
+
+    /// Shader stages this resources variable applies to.
+    ///
+    /// If more than one shader stage is specified, the variable will be shared between these stages.
+    /// Shader stages used by different variables with the same name must not overlap.
+    shader_stages: ShaderType = .{},
+
+    /// Shader variable type. See Diligent::SHADER_RESOURCE_VARIABLE_TYPE for a list of allowed types
+    type: ShaderResourceVariableType = .static,
+
+    flags: ShaderVariableFlags = .{},
+
+    comptime {
+        helpers.ensureSame(@This(), c.ShaderResourceVariableDesc);
+    }
+};
+
+/// Flags used by IShaderResourceVariable::Set, IShaderResourceVariable::SetArray,
+/// and IShaderResourceVariable::SetBufferRange methods.
+///
+/// **Zig Usage:** Default value is equivalent to `SET_SHADER_RESOURCE_FLAG_NONE`.
+pub const SetShaderResourceFlags = packed struct(u32) {
+    /// Allow overwriting static and mutable variable bindings.
+    ///
+    /// By default, static and mutable variables can't be changed once
+    /// initialized to a non-null resource. This flag is required
+    /// to explicitly allow overwriting the binding.
+    ///
+    /// Overwriting static variables does not require synchronization
+    /// with GPU and does not have effect on shader resource binding
+    /// objects already created from the pipeline state or resource signature.
+    ///
+    /// When overwriting a mutable variable binding in Direct3D12 and Vulkan,
+    /// an application must ensure that the GPU is not accessing the SRB.
+    /// This can be achieved using synchronization tools such as fences.
+    /// Synchronization with GPU is not required in OpenGL, Direct3D11,
+    /// and Metal backends.
+    allow_overwrite: bool = false,
+
+    _: u31 = 0,
+};
+
+/// Buffer view type
+///
+/// This enumeration describes allowed view types for a buffer view. It is used by BufferViewDesc
+/// structure.
+pub const BufferViewType = enum(u8) {
+    /// Undefined view type
+    undefined,
+
+    /// A buffer view will define a shader resource view that will be used
+    /// as the source for the shader read operations
+    shader_resource,
+
+    /// A buffer view will define an unordered access view that will be used
+    /// for unordered read/write operations from the shaders
+    unordered_access,
+};
+
+/// Buffer format description
+pub const BufferFormat = extern struct {
+    /// Type of components. For a formatted buffer views, this value cannot be VT_UNDEFINED
+    value_type: ValueType = .undefined,
+
+    /// Number of components. Allowed values: 1, 2, 3, 4.
+    /// For a formatted buffer, this value cannot be 0
+    num_components: u8 = 0,
+
+    /// For signed and unsigned integer value types
+    /// (VT_INT8, VT_INT16, VT_INT32, VT_UINT8, VT_UINT16, VT_UINT32)
+    /// indicates if the value should be normalized to [-1,+1] or
+    /// [0, 1] range respectively. For floating point types
+    /// (VT_FLOAT16 and VT_FLOAT32), this member is ignored.
+    is_normalized: bool = false,
+
+    comptime {
+        helpers.ensureSame(@This(), c.BufferFormat);
+    }
+};
+
+/// Buffer view description
+pub const BufferViewDesc = extern struct {
+    /// Object name
+    name: ?[*:0]const u8 = null,
+
+    /// View type. See Diligent::BUFFER_VIEW_TYPE for details.
+    view_type: BufferViewType = .undefined,
+
+    /// Format of the view. This member is only used for formatted and raw buffers.
+    /// To create raw view of a raw buffer, set Format.ValueType member to VT_UNDEFINED
+    /// (default value).
+    format: BufferFormat = .{},
+
+    /// Offset in bytes from the beginning of the buffer to the start of the
+    /// buffer region referenced by the view.
+    byte_offset: u64 = 0,
+
+    /// Size in bytes of the referenced buffer region.
+    byte_width: u64 = 0,
+
+    comptime {
+        helpers.ensureSame(@This(), c.BufferViewDesc);
+    }
+};
+
+/// Texture view type
+///
+/// This enumeration describes allowed view types for a texture view. It is used by TextureViewDesc
+/// structure.
+pub const TextureViewType = enum(u8) {
+    /// Undefined view type
+    undefined,
+
+    /// A texture view will define a shader resource view that will be used
+    /// as the source for the shader read operations
+    shader_resource,
+
+    /// A texture view will define a render target view that will be used
+    /// as the target for rendering operations
+    render_target,
+
+    /// A texture view will define a depth stencil view that will be used
+    /// as the target for rendering operations
+    depth_stencil,
+
+    /// A texture view will define a read-only depth stencil view that will be used
+    /// as depth stencil source for rendering operations, but can also be simultaneously
+    /// read from shaders.
+    read_only_depth_stencil,
+
+    /// A texture view will define an unordered access view that will be used
+    /// for unordered read/write operations from the shaders
+    unordered_access,
+
+    /// A texture view will define a variable shading rate view that will be used
+    /// as the shading rate source for rendering operations
+    shading_rate,
+};
+
+/// Describes allowed unordered access view mode
+///
+/// **Zig Usage:** Default value is equivalent to `UAV_ACCESS_UNSPECIFIED`.
+pub const UAVAccessFlags = packed struct(u8) {
+    /// Allow read operations on the UAV
+    read: bool = false,
+
+    /// Allow write operations on the UAV
+    write: bool = false,
+
+    _: u6 = 0,
+
+    pub const read_write: UAVAccessFlags = .{ .read = true, .write = true };
+};
+
+/// Texture view flags
+///
+/// **Zig Usage:** Default value is equivalent to `TEXTURE_VIEW_FLAG_NONE`.
+pub const TextureViewFlags = packed struct(u8) {
+    /// Allow automatic mipmap generation for this view.
+    /// This flag is only allowed for TEXTURE_VIEW_SHADER_RESOURCE view type.
+    /// The texture must be created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag.
+    allow_mip_map_generation: bool = false,
+
+    _: u7 = 0,
+};
+
+/// Texture component swizzle
+pub const TextureComponentSwizzle = enum(u8) {
+    /// Identity swizzle (e.g. `R->R`, `G->G`, `B->B`, `A->A`).
+    identity,
+
+    /// The component is set to zero.
+    zero,
+
+    /// The component is set to one.
+    one,
+
+    /// The component is set to the value of the red channel of the texture.
+    red,
+
+    /// The component is set to the value of the green channel of the texture.
+    green,
+
+    /// The component is set to the value of the blue channel of the texture.
+    blue,
+
+    /// The component is set to the value of the alpha channel of the texture.
+    alpha,
+};
+
+/// Defines the per-channel texutre component mapping.
+pub const TextureComponentMapping = extern struct {
+    /// Defines the component placed in the red component of the output vector.
+    r: TextureComponentSwizzle = .identity,
+    /// Defines the component placed in the green component of the output vector.
+    g: TextureComponentSwizzle = .identity,
+    /// Defines the component placed in the blue component of the output vector.
+    b: TextureComponentSwizzle = .identity,
+    /// Defines the component placed in the alpha component of the output vector.
+    a: TextureComponentSwizzle = .identity,
+
+    comptime {
+        helpers.ensureSame(@This(), c.TextureComponentMapping);
+    }
+};
+
+/// Texture view description
+pub const TextureViewDesc = extern struct {
+    /// Describes the texture view type, see Diligent::TEXTURE_VIEW_TYPE for details.
+    view_type: TextureViewType = .undefined,
+
+    /// View interpretation of the original texture.
+    ///
+    /// For instance, one slice of a 2D texture array can be viewed as a 2D texture.
+    /// See Diligent::RESOURCE_DIMENSION for a list of texture types.
+    /// If default value Diligent::RESOURCE_DIM_UNDEFINED is provided,
+    /// the view type will match the type of the referenced texture.
+    texture_dim: ResourceDimension = .undefined,
+
+    /// View format.
+    ///
+    /// If default value Diligent::TEX_FORMAT_UNKNOWN is provided,
+    /// the view format will match the referenced texture format.
+    format: TextureFormat = .unknown,
+
+    /// Most detailed mip level to use
+    most_detailed_mip: u32 = 0,
+
+    /// Total number of mip levels for the view of the texture.
+    ///
+    /// Render target and depth stencil views can address only one mip level.
+    /// If 0 is provided, then for a shader resource view all mip levels will be
+    /// referenced, and for a render target or a depth stencil view, one mip level
+    /// will be referenced.
+    num_mip_levels: u32 = 0,
+
+    first_array_or_depth_slice: extern union {
+        /// For a texture array, first array slice to address in the view
+        first_array_slice: u32,
+
+        /// For a 3D texture, first depth slice to address the view
+        first_depth_slice: u32,
+    } = .{ .first_array_slice = 0 },
+
+    num_array_or_depth_slices: extern union {
+        /// For a texture array, number of array slices to address in the view.
+        ///
+        /// Set to 0 to address all array slices.
+        num_array_slices: u32,
+        /// For a 3D texture, number of depth slices to address in the view
+        ///
+        /// Set to 0 to address all depth slices.
+        num_depth_slices: u32,
+    } = .{ .num_array_slices = 0 },
+
+    /// For an unordered access view, allowed access flags.
+    ///
+    /// See Diligent::UAV_ACCESS_FLAG for details.
+    access_flags: UAVAccessFlags = .{},
+
+    /// Texture view flags, see Diligent::TEXTURE_VIEW_FLAGS.
+    flags: TextureViewFlags = .{},
+
+    /// Texture component swizzle, see Diligent::TextureComponentMapping.
+    swizzle: TextureComponentMapping,
+
+    comptime {
+        helpers.ensureSame(@This(), c.TextureViewDesc);
+    }
+};
+
+/// Shader Macro
+pub const ShaderMacro = extern struct {
+    /// Macro name
+    name: ?[*:0]const u8 = null,
+
+    /// Macro definition
+    definition: ?[*:0]const u8 = null,
+
+    comptime {
+        helpers.ensureSame(@This(), c.ShaderMacro);
+    }
+};
+
+/// Shader macro array
+pub const ShaderMacroArray = extern struct {
+    /// A pointer to the array elements
+    elements: ?[*]const ShaderMacro = null,
+
+    /// The number of elements in the array
+    count: u32 = 0,
+
+    comptime {
+        helpers.ensureSame(@This(), c.ShaderMacroArray);
+    }
+};
+
+/// Shader description
+pub const ShaderDesc = extern struct {
+    /// Object name:
+    name: ?[*:0]const u8 = null,
+
+    /// Shader type. See Diligent::SHADER_TYPE.
+    shader_type: ShaderType = .{},
+
+    /// Whether to use combined texture samplers.
+    ///
+    /// If set to `true`, textures will be combined with texture samplers.
+    /// The `CombinedSamplerSuffix` member defines the suffix added to the texture
+    /// variable name to get corresponding sampler name. When using combined samplers,
+    /// the sampler assigned to the shader resource view is automatically set when
+    /// the view is bound. Otherwise, samplers need to be explicitly set similar to other
+    /// shader variables.
+    ///
+    /// This member has no effect if the shader is used in the PSO that uses pipeline resource signature(s).
+    use_combined_texture_samplers: bool = false,
+
+    /// Combined sampler suffix.
+    /// If `UseCombinedTextureSamplers` is `true`, defines the suffix added to the
+    /// texture variable name to get corresponding sampler name.  For example,
+    /// for default value `"_sampler"`, a texture named `"tex"` will be combined
+    /// with the sampler named `"tex_sampler"`.
+    /// If `UseCombinedTextureSamplers` is `false`, this member is ignored.
+    ///
+    /// This member has no effect if the shader is used in the PSO that uses pipeline resource signature(s).
+    combined_sampler_suffix: [*:0]const u8 = "_sampler",
+
+    comptime {
+        helpers.ensureSame(@This(), c.ShaderDesc);
+    }
+};
+
+/// Describes the shader source code language
+pub const ShaderSourceLanguage = enum(u8) {
+    /// Default language (GLSL for OpenGL/OpenGLES/Vulkan devices, HLSL for Direct3D11/Direct3D12 devices)
+    default,
+
+    /// The source language is HLSL
+    hlsl,
+
+    /// The source language is GLSL
+    glsl,
+
+    /// The source language is GLSL that should be compiled verbatim
+    ///
+    /// By default the engine prepends GLSL shader source code with platform-specific
+    /// definitions. For instance it adds appropriate #version directive (e.g. `#version 430 core` or
+    /// `#version 310 es`) so that the same source will work on different versions of desktop OpenGL and OpenGLES.
+    /// When `SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM` is used, the source code will be compiled as is.
+    /// Note that shader macros are ignored when compiling GLSL verbatim in OpenGL backend, and an application
+    /// should add the macro definitions to the source code.
+    glsl_verbatim,
+
+    /// The source language is Metal shading language (MSL)
+    msl,
+
+    /// The source language is Metal shading language (MSL) that should be compiled verbatim
+    ///
+    /// Note that shader macros are ignored when compiling MSL verbatim, and an application
+    /// should add the macro definitions to the source code.
+    msl_verbatim,
+
+    /// The source language is Metal bytecode
+    mtlb,
+
+    /// The source language is WebGPU shading language (WGSL)
+    wgsl,
+
+    /// The shader source is provided as device-specific bytecode
+    /// (e.g. DXBC or DXIL for Direct3D11/Direct3D12, SPIRV for Vulkan, etc.).
+    /// The bytecode is used verbatim and no compilation is performed.
+    ///
+    /// This option is similar to providing the byte code via `ShaderCreateInfo::ByteCode`.
+    bytecode,
+};
+
+/// Describes the shader compiler that will be used to compile the shader source code
+pub const ShaderCompiler = enum(u32) {
+    /// Default compiler for specific language and API that is selected as follows:
+    ///
+    ///     - Direct3D11:      legacy HLSL compiler (FXC)
+    ///     - Direct3D12:      legacy HLSL compiler (FXC)
+    ///     - OpenGL(ES) GLSL: native compiler
+    ///     - OpenGL(ES) HLSL: HLSL2GLSL converter and native compiler
+    ///     - Vulkan GLSL:     built-in glslang
+    ///     - Vulkan HLSL:     built-in glslang (with limited support for Shader Model 6.x)
+    ///     - Metal GLSL/HLSL: built-in glslang (HLSL with limited support for Shader Model 6.x)
+    ///     - Metal MSL:       native compiler
+    default,
+
+    /// Built-in glslang compiler for GLSL and HLSL.
+    glslang,
+
+    /// Modern HLSL compiler (DXC) for Direct3D12 and Vulkan with Shader Model 6.x support.
+    dxc,
+
+    /// Legacy HLSL compiler (FXC) for Direct3D11 and Direct3D12 supporting shader models up to 5.1.
+    fxc,
+};
+
+/// Shader compilation flags
+///
+/// **Zig usage:** Default value is equivalent to `SHADER_COMPILE_FLAG_NONE`
+pub const ShaderCompileFlags = packed struct(u32) {
+    /// Enable unbounded resource arrays (e.g. `Texture2D g_Texture[]`).
+    enable_unbounded_arrays: bool = false,
+
+    /// Don't load shader reflection.
+    skip_reflection: bool = false,
+
+    /// Compile the shader asynchronously.
+    ///
+    /// When this flag is set to true and if the devices supports
+    /// AsyncShaderCompilation feature, the shader will be compiled
+    /// asynchronously in the background. An application should use
+    /// the IShader::GetStatus() method to check the shader status.
+    /// If the device does not support asynchronous shader compilation,
+    /// the flag is ignored and the shader is compiled synchronously.
+    asynchronous: bool = false,
+
+    /// Pack matrices in row-major order.
+    ///
+    /// By default, matrices are laid out in GPU memory in column-major order,
+    /// which means that the first four values in a 4x4 matrix represent
+    /// the first column, the next four values represent the second column,
+    /// and so on.
+    ///
+    /// If this flag is set, matrices are packed in row-major order, i.e.
+    /// they are laid out in memory row-by-row.
+    pack_matrix_row_major: bool = false,
+
+    /// Convert HLSL to GLSL when compiling HLSL shaders to SPIRV.
+    ///
+    /// HLSL shaders can be compiled to SPIRV directly using either DXC or glslang.
+    /// While glslang supports most HLSL 5.1 features, some Vulkan-specific functionality
+    /// is missing. Notably, glslang does not support UAV texture format annotations
+    /// (see https://github.com/KhronosGroup/glslang/issues/3790), for example:
+    /// ```hlsl
+    /// [[vk::image_format("rgba8")]] RWTexture2D<float4> g_rwTexture;
+    /// ```
+    /// This flag provides a workaround by converting HLSL to GLSL before compiling it
+    /// to SPIRV. The converter supports specially formatted comments to specify UAV
+    /// texture formats:
+    /// ```hlsl
+    /// RWTexture2D<float4 /*format = rgba8*/> g_rwTexture;
+    /// ```
+    /// Another use case for this flag is to leverage GLSL-specific keywords in HLSL
+    /// shaders, such as `gl_DrawID` for multi-draw or manually setting `gl_PointSize`.
+    ///
+    /// This flag only takes effect when compiling HLSL to SPIRV with glslang.
+    /// Since DXC does not support GLSL, this flag is ignored when SHADER_COMPILER_DXC is used.
+    hlsl_to_spirv_via_glsl: bool = false,
+
+    _: u27 = 0,
+};
+
+/// Describes the shader optimization level.
+pub const ShaderOptimizationLevel = enum(u8) {
+    /// Default optimization level.
+    ///
+    /// Each backend uses its historical default optimization behavior.
+    default,
+
+    /// Optimization is explicitly disabled regardless of build configuration
+    /// (DXC `-Od`, FXC `D3DCOMPILE_SKIP_OPTIMIZATION`, no SPIR-V performance pass).
+    disabled,
+
+    /// Optimization level 0 (DXC `-O0`, FXC optimization level 0, SPIR-V performance pass).
+    level_0,
+
+    /// Optimization level 1 (DXC `-O1`, FXC optimization level 1, SPIR-V performance pass).
+    level_1,
+
+    /// Optimization level 2 (DXC `-O2`, FXC optimization level 2, SPIR-V performance pass).
+    level_2,
+
+    /// Optimization level 3 (DXC `-O3`, FXC optimization level 3, SPIR-V performance pass).
+    level_3,
+};
+
+pub const ShaderVersion = Version;
+/// Shader creation attributes
+pub const ShaderCreateInfo = extern struct {
+    /// Source file path
+    ///
+    /// If source file path is provided, `Source` and `ByteCode` members must be null
+    name: ?[*:0]const u8 = null,
+
+    /// Pointer to the shader source input stream factory.
+    ///
+    /// The factory is used to load the shader source file if FilePath is not null.
+    /// It is also used to create additional input streams for shader include files
+    shader_source_stream_factory: ?*c.IShaderSourceInputStreamFactory = null,
+
+    /// Shader source
+    ///
+    /// If shader source is provided, FilePath and ByteCode members must be null
+    source: ?[*:0]const u8 = null,
+
+    /// Compiled shader bytecode.
+    ///
+    /// If shader byte code is provided, FilePath and Source members must be null
+    ///
+    /// This option is supported for D3D11, D3D12, Vulkan and Metal backends.
+    /// For D3D11 and D3D12 backends, DXBC should be provided.
+    /// Vulkan backend expects SPIRV bytecode.
+    /// Metal backend supports .metallib bytecode to create MTLLibrary
+    /// or SPIRV to translate it to MSL and compile (may be slow).
+    ///
+    /// If SHADER_COMPILE_FLAG_SKIP_REFLECTION flag is not used, the bytecode
+    /// must contain reflection information. If shaders were compiled
+    /// using fxc, make sure that `/Qstrip_reflect` option is **not** specified.
+    /// HLSL shaders need to be compiled against 4.0 profile or higher.
+    byte_code: ?*const anyopaque = null,
+
+    byte_code_size_or_source_length: extern union {
+        /// Length of the source code, when `Source` is not null.
+        /// When Source is not null and is not a null-terminated string, this member
+        /// should be used to specify the length of the source code.
+        /// If `SourceLength` is zero, the source code string is assumed to be
+        /// null-terminated.
+        source_length: usize,
+
+        /// Size of the compiled shader byte code, when `ByteCode` is not null.
+        /// Byte code size (in bytes) must not be zero if `ByteCode` is not null.
+        byte_code_size: usize,
+    } = .{ .source_length = 0 },
+
+    /// Shader entry point
+    /// This member is ignored if ByteCode is not null
+    entry_point: [*:0]const u8 = "main",
+
+    /// Shader macros (see Diligent::ShaderMacroArray)
+    macros: ShaderMacroArray = .{},
+
+    /// Shader description. See Diligent::ShaderDesc.
+    desc: ShaderDesc,
+
+    /// Shader source language. See Diligent::SHADER_SOURCE_LANGUAGE.
+    source_language: ShaderSourceLanguage = .default,
+
+    /// Shader compiler. See Diligent::SHADER_COMPILER.
+    shader_compiler: ShaderCompiler = .default,
+
+    /// HLSL shader model to use when compiling the shader.
+    /// When default value is given (0, 0), the engine will attempt to use the highest HLSL shader model
+    /// supported by the device. If the shader is created from the byte code, this value
+    /// has no effect.
+    ///
+    /// \note When HLSL source is converted to GLSL, corresponding GLSL/GLESSL version will be used.
+    hlsl_version: ShaderVersion = .{},
+
+    /// GLSL version to use when creating the shader.
+    /// When default value is given (0, 0), the engine will attempt to use the highest GLSL version
+    /// supported by the device.
+    glsl_version: ShaderVersion = .{},
+
+    /// GLES shading language version to use when creating the shader.
+    /// When default value is given (0, 0), the engine will attempt to use the highest GLESSL version
+    /// supported by the device.
+    glessl_version: ShaderVersion = .{},
+
+    /// Metal shading language version to use when creating the shader.
+    /// When default value is given (0, 0), the engine will attempt to use the highest MSL version
+    /// supported by the device.
+    msl_version: ShaderVersion = .{},
+
+    /// Shader compile flags (see Diligent::SHADER_COMPILE_FLAGS).
+    compile_flags: ShaderCompileFlags = .{},
+
+    /// Shader optimization level. See Diligent::SHADER_OPTIMIZATION_LEVEL.
+    shader_optimization_level: ShaderOptimizationLevel = .default,
+
+    /// Whether to load constant buffer reflection information.
+    /// The reflection information can be queried through
+    /// IShader::GetConstantBufferDesc() method.
+    /// **Note:** Loading constant buffer reflection introduces some overhead,
+    /// and should be disabled when it is not needed.
+    load_constant_buffer_reflection: bool = false,
+
+    /// An optional list of GLSL extensions to enable when compiling GLSL source code.
+    glsl_extension: ?[*:0]const u8 = null,
+
+    /// Emulated array index suffix for WebGPU backend.
+    ///
+    /// An optional suffix to append to the name of emulated array variables to get
+    /// the indexed array element name.
+    ///
+    /// Since WebGPU does not support arrays of resources, Diligent Engine
+    /// emulates them by appending an index to the resource name.
+    /// For instance, if the suffix is set to `"_"`, resources named
+    /// `"g_Tex2D_0"`, `"g_Tex2D_1"`, `"g_Tex2D_2"` will be grouped into an array
+    /// of 3 textures named `"g_Tex2D"`. All resources must be the same type
+    /// to be grouped into an array.
+    ///
+    /// When suffix is null or empty, no array emulation is performed.
+    ///
+    /// \remarks    This member is ignored when compiling shaders for backends other than WebGPU.
+    webgpu_emulated_array_index_suffix: ?[*:0]const u8 = null,
+
+    comptime {
+        helpers.ensureSame(@This(), c.ShaderCreateInfo);
     }
 };

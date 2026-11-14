@@ -15,3 +15,4 @@ pub fn present(self: Swapchain, sync_interval: ?u32) void {
 pub const method = helpers.methodHelper(@This(), "SwapChain");
 pub const addRef = helpers.objectMethods(@This()).addRef;
 pub const release = helpers.objectMethods(@This()).release;
+pub const asObject = helpers.baseHelper(@This(), graphics.Object);

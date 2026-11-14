@@ -1,15 +1,15 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const gpu = @import("gpu.zig");
-pub const BufferHandle = struct { ptr: *anyopaque };
-pub const ImageHandle = struct { ptr: *anyopaque };
-pub const ShaderHandle = struct { ptr: *anyopaque };
-pub const PipelineHandle = struct { ptr: *anyopaque };
-pub const ComputePipelineHandle = struct { ptr: *anyopaque };
-pub const SamplerHandle = struct { ptr: *anyopaque };
-pub const SwapchainHandle = struct { ptr: *anyopaque };
-pub const RenderTargetHandle = struct { ptr: *anyopaque };
-pub const DepthTargetHandle = struct { ptr: *anyopaque };
+pub const BufferHandle = *opaque {};
+pub const ImageHandle = *opaque {};
+pub const ShaderHandle = *opaque {};
+pub const PipelineHandle = *opaque {};
+pub const ComputePipelineHandle = *opaque {};
+pub const SamplerHandle = *opaque {};
+pub const SwapchainHandle = *opaque {};
+pub const RenderTargetHandle = *opaque {};
+pub const DepthTargetHandle = *opaque {};
 
 pub const BufferUsage = enum { default, immutable, dynamic, stream, readback };
 pub const BufferType = enum { vertex, index, uniform, storage };
@@ -31,6 +31,12 @@ pub const PixelFormat = enum {
 pub const IndexType = enum { none, uint16, uint32 };
 pub const WrapType = enum { repeat, clamp };
 pub const FilterType = enum { linear, nearest };
+
+pub const ShaderSet = struct {
+    vertex_shader: ?*ShaderHandle = null,
+    pixel_shader: ?*ShaderHandle = null,
+    compute_shader: ?*ShaderHandle = null,
+};
 
 pub const Vertex = extern struct {
     position: [3]f32,
