@@ -24,3 +24,4 @@ pub fn setMemoryAllocator(self: *const EngineFactory, allocator: primitives.Memo
 }
 
 const method = helpers.methodHelper(@This(), "EngineFactory");
+pub const asObject = helpers.baseHelper(@This(), graphics.Object);

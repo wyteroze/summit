@@ -10,3 +10,5 @@ raw: *c.ISampler,
 pub const method = helpers.methodHelper(@This(), "Sampler");
 pub const addRef = helpers.objectMethods(@This()).addRef;
 pub const release = helpers.objectMethods(@This()).release;
+pub const asDeviceObject = helpers.baseHelper(@This(), graphics.DeviceObject);
+pub const asObject = helpers.baseHelper(@This(), graphics.Object);

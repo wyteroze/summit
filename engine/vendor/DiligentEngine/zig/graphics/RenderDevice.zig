@@ -31,7 +31,7 @@ pub fn createBuffer(self: *RenderDevice, buff_desc: graphics.types.BufferDesc, b
     return .{ .raw = buffer.? };
 }
 
-/// Creates a new shader object.
+/// Creates a new shader object. **READ ZIG USAGE AT BOTTOM!**
 ///
 /// `shader_ci` - Shader create info, see Diligent::ShaderCreateInfo for details.
 ///
@@ -41,11 +41,16 @@ pub fn createBuffer(self: *RenderDevice, buff_desc: graphics.types.BufferDesc, b
 /// strings. The first one is the compiler output message. The second one is the full
 /// shader source code including definitions added by the engine. The data blob
 /// object must be released by the client.
+///
+/// **Zig Usage:** To make the bindings more idiomatic, shader and compiler output
+/// are returned directly by the function instead of passing the pointers to the function.
+/// This also means that you can't pass null as the compiler output pointer to avoid having to deal with it.
+/// The compiler output is the second element of the tuple. If not null, **you must release it if you don't need it.**
 pub fn createShader(self: *RenderDevice, shader_ci: graphics.types.ShaderCreateInfo) !struct { graphics.Shader, ?graphics.DataBlob } {
     var shader: [*c]c.IShader = null;
     var compiler_output: [*c]c.IDataBlob = null;
 
-    self.method("CreateShader")(self.raw, @ptrCast(shader_ci), &shader, &compiler_output);
+    self.method("CreateShader")(self.raw, @ptrCast(&shader_ci), &shader, &compiler_output);
     if (shader == null) return error.ShaderCreationFailed;
 
     return .{
@@ -122,7 +127,7 @@ pub fn createResourceMapping(self: *RenderDevice, res_mapping_ci: graphics.types
 /// The returned pipeline state has one reference and must be released with `release()`.
 pub fn createGraphicsPipelineState(self: *RenderDevice, pso_create_info: graphics.types.GraphicsPipelineStateCreateInfo) !graphics.PipelineState {
     var pipeline_state: [*c]c.IPipelineState = null;
-    self.method("CreateGraphicsPipelineState")(self.raw, @ptrCast(pso_create_info), &pipeline_state);
+    self.method("CreateGraphicsPipelineState")(self.raw, @ptrCast(&pso_create_info), &pipeline_state);
     if (pipeline_state == null) return error.PipelineStateCreationFailed;
     return .{ .raw = pipeline_state.? };
 }
@@ -326,6 +331,8 @@ pub fn getShaderCompilationThreadPool(self: RenderDevice) ?graphics.ThreadPool {
 pub const method = helpers.methodHelper(@This(), "RenderDevice");
 pub const addRef = helpers.objectMethods(@This()).addRef;
 pub const release = helpers.objectMethods(@This()).release;
+pub const asDeviceObject = helpers.baseHelper(@This(), graphics.DeviceObject);
+pub const asObject = helpers.baseHelper(@This(), graphics.Object);
 
 comptime {
     helpers.ensureHandle(@This());

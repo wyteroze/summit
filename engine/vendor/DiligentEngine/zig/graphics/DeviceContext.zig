@@ -14,7 +14,7 @@ const DeviceContext = @This();
 raw: *c.IDeviceContext,
 
 /// Returns the context description.
-pub fn getDesc(self: *const DeviceContext) *const graphics.types.DeviceContextDesc {
+pub fn getDesc(self: DeviceContext) graphics.types.DeviceContextDesc {
     return @ptrCast(self.method("GetDesc")(self.raw));
 }
 
@@ -98,7 +98,7 @@ pub fn setStencilRef(self: *DeviceContext, stencil_ref: u32) void {
 /// `{1, 1, 1, 1}` is used.
 ///
 /// **Remarks:** Supported contexts: graphics.
-pub fn setBlendFactors(self: *DeviceContext, blend_factors: ?*const [4]f32) void {
+pub fn setBlendFactors(self: *DeviceContext, blend_factors: ?[4]f32) void {
     self.method("SetBlendFactors")(self.raw, if (blend_factors) |f| &f[0] else null);
 }
 
@@ -245,8 +245,8 @@ pub fn setRenderTargets(
 /// targets not defined by this call are set to `null`.
 ///
 /// **Remarks:** Supported contexts: graphics.
-pub fn setRenderTargetsExt(self: *DeviceContext, attribs: *const graphics.types.SetRenderTargetsAttribs) void {
-    self.method("SetRenderTargetsExt")(self.raw, @ptrCast(attribs));
+pub fn setRenderTargetsExt(self: *DeviceContext, attribs: graphics.types.SetRenderTargetsAttribs) void {
+    self.method("SetRenderTargetsExt")(self.raw, @ptrCast(&attribs));
 }
 
 /// Begins a new render pass.
@@ -254,8 +254,8 @@ pub fn setRenderTargetsExt(self: *DeviceContext, attribs: *const graphics.types.
 /// `attribs` - Command attributes, see `Diligent::BeginRenderPassAttribs`.
 ///
 /// **Remarks:** Supported contexts: graphics.
-pub fn beginRenderPass(self: *DeviceContext, attribs: *const graphics.types.BeginRenderPassAttribs) void {
-    self.method("BeginRenderPass")(self.raw, @ptrCast(attribs));
+pub fn beginRenderPass(self: *DeviceContext, attribs: graphics.types.BeginRenderPassAttribs) void {
+    self.method("BeginRenderPass")(self.raw, @ptrCast(&attribs));
 }
 
 /// Transitions to the next subpass in the render pass instance.
@@ -280,8 +280,8 @@ pub fn endRenderPass(self: *DeviceContext) void {
 /// thread may alter the states of the same resources. Reading is safe.
 ///
 /// **Remarks:** Supported contexts: graphics.
-pub fn draw(self: *DeviceContext, attribs: *const graphics.types.DrawAttribs) void {
-    self.method("Draw")(self.raw, @ptrCast(attribs));
+pub fn draw(self: *DeviceContext, attribs: graphics.types.DrawAttribs) void {
+    self.method("Draw")(self.raw, @ptrCast(&attribs));
 }
 
 /// Executes an indexed draw command.
@@ -291,8 +291,8 @@ pub fn draw(self: *DeviceContext, attribs: *const graphics.types.DrawAttribs) vo
 /// If `DRAW_FLAG_VERIFY_STATES` is set, the method reads the state of vertex and index buffers.
 ///
 /// **Remarks:** Supported contexts: graphics.
-pub fn drawIndexed(self: *DeviceContext, attribs: *const graphics.types.DrawIndexedAttribs) void {
-    self.method("DrawIndexed")(self.raw, @ptrCast(attribs));
+pub fn drawIndexed(self: *DeviceContext, attribs: graphics.types.DrawIndexedAttribs) void {
+    self.method("DrawIndexed")(self.raw, @ptrCast(&attribs));
 }
 
 /// Executes an indirect draw command.
@@ -305,8 +305,8 @@ pub fn drawIndexed(self: *DeviceContext, attribs: *const graphics.types.DrawInde
 /// **Remarks:** If the attribs or counter buffer state transition mode is
 /// `RESOURCE_STATE_TRANSITION_MODE_TRANSITION`, the buffer states may be changed, which is **not
 /// thread-safe**. Supported contexts: graphics.
-pub fn drawIndirect(self: *DeviceContext, attribs: *const graphics.types.DrawIndirectAttribs) void {
-    self.method("DrawIndirect")(self.raw, @ptrCast(attribs));
+pub fn drawIndirect(self: *DeviceContext, attribs: graphics.types.DrawIndirectAttribs) void {
+    self.method("DrawIndirect")(self.raw, @ptrCast(&attribs));
 }
 
 /// Executes an indexed indirect draw command.
@@ -318,8 +318,8 @@ pub fn drawIndirect(self: *DeviceContext, attribs: *const graphics.types.DrawInd
 ///
 /// **Remarks:** In the OpenGL backend, the index buffer offset set by `setIndexBuffer()` cannot be
 /// applied to indirect draws and must be zero. Supported contexts: graphics.
-pub fn drawIndexedIndirect(self: *DeviceContext, attribs: *const graphics.types.DrawIndexedIndirectAttribs) void {
-    self.method("DrawIndexedIndirect")(self.raw, @ptrCast(attribs));
+pub fn drawIndexedIndirect(self: *DeviceContext, attribs: graphics.types.DrawIndexedIndirectAttribs) void {
+    self.method("DrawIndexedIndirect")(self.raw, @ptrCast(&attribs));
 }
 
 /// Executes a mesh draw command.
@@ -329,8 +329,8 @@ pub fn drawIndexedIndirect(self: *DeviceContext, attribs: *const graphics.types.
 /// **Remarks:** Only a single work group dimension is used for compatibility between Direct3D12 and
 /// Vulkan. In the shader, `numthreads` and `local_size` must define only the first dimension.
 /// Supported contexts: graphics.
-pub fn drawMesh(self: *DeviceContext, attribs: *const graphics.types.DrawMeshAttribs) void {
-    self.method("DrawMesh")(self.raw, @ptrCast(attribs));
+pub fn drawMesh(self: *DeviceContext, attribs: graphics.types.DrawMeshAttribs) void {
+    self.method("DrawMesh")(self.raw, @ptrCast(&attribs));
 }
 
 /// Executes an indirect mesh draw command.
@@ -339,8 +339,8 @@ pub fn drawMesh(self: *DeviceContext, attribs: *const graphics.types.DrawMeshAtt
 ///
 /// **Remarks:** If the attribs buffer transition mode is `RESOURCE_STATE_TRANSITION_MODE_TRANSITION`, its
 /// state may be changed, which is **not thread-safe**. Supported contexts: graphics.
-pub fn drawMeshIndirect(self: *DeviceContext, attribs: *const graphics.types.DrawMeshIndirectAttribs) void {
-    self.method("DrawMeshIndirect")(self.raw, @ptrCast(attribs));
+pub fn drawMeshIndirect(self: *DeviceContext, attribs: graphics.types.DrawMeshIndirectAttribs) void {
+    self.method("DrawMeshIndirect")(self.raw, @ptrCast(&attribs));
 }
 
 /// Executes a multi-draw command.
@@ -351,8 +351,8 @@ pub fn drawMeshIndirect(self: *DeviceContext, attribs: *const graphics.types.Dra
 /// commands. The draw command index is only available in the shader when `NativeMultiDraw` is supported.
 ///
 /// **Remarks:** Supported contexts: graphics.
-pub fn multiDraw(self: *DeviceContext, attribs: *const graphics.types.MultiDrawAttribs) void {
-    self.method("MultiDraw")(self.raw, @ptrCast(attribs));
+pub fn multiDraw(self: *DeviceContext, attribs: graphics.types.MultiDrawAttribs) void {
+    self.method("MultiDraw")(self.raw, @ptrCast(&attribs));
 }
 
 /// Executes an indexed multi-draw command.
@@ -363,8 +363,8 @@ pub fn multiDraw(self: *DeviceContext, attribs: *const graphics.types.MultiDrawA
 /// commands. The draw command index is only available in the shader when `NativeMultiDraw` is supported.
 ///
 /// **Remarks:** Supported contexts: graphics.
-pub fn multiDrawIndexed(self: *DeviceContext, attribs: *const graphics.types.MultiDrawIndexedAttribs) void {
-    self.method("MultiDrawIndexed")(self.raw, @ptrCast(attribs));
+pub fn multiDrawIndexed(self: *DeviceContext, attribs: graphics.types.MultiDrawIndexedAttribs) void {
+    self.method("MultiDrawIndexed")(self.raw, @ptrCast(&attribs));
 }
 
 /// Executes a dispatch compute command.
@@ -375,8 +375,8 @@ pub fn multiDrawIndexed(self: *DeviceContext, attribs: *const graphics.types.Mul
 /// size must be provided through the `MtlThreadGroupSize*` members.
 ///
 /// **Remarks:** Supported contexts: graphics, compute.
-pub fn dispatchCompute(self: *DeviceContext, attribs: *const graphics.types.DispatchComputeAttribs) void {
-    self.method("DispatchCompute")(self.raw, @ptrCast(attribs));
+pub fn dispatchCompute(self: *DeviceContext, attribs: graphics.types.DispatchComputeAttribs) void {
+    self.method("DispatchCompute")(self.raw, @ptrCast(&attribs));
 }
 
 /// Executes an indirect dispatch compute command.
@@ -385,16 +385,16 @@ pub fn dispatchCompute(self: *DeviceContext, attribs: *const graphics.types.Disp
 ///
 /// **Remarks:** If the attribs buffer transition mode is `RESOURCE_STATE_TRANSITION_MODE_TRANSITION`, its
 /// state may be changed, which is **not thread-safe**. Supported contexts: graphics, compute.
-pub fn dispatchComputeIndirect(self: *DeviceContext, attribs: *const graphics.types.DispatchComputeIndirectAttribs) void {
-    self.method("DispatchComputeIndirect")(self.raw, @ptrCast(attribs));
+pub fn dispatchComputeIndirect(self: *DeviceContext, attribs: graphics.types.DispatchComputeIndirectAttribs) void {
+    self.method("DispatchComputeIndirect")(self.raw, @ptrCast(&attribs));
 }
 
 /// Executes a dispatch tile command.
 ///
 /// `attribs` - Command attributes, see `Diligent::DispatchTileAttribs`. The thread counts must not
 /// exceed the tile size returned by `getTileSize()`.
-pub fn dispatchTile(self: *DeviceContext, attribs: *const graphics.types.DispatchTileAttribs) void {
-    self.method("DispatchTile")(self.raw, @ptrCast(attribs));
+pub fn dispatchTile(self: *DeviceContext, attribs: graphics.types.DispatchTileAttribs) void {
+    self.method("DispatchTile")(self.raw, @ptrCast(&attribs));
 }
 
 /// Returns the current render pass tile size.
@@ -455,7 +455,7 @@ pub fn clearDepthStencil(
 pub fn clearRenderTarget(
     self: *DeviceContext,
     view: graphics.TextureView,
-    rgba: ?*const anyopaque,
+    rgba: ?anyopaque,
     state_transition_mode: graphics.types.ResourceStateTransitionMode,
 ) void {
     self.method("ClearRenderTarget")(self.raw, view.raw, rgba, @backingInt(state_transition_mode));
@@ -668,8 +668,8 @@ pub fn updateTexture(
     texture: graphics.Texture,
     mip_level: u32,
     slice: u32,
-    dst_box: *const graphics.types.Box,
-    subres_data: *const graphics.types.TextureSubResData,
+    dst_box: graphics.types.Box,
+    subres_data: graphics.types.TextureSubResData,
     src_buffer_transition_mode: graphics.types.ResourceStateTransitionMode,
     texture_transition_mode: graphics.types.ResourceStateTransitionMode,
 ) void {
@@ -690,7 +690,7 @@ pub fn updateTexture(
 /// `copy_attribs` - Copy command attributes, see `Diligent::CopyTextureAttribs`.
 ///
 /// **Remarks:** Supported contexts: graphics, compute, transfer.
-pub fn copyTexture(self: *DeviceContext, copy_attribs: *const graphics.types.CopyTextureAttribs) void {
+pub fn copyTexture(self: *DeviceContext, copy_attribs: graphics.types.CopyTextureAttribs) void {
     self.method("CopyTexture")(self.raw, @ptrCast(copy_attribs));
 }
 
@@ -716,7 +716,7 @@ pub fn mapTextureSubresource(
     array_slice: u32,
     map_type: graphics.types.MapType,
     map_flags: graphics.types.MapFlags,
-    map_region: ?*const graphics.types.Box,
+    map_region: ?graphics.types.Box,
 ) graphics.types.MappedTextureSubresource {
     var mapped: graphics.types.MappedTextureSubresource = .{};
     self.method("MapTextureSubresource")(
@@ -769,7 +769,7 @@ pub fn finishFrame(self: *DeviceContext) void {
 /// Returns the current frame number.
 ///
 /// **Note:** The frame number is incremented every time `finishFrame()` is called.
-pub fn getFrameNumber(self: *const DeviceContext) u64 {
+pub fn getFrameNumber(self: DeviceContext) u64 {
     return self.method("GetFrameNumber")(self.raw);
 }
 
@@ -802,7 +802,7 @@ pub fn resolveTextureSubresource(
     self: *DeviceContext,
     src_texture: graphics.Texture,
     dst_texture: graphics.Texture,
-    resolve_attribs: *const graphics.types.ResolveTextureSubresourceAttribs,
+    resolve_attribs: graphics.types.ResolveTextureSubresourceAttribs,
 ) void {
     self.method("ResolveTextureSubresource")(self.raw, src_texture.raw, dst_texture.raw, @ptrCast(resolve_attribs));
 }
@@ -815,8 +815,8 @@ pub fn resolveTextureSubresource(
 /// CPU-side data that would not match the GPU-side data, and shader binding would be incorrect.
 ///
 /// **Remarks:** Supported contexts: graphics, compute.
-pub fn buildBLAS(self: *DeviceContext, attribs: *const graphics.types.BuildBLASAttribs) void {
-    self.method("BuildBLAS")(self.raw, @ptrCast(attribs));
+pub fn buildBLAS(self: *DeviceContext, attribs: graphics.types.BuildBLASAttribs) void {
+    self.method("BuildBLAS")(self.raw, @ptrCast(&attribs));
 }
 
 /// Builds a top-level acceleration structure with the specified instances.
@@ -827,8 +827,8 @@ pub fn buildBLAS(self: *DeviceContext, attribs: *const graphics.types.BuildBLASA
 /// CPU-side data that would not match the GPU-side data, and shader binding would be incorrect.
 ///
 /// **Remarks:** Supported contexts: graphics, compute.
-pub fn buildTLAS(self: *DeviceContext, attribs: *const graphics.types.BuildTLASAttribs) void {
-    self.method("BuildTLAS")(self.raw, @ptrCast(attribs));
+pub fn buildTLAS(self: *DeviceContext, attribs: graphics.types.BuildTLASAttribs) void {
+    self.method("BuildTLAS")(self.raw, @ptrCast(&attribs));
 }
 
 /// Copies data from one bottom-level acceleration structure to another.
@@ -838,8 +838,8 @@ pub fn buildTLAS(self: *DeviceContext, attribs: *const graphics.types.BuildTLASA
 /// **Note:** Do not call build or copy operations on the same BLAS from different contexts.
 ///
 /// **Remarks:** Supported contexts: graphics, compute.
-pub fn copyBLAS(self: *DeviceContext, attribs: *const graphics.types.CopyBLASAttribs) void {
-    self.method("CopyBLAS")(self.raw, @ptrCast(attribs));
+pub fn copyBLAS(self: *DeviceContext, attribs: graphics.types.CopyBLASAttribs) void {
+    self.method("CopyBLAS")(self.raw, @ptrCast(&attribs));
 }
 
 /// Copies data from one top-level acceleration structure to another.
@@ -849,8 +849,8 @@ pub fn copyBLAS(self: *DeviceContext, attribs: *const graphics.types.CopyBLASAtt
 /// **Note:** Do not call build or copy operations on the same TLAS from different contexts.
 ///
 /// **Remarks:** Supported contexts: graphics, compute.
-pub fn copyTLAS(self: *DeviceContext, attribs: *const graphics.types.CopyTLASAttribs) void {
-    self.method("CopyTLAS")(self.raw, @ptrCast(attribs));
+pub fn copyTLAS(self: *DeviceContext, attribs: graphics.types.CopyTLASAttribs) void {
+    self.method("CopyTLAS")(self.raw, @ptrCast(&attribs));
 }
 
 /// Writes the memory size a bottom-level acceleration structure needs for compaction to a buffer.
@@ -858,8 +858,8 @@ pub fn copyTLAS(self: *DeviceContext, attribs: *const graphics.types.CopyTLASAtt
 /// `attribs` - Command attributes, see `Diligent::WriteBLASCompactedSizeAttribs`.
 ///
 /// **Remarks:** Supported contexts: graphics, compute.
-pub fn writeBLASCompactedSize(self: *DeviceContext, attribs: *const graphics.types.WriteBLASCompactedSizeAttribs) void {
-    self.method("WriteBLASCompactedSize")(self.raw, @ptrCast(attribs));
+pub fn writeBLASCompactedSize(self: *DeviceContext, attribs: graphics.types.WriteBLASCompactedSizeAttribs) void {
+    self.method("WriteBLASCompactedSize")(self.raw, @ptrCast(&attribs));
 }
 
 /// Writes the memory size a top-level acceleration structure needs for compaction to a buffer.
@@ -867,8 +867,8 @@ pub fn writeBLASCompactedSize(self: *DeviceContext, attribs: *const graphics.typ
 /// `attribs` - Command attributes, see `Diligent::WriteTLASCompactedSizeAttribs`.
 ///
 /// **Remarks:** Supported contexts: graphics, compute.
-pub fn writeTLASCompactedSize(self: *DeviceContext, attribs: *const graphics.types.WriteTLASCompactedSizeAttribs) void {
-    self.method("WriteTLASCompactedSize")(self.raw, @ptrCast(attribs));
+pub fn writeTLASCompactedSize(self: *DeviceContext, attribs: graphics.types.WriteTLASCompactedSizeAttribs) void {
+    self.method("WriteTLASCompactedSize")(self.raw, @ptrCast(&attribs));
 }
 
 /// Executes a trace rays command.
@@ -880,8 +880,8 @@ pub fn writeTLASCompactedSize(self: *DeviceContext, attribs: *const graphics.typ
 /// functions that do not modify it.
 ///
 /// **Remarks:** Supported contexts: graphics, compute.
-pub fn traceRays(self: *DeviceContext, attribs: *const graphics.types.TraceRaysAttribs) void {
-    self.method("TraceRays")(self.raw, @ptrCast(attribs));
+pub fn traceRays(self: *DeviceContext, attribs: graphics.types.TraceRaysAttribs) void {
+    self.method("TraceRays")(self.raw, @ptrCast(&attribs));
 }
 
 /// Executes an indirect trace rays command.
@@ -892,8 +892,8 @@ pub fn traceRays(self: *DeviceContext, attribs: *const graphics.types.TraceRaysA
 /// shader binding table (SBT). The function does not modify the SBT.
 ///
 /// **Remarks:** Supported contexts: graphics, compute.
-pub fn traceRaysIndirect(self: *DeviceContext, attribs: *const graphics.types.TraceRaysIndirectAttribs) void {
-    self.method("TraceRaysIndirect")(self.raw, @ptrCast(attribs));
+pub fn traceRaysIndirect(self: *DeviceContext, attribs: graphics.types.TraceRaysIndirectAttribs) void {
+    self.method("TraceRaysIndirect")(self.raw, @ptrCast(&attribs));
 }
 
 /// Updates the SBT with the pending data recorded in `IShaderBindingTable::Bind***` calls.
@@ -911,7 +911,7 @@ pub fn traceRaysIndirect(self: *DeviceContext, attribs: *const graphics.types.Tr
 pub fn updateSBT(
     self: *DeviceContext,
     sbt: graphics.ShaderBindingTable,
-    update_indirect_buffer_attribs: ?*const graphics.types.UpdateIndirectRTBufferAttribs,
+    update_indirect_buffer_attribs: ?graphics.types.UpdateIndirectRTBufferAttribs,
 ) void {
     self.method("UpdateSBT")(
         self.raw,
@@ -934,7 +934,7 @@ pub fn setUserData(self: *DeviceContext, user_data: ?graphics.Object) void {
 /// Returns the user data object previously set with `setUserData()`.
 ///
 /// **Remarks:** The method does not call `AddRef()` on the returned object.
-pub fn getUserData(self: *const DeviceContext) ?graphics.Object {
+pub fn getUserData(self: DeviceContext) ?graphics.Object {
     const p = self.method("GetUserData")(self.raw);
     if (p == null) return null;
     return .{ .raw = p.? };
@@ -948,7 +948,7 @@ pub fn getUserData(self: *const DeviceContext) ?graphics.Object {
 /// External debug tools may use this information when displaying context commands.
 ///
 /// **Remarks:** Supported contexts: graphics, compute, transfer.
-pub fn beginDebugGroup(self: *DeviceContext, name: [:0]const u8, color: ?*const [4]f32) void {
+pub fn beginDebugGroup(self: *DeviceContext, name: [:0]const u8, color: ?[4]f32) void {
     self.method("BeginDebugGroup")(self.raw, name.ptr, if (color) |col| &col[0] else null);
 }
 
@@ -965,7 +965,7 @@ pub fn endDebugGroup(self: *DeviceContext) void {
 /// External debug tools may use this information when displaying context commands.
 ///
 /// **Remarks:** Supported contexts: graphics, compute, transfer. Not supported in the Metal backend.
-pub fn insertDebugLabel(self: *DeviceContext, label: [:0]const u8, color: ?*const [4]f32) void {
+pub fn insertDebugLabel(self: *DeviceContext, label: [:0]const u8, color: ?[4]f32) void {
     self.method("InsertDebugLabel")(self.raw, label.ptr, if (color) |col| &col[0] else null);
 }
 
@@ -1027,8 +1027,8 @@ pub fn setShadingRate(
 ///
 /// **Remarks:** Only executed by an immediate context whose queue supports
 /// `COMMAND_QUEUE_TYPE_SPARSE_BINDING`.
-pub fn bindSparseResourceMemory(self: *DeviceContext, attribs: *const graphics.types.BindSparseResourceMemoryAttribs) void {
-    self.method("BindSparseResourceMemory")(self.raw, @ptrCast(attribs));
+pub fn bindSparseResourceMemory(self: *DeviceContext, attribs: graphics.types.BindSparseResourceMemoryAttribs) void {
+    self.method("BindSparseResourceMemory")(self.raw, @ptrCast(&attribs));
 }
 
 /// Clears the device context statistics.
@@ -1039,13 +1039,14 @@ pub fn clearStats(self: *DeviceContext) void {
 /// Returns the device context statistics, see `Diligent::DeviceContextStats`.
 ///
 /// The returned pointer is valid for the lifetime of the context.
-pub fn getStats(self: *const DeviceContext) *const graphics.types.DeviceContextStats {
+pub fn getStats(self: DeviceContext) graphics.types.DeviceContextStats {
     return @ptrCast(self.method("GetStats")(self.raw));
 }
 
 pub const method = helpers.methodHelper(@This(), "DeviceContext");
 pub const addRef = helpers.objectMethods(@This()).addRef;
 pub const release = helpers.objectMethods(@This()).release;
+pub const asObject = helpers.baseHelper(@This(), graphics.Object);
 
 comptime {
     helpers.ensureHandle(@This());
