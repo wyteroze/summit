@@ -63,6 +63,17 @@ fn summitWrapToDiligent(wrap: types.WrapType) graphics.types.TextureAddressMode 
     };
 }
 
+fn summitPixelFormatToDiligent(format: types.PixelFormat) graphics.types.TextureFormat {
+    return switch (format) {
+        .rgba8 => .rgba8_unorm_srgb,
+        .rgba16f => .rgba16_float,
+        .d24_s8 => .d24_unorm_s8_uint,
+        .d32 => .d32_float,
+        .r8_unorm => .r8_unorm,
+        .bgra8 => .bgra8_unorm,
+    };
+}
+
 const engine = switch (build_opts.backend) {
     .vulkan => graphics.engines.GraphicsEngineVulkan,
     .d3d11 => graphics.engines.GraphicsEngineD3D11,
@@ -96,13 +107,11 @@ pub fn init(allocator: std.mem.Allocator) !DiligentBackend {
     };
 }
 
-pub fn deinit(self: DiligentBackend) void {
-    // Again, sorry. I'm gonna fix all of this later I'm just so tired of doing this.
-    const self_mut: *DiligentBackend = @constCast(&self);
-    self_mut.context.flush();
-    self_mut.context.waitForIdle();
-    self_mut.context.release();
-    self_mut.device.release();
+pub fn deinit(self: *DiligentBackend) void {
+    self.context.flush();
+    self.context.waitForIdle();
+    self.context.release();
+    self.device.release();
     self.alloc.allocator.destroy(self.alloc);
 }
 
@@ -215,23 +224,77 @@ pub fn destroySampler(_: DiligentBackend, h: types.SamplerHandle) void {
 
 // Image
 
-pub fn createImage(_: DiligentBackend, _: desc.ImageDesc) types.ImageHandle {
-    // const img_h = c.diligent_create_image(self.handle, .{
-    //     .name = d.name,
-    //     .width = d.width,
-    //     .height = d.height,
-    //     .format = @backingInt(d.format),
-    //     .data = if (d.data) |data| data.ptr else @ptrFromInt(0),
-    //     .is_cubemap = d.is_cubemap,
-    //     .is_render_target = d.is_render_target,
-    // });
+pub fn createImage(self: *DiligentBackend, d: desc.ImageDesc) !types.ImageHandle {
+    const is_depth = switch (d.format) {
+        .d24_s8, .d32 => true,
+        else => false,
+    };
 
-    // return .{ .ptr = img_h.ptr.? };
-    return .{ .ptr = @ptrFromInt(1) };
+    const stride: u64 = switch (d.format) {
+        .bgra8, .rgba8, .d24_s8, .d32 => 4,
+        .rgba16f => 8,
+        .r8_unorm => 1,
+    };
+
+    const dynamic = is_depth or d.is_render_target;
+
+    const tex_desc: graphics.types.TextureDesc = .{
+        .name = d.name,
+        .type = if (d.is_cubemap) .tex_cube else .tex_2d,
+        .array_size_or_depth = .{ .array_size = if (d.is_cubemap) 6 else 1 },
+        .width = d.width,
+        .height = d.height,
+        .mip_levels = 1,
+        .format = summitPixelFormatToDiligent(d.format),
+        .bind_flags = .{
+            .shader_resource = true,
+            .depth_stencil = is_depth,
+            .render_target = d.is_render_target,
+        },
+        .usage = if (dynamic) .default else .immutable,
+    };
+
+    const row_stride = @as(u64, d.width) * stride;
+
+    var subres: [6]graphics.types.TextureSubresData = undefined;
+
+    const tex_data: ?graphics.types.TextureData = blk: {
+        if (dynamic) break :blk null;
+        const bytes = d.data orelse return error.MissingImageData;
+
+        if (d.is_cubemap) {
+            const face_size = row_stride * d.height;
+            if (bytes.len < face_size * 6) return error.ImageDataTooSmall;
+
+            for (&subres, 0..) |*s, face| {
+                s.* = .{
+                    .data = bytes.ptr + face * face_size,
+                    .stride = row_stride,
+                };
+            }
+
+            break :blk .{
+                .sub_resources = &subres,
+                .num_subresources = 6,
+            };
+        } else {
+            if (bytes.len < row_stride * d.height) return error.ImageDataTooSmall;
+
+            subres[0] = .{ .data = bytes.ptr, .stride = row_stride };
+            break :blk .{
+                .sub_resources = &subres,
+                .num_subresources = 1,
+            };
+        }
+    };
+
+    const image = try self.device.createTexture(tex_desc, tex_data);
+    return .{ .ptr = image.raw };
 }
 
-pub fn destroyImage(_: DiligentBackend, _: types.ImageHandle) void {
-    // c.diligent_destroy_image(self.handle, .{ .ptr = h.ptr });
+pub fn destroyImage(_: DiligentBackend, h: types.ImageHandle) void {
+    const texture: graphics.Texture = .{ .raw = @ptrCast(@alignCast(h.ptr)) };
+    texture.release();
 }
 
 // Pipeline

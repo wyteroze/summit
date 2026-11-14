@@ -41,7 +41,7 @@ pub fn createBuffer(self: *RenderDevice, buff_desc: graphics.types.BufferDesc, b
 /// strings. The first one is the compiler output message. The second one is the full
 /// shader source code including definitions added by the engine. The data blob
 /// object must be released by the client.
-pub fn createShader(self: *RenderDevice, shader_ci: *const graphics.types.ShaderCreateInfo) !struct { graphics.Shader, ?graphics.DataBlob } {
+pub fn createShader(self: *RenderDevice, shader_ci: graphics.types.ShaderCreateInfo) !struct { graphics.Shader, ?graphics.DataBlob } {
     var shader: [*c]c.IShader = null;
     var compiler_output: [*c]c.IDataBlob = null;
 
@@ -78,9 +78,10 @@ pub fn createShader(self: *RenderDevice, shader_ci: *const graphics.types.Shader
 /// For a 15 x 6 x 4 3D texture, the following array of subresources should be provided:
 ///
 ///     15x6x4, 7x3x2, 3x1x1, 1x1x1
-pub fn createTexture(self: *RenderDevice, tex_desc: *const graphics.types.TextureDesc, data: ?*const graphics.types.TextureData) !graphics.Texture {
+pub fn createTexture(self: *RenderDevice, tex_desc: graphics.types.TextureDesc, data: ?graphics.types.TextureData) !graphics.Texture {
     var texture: [*c]c.ITexture = null;
-    self.method("CreateTexture")(self.raw, @ptrCast(tex_desc), @ptrCast(data), &texture);
+    const data_ptr = if (data) |*dd| dd else null;
+    self.method("CreateTexture")(self.raw, @ptrCast(&tex_desc), @ptrCast(data_ptr), &texture);
     if (texture == null) return error.TextureCreationFailed;
     return .{ .raw = texture.? };
 }
@@ -107,7 +108,7 @@ pub fn createSampler(self: *RenderDevice, sam_desc: graphics.types.SamplerDesc) 
 /// `res_mapping_ci` - Resource mapping create info, see Diligent::ResourceMappingCreateInfo for details.
 ///
 /// The returned mapping has one reference and must be released with `release()`.
-pub fn createResourceMapping(self: *RenderDevice, res_mapping_ci: *const graphics.types.ResourceMappingCreateInfo) !graphics.ResourceMapping {
+pub fn createResourceMapping(self: *RenderDevice, res_mapping_ci: graphics.types.ResourceMappingCreateInfo) !graphics.ResourceMapping {
     var mapping: [*c]c.IResourceMapping = null;
     self.method("CreateResourceMapping")(self.raw, @ptrCast(res_mapping_ci), &mapping);
     if (mapping == null) return error.ResourceMappingCreationFailed;
@@ -119,7 +120,7 @@ pub fn createResourceMapping(self: *RenderDevice, res_mapping_ci: *const graphic
 /// `pso_create_info` - Graphics pipeline state create info, see Diligent::GraphicsPipelineStateCreateInfo for details.
 ///
 /// The returned pipeline state has one reference and must be released with `release()`.
-pub fn createGraphicsPipelineState(self: *RenderDevice, pso_create_info: *const graphics.types.GraphicsPipelineStateCreateInfo) !graphics.PipelineState {
+pub fn createGraphicsPipelineState(self: *RenderDevice, pso_create_info: graphics.types.GraphicsPipelineStateCreateInfo) !graphics.PipelineState {
     var pipeline_state: [*c]c.IPipelineState = null;
     self.method("CreateGraphicsPipelineState")(self.raw, @ptrCast(pso_create_info), &pipeline_state);
     if (pipeline_state == null) return error.PipelineStateCreationFailed;
@@ -131,7 +132,7 @@ pub fn createGraphicsPipelineState(self: *RenderDevice, pso_create_info: *const 
 /// `pso_create_info` - Compute pipeline state create info, see Diligent::ComputePipelineStateCreateInfo for details.
 ///
 /// The returned pipeline state has one reference and must be released with `release()`.
-pub fn createComputePipelineState(self: *RenderDevice, pso_create_info: *const graphics.types.ComputePipelineStateCreateInfo) !graphics.PipelineState {
+pub fn createComputePipelineState(self: *RenderDevice, pso_create_info: graphics.types.ComputePipelineStateCreateInfo) !graphics.PipelineState {
     var pipeline_state: [*c]c.IPipelineState = null;
     self.method("CreateComputePipelineState")(self.raw, @ptrCast(pso_create_info), &pipeline_state);
     if (pipeline_state == null) return error.PipelineStateCreationFailed;
@@ -143,7 +144,7 @@ pub fn createComputePipelineState(self: *RenderDevice, pso_create_info: *const g
 /// `desc` - Fence description, see Diligent::FenceDesc for details.
 ///
 /// The returned fence has one reference and must be released with `release()`.
-pub fn createFence(self: *RenderDevice, desc: *const graphics.types.FenceDesc) !graphics.Fence {
+pub fn createFence(self: *RenderDevice, desc: graphics.types.FenceDesc) !graphics.Fence {
     var fence: [*c]c.IFence = null;
     self.method("CreateFence")(self.raw, @ptrCast(desc), &fence);
     if (fence == null) return error.FenceCreationFailed;
@@ -155,7 +156,7 @@ pub fn createFence(self: *RenderDevice, desc: *const graphics.types.FenceDesc) !
 /// `desc` - Query description, see Diligent::QueryDesc for details.
 ///
 /// The returned query has one reference and must be released with `release()`.
-pub fn createQuery(self: *RenderDevice, desc: *const graphics.types.QueryDesc) !graphics.Query {
+pub fn createQuery(self: *RenderDevice, desc: graphics.types.QueryDesc) !graphics.Query {
     var query: [*c]c.IQuery = null;
     self.method("CreateQuery")(self.raw, @ptrCast(desc), &query);
     if (query == null) return error.QueryCreationFailed;
@@ -167,7 +168,7 @@ pub fn createQuery(self: *RenderDevice, desc: *const graphics.types.QueryDesc) !
 /// `desc` - Render pass description, see Diligent::RenderPassDesc for details.
 ///
 /// The returned render pass has one reference and must be released with `release()`.
-pub fn createRenderPass(self: *RenderDevice, desc: *const graphics.types.RenderPassDesc) !graphics.RenderPass {
+pub fn createRenderPass(self: *RenderDevice, desc: graphics.types.RenderPassDesc) !graphics.RenderPass {
     var render_pass: [*c]c.IRenderPass = null;
     self.method("CreateRenderPass")(self.raw, @ptrCast(desc), &render_pass);
     if (render_pass == null) return error.RenderPassCreationFailed;
@@ -179,7 +180,7 @@ pub fn createRenderPass(self: *RenderDevice, desc: *const graphics.types.RenderP
 /// `desc` - Framebuffer description, see Diligent::FramebufferDesc for details.
 ///
 /// The returned framebuffer has one reference and must be released with `release()`.
-pub fn createFramebuffer(self: *RenderDevice, desc: *const graphics.types.FramebufferDesc) !graphics.Framebuffer {
+pub fn createFramebuffer(self: *RenderDevice, desc: graphics.types.FramebufferDesc) !graphics.Framebuffer {
     var framebuffer: [*c]c.IFramebuffer = null;
     self.method("CreateFramebuffer")(self.raw, @ptrCast(desc), &framebuffer);
     if (framebuffer == null) return error.FramebufferCreationFailed;
@@ -191,7 +192,7 @@ pub fn createFramebuffer(self: *RenderDevice, desc: *const graphics.types.Frameb
 /// `desc` - Resource signature description, see Diligent::PipelineResourceSignatureDesc for details.
 ///
 /// The returned signature has one reference and must be released with `release()`.
-pub fn createPipelineResourceSignature(self: *RenderDevice, desc: *const graphics.types.PipelineResourceSignatureDesc) !graphics.PipelineResourceSignature {
+pub fn createPipelineResourceSignature(self: *RenderDevice, desc: graphics.types.PipelineResourceSignatureDesc) !graphics.PipelineResourceSignature {
     var signature: [*c]c.IPipelineResourceSignature = null;
     self.method("CreatePipelineResourceSignature")(self.raw, @ptrCast(desc), &signature);
     if (signature == null) return error.PipelineResourceSignatureCreationFailed;
@@ -203,7 +204,7 @@ pub fn createPipelineResourceSignature(self: *RenderDevice, desc: *const graphic
 /// `create_info` - Device memory create info, see Diligent::DeviceMemoryCreateInfo for details.
 ///
 /// The returned device memory has one reference and must be released with `release()`.
-pub fn createDeviceMemory(self: *RenderDevice, create_info: *const graphics.types.DeviceMemoryCreateInfo) !graphics.DeviceMemory {
+pub fn createDeviceMemory(self: *RenderDevice, create_info: graphics.types.DeviceMemoryCreateInfo) !graphics.DeviceMemory {
     var memory: [*c]c.IDeviceMemory = null;
     self.method("CreateDeviceMemory")(self.raw, @ptrCast(create_info), &memory);
     if (memory == null) return error.DeviceMemoryCreationFailed;
@@ -218,7 +219,7 @@ pub fn createDeviceMemory(self: *RenderDevice, create_info: *const graphics.type
 ///
 /// On devices that don't support pipeline state caches (e.g. Direct3D11, OpenGL),
 /// the method will silently do nothing, and this function returns null.
-pub fn createPipelineStateCache(self: *RenderDevice, create_info: *const graphics.types.PipelineStateCacheCreateInfo) !?graphics.PipelineStateCache {
+pub fn createPipelineStateCache(self: *RenderDevice, create_info: graphics.types.PipelineStateCacheCreateInfo) !?graphics.PipelineStateCache {
     var pso_cache: [*c]c.IPipelineStateCache = null;
     self.method("CreatePipelineStateCache")(self.raw, @ptrCast(create_info), &pso_cache);
     if (pso_cache == null) return null;
@@ -238,12 +239,12 @@ pub fn createDeferredContext(self: *RenderDevice) !graphics.DeviceContext {
 }
 
 /// Returns the device information, see Diligent::RenderDeviceInfo for details.
-pub fn getDeviceInfo(self: *const RenderDevice) *const graphics.types.RenderDeviceInfo {
+pub fn getDeviceInfo(self: RenderDevice) graphics.types.RenderDeviceInfo {
     return @ptrCast(self.method("GetDeviceInfo")(self.raw));
 }
 
 /// Returns the graphics adapter information, see Diligent::GraphicsAdapterInfo for details.
-pub fn getAdapterInfo(self: *const RenderDevice) *const graphics.types.GraphicsAdapterInfo {
+pub fn getAdapterInfo(self: RenderDevice) graphics.types.GraphicsAdapterInfo {
     return @ptrCast(self.method("GetAdapterInfo")(self.raw));
 }
 
@@ -257,7 +258,7 @@ pub fn getAdapterInfo(self: *const RenderDevice) *const graphics.types.GraphicsA
 /// texture format description.
 ///
 /// **Remarks:** This method must be externally synchronized.
-pub fn getTextureFormatInfo(self: *const RenderDevice, tex_format: graphics.types.TextureFormat) *const graphics.types.TextureFormatInfo {
+pub fn getTextureFormatInfo(self: RenderDevice, tex_format: graphics.types.TextureFormat) graphics.types.TextureFormatInfo {
     return @ptrCast(self.method("GetTextureFormatInfo")(self.raw, @backingInt(tex_format)));
 }
 
@@ -275,7 +276,7 @@ pub fn getTextureFormatInfo(self: *const RenderDevice, tex_format: graphics.type
 /// extended information, call getTextureFormatInfo() instead.
 ///
 /// **Remarks:** This method must be externally synchronized.
-pub fn getTextureFormatInfoExt(self: *RenderDevice, tex_format: graphics.types.TextureFormat) *const graphics.types.TextureFormatInfoExt {
+pub fn getTextureFormatInfoExt(self: *RenderDevice, tex_format: graphics.types.TextureFormat) graphics.types.TextureFormatInfoExt {
     return @ptrCast(self.method("GetTextureFormatInfoExt")(self.raw, @backingInt(tex_format)));
 }
 
@@ -306,7 +307,7 @@ pub fn idleGPU(self: *RenderDevice) void {
 ///
 /// The reference counter of the returned interface is not incremented,
 /// so the caller must not call `release()` on it.
-pub fn getEngineFactory(self: *const RenderDevice) ?graphics.EngineFactory {
+pub fn getEngineFactory(self: RenderDevice) ?graphics.EngineFactory {
     const p = self.method("GetEngineFactory")(self.raw);
     if (p == null) return null;
     return .{ .raw = p.? };
@@ -316,7 +317,7 @@ pub fn getEngineFactory(self: *const RenderDevice) ?graphics.EngineFactory {
 ///
 /// The reference counter of the returned interface is not incremented,
 /// so the caller must not call `release()` on it.
-pub fn getShaderCompilationThreadPool(self: *const RenderDevice) ?graphics.ThreadPool {
+pub fn getShaderCompilationThreadPool(self: RenderDevice) ?graphics.ThreadPool {
     const p = self.method("GetShaderCompilationThreadPool")(self.raw);
     if (p == null) return null;
     return .{ .raw = p.? };
