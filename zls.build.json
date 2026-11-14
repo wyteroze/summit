@@ -1,5 +1,0 @@
-{
-  "build_options": [
-    { "name": "check_only", "value": "true" }
-  ]
-}

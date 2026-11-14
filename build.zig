@@ -10,33 +10,6 @@ pub fn build(b: *std.Build) void {
         std.zig.system.darwin.getSdk(b.allocator, b.graph.io, &target.result);
 
     const backend = b.option(enum { gl, d3d11, d3d12, vulkan }, "backend", "Backend to use\n(default: vulkan)") orelse .vulkan;
-    const check_only = b.option(bool, "check_only", "Only build the `check` step (skips engine build)") orelse false;
-
-    // For ZLS
-    const check = b.step("check", "Check if summit compiles");
-
-    if (check_only) {
-        const dep_engine_check = b.dependency("engine", .{
-            .target = target,
-            .optimize = optimize,
-            .sdk = sdk_path,
-            .backend = backend,
-        });
-
-        const exe_check_mod = b.createModule(.{
-            .root_source_file = b.path("runtime/src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "engine", .module = dep_engine_check.module("engine") },
-            },
-            .link_libc = true,
-        });
-
-        const exe_check = b.addExecutable(.{ .name = "summit", .root_module = exe_check_mod });
-        check.dependOn(&exe_check.step);
-        return;
-    }
 
     // This only runs for real builds, not zls
 
@@ -59,9 +32,6 @@ pub fn build(b: *std.Build) void {
         .root_module = exe_mod,
     });
     b.installArtifact(exe);
-
-    const exe_check = b.addExecutable(.{ .name = "summit", .root_module = exe_mod });
-    check.dependOn(&exe_check.step);
 
     if (target.result.os.tag == .macos and sdk_path != null) {
         const sdk_frameworks = b.pathJoin(&.{ sdk_path.?, "System", "Library", "Frameworks" });
