@@ -9,6 +9,7 @@ const resource = @import("../resource.zig");
 
 const DepthPrepassPass = @This();
 pipeline: gpu.GpuDevice.GpuPipeline,
+shader: gpu.GpuDevice.GpuShader,
 vs_ubuf: gpu.GpuDevice.GpuBuffer,
 
 pub fn init(gpu_device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader) !DepthPrepassPass {
@@ -31,6 +32,7 @@ pub fn init(gpu_device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader) !DepthP
                 .{ .offset = 24, .format = .float2 },
             },
         }),
+        .shader = shader,
         .vs_ubuf = try gpu_device.createBuffer(.{
             .name = "Depth prepass vs ubuf",
             .type = .uniform,
@@ -68,6 +70,7 @@ pub fn execute(self: *DepthPrepassPass, ctx: pass.PassContext) void {
 
 pub fn deinit(self: *DepthPrepassPass, allocator: std.mem.Allocator) void {
     self.pipeline.deinit();
+    self.shader.deinit();
     self.vs_ubuf.deinit();
     allocator.destroy(self);
 }

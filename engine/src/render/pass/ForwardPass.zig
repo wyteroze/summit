@@ -10,6 +10,7 @@ const math = core.math;
 
 const ForwardPass = @This();
 pipeline: gpu.GpuDevice.GpuPipeline,
+shader: gpu.GpuDevice.GpuShader,
 vs_ubuf: gpu.GpuDevice.GpuBuffer,
 light_ubuf: gpu.GpuDevice.GpuBuffer,
 
@@ -37,6 +38,7 @@ pub fn init(gpu_device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader) !Forwar
                 .{ .offset = 24, .format = .float2 },
             },
         }),
+        .shader = shader,
         .vs_ubuf = try gpu_device.createBuffer(.{
             .name = "Vs ubuf",
             .type = .uniform,
@@ -106,6 +108,7 @@ pub fn execute(self: *ForwardPass, ctx: pass.PassContext) void {
 
 pub fn deinit(self: *ForwardPass, allocator: std.mem.Allocator) void {
     self.pipeline.deinit();
+    self.shader.deinit();
     self.vs_ubuf.deinit();
     self.light_ubuf.deinit();
     allocator.destroy(self);

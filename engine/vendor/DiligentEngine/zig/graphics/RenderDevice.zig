@@ -139,7 +139,7 @@ pub fn createGraphicsPipelineState(self: *RenderDevice, pso_create_info: graphic
 /// The returned pipeline state has one reference and must be released with `release()`.
 pub fn createComputePipelineState(self: *RenderDevice, pso_create_info: graphics.types.ComputePipelineStateCreateInfo) !graphics.PipelineState {
     var pipeline_state: [*c]c.IPipelineState = null;
-    self.method("CreateComputePipelineState")(self.raw, @ptrCast(pso_create_info), &pipeline_state);
+    self.method("CreateComputePipelineState")(self.raw, @ptrCast(&pso_create_info), &pipeline_state);
     if (pipeline_state == null) return error.PipelineStateCreationFailed;
     return .{ .raw = pipeline_state.? };
 }

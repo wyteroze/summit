@@ -455,7 +455,7 @@ pub fn clearDepthStencil(
 pub fn clearRenderTarget(
     self: *DeviceContext,
     view: graphics.TextureView,
-    rgba: ?anyopaque,
+    rgba: ?*const anyopaque,
     state_transition_mode: graphics.types.ResourceStateTransitionMode,
 ) void {
     self.method("ClearRenderTarget")(self.raw, view.raw, rgba, @backingInt(state_transition_mode));

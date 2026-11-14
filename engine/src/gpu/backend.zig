@@ -31,7 +31,7 @@ pub const Backend = union(enum) {
         };
     }
 
-    pub fn deleteBuffer(self: *Backend, h: types.BufferHandle) void {
+    pub fn destroyBuffer(self: *Backend, h: types.BufferHandle) void {
         return switch (self.*) {
             inline else => |*b| b.destroyBuffer(h),
         };
@@ -49,7 +49,7 @@ pub const Backend = union(enum) {
         };
     }
 
-    pub fn deleteSampler(self: *Backend, h: types.SamplerHandle) void {
+    pub fn destroySampler(self: *Backend, h: types.SamplerHandle) void {
         return switch (self.*) {
             inline else => |*b| b.destroySampler(h),
         };
@@ -61,7 +61,7 @@ pub const Backend = union(enum) {
         };
     }
 
-    pub fn deleteImage(self: *Backend, h: types.ImageHandle) void {
+    pub fn destroyImage(self: *Backend, h: types.ImageHandle) void {
         return switch (self.*) {
             inline else => |*b| b.destroyImage(h),
         };
@@ -73,7 +73,7 @@ pub const Backend = union(enum) {
         };
     }
 
-    pub fn deleteShader(self: *Backend, h: types.ShaderHandle) void {
+    pub fn destroyShader(self: *Backend, h: types.ShaderHandle) void {
         return switch (self.*) {
             inline else => |*b| b.destroyShader(h),
         };
@@ -91,7 +91,7 @@ pub const Backend = union(enum) {
         };
     }
 
-    pub fn deletePipeline(self: *Backend, h: types.PipelineHandle) void {
+    pub fn destroyPipeline(self: *Backend, h: types.PipelineHandle) void {
         return switch (self.*) {
             inline else => |*b| b.destroyPipeline(h),
         };
@@ -105,7 +105,7 @@ pub const Backend = union(enum) {
 
     pub fn applyPipelineBindings(self: *Backend, pipeline: types.PipelineHandle, binds: desc.Bindings) !void {
         switch (self.*) {
-            inline else => |*b| b.applyPipelineBindings(pipeline, binds),
+            inline else => |*b| try b.applyPipelineBindings(pipeline, binds),
         }
     }
 
@@ -121,7 +121,7 @@ pub const Backend = union(enum) {
         };
     }
 
-    pub fn deleteComputePipeline(self: *Backend, h: types.ComputePipelineHandle) void {
+    pub fn destroyComputePipeline(self: *Backend, h: types.ComputePipelineHandle) void {
         return switch (self.*) {
             inline else => |*b| b.destroyComputePipeline(h),
         };
@@ -133,9 +133,9 @@ pub const Backend = union(enum) {
         }
     }
 
-    pub fn applyComputeBindings(self: *Backend, h: types.ComputePipelineHandle, binds: desc.Bindings) void {
+    pub fn applyComputeBindings(self: *Backend, h: types.ComputePipelineHandle, binds: desc.Bindings) !void {
         switch (self.*) {
-            inline else => |*b| b.applyComputeBindings(h, binds),
+            inline else => |*b| try b.applyComputeBindings(h, binds),
         }
     }
 
@@ -163,9 +163,9 @@ pub const Backend = union(enum) {
         };
     }
 
-    pub fn resizeSwapchain(self: *Backend, h: types.SwapchainHandle, pixel_size: [2]u32) void {
+    pub fn resizeSwapchain(self: *Backend, h: types.SwapchainHandle, pixel_size: [2]u32) !void {
         switch (self.*) {
-            inline else => |*b| b.resizeSwapchain(h, pixel_size),
+            inline else => |*b| try b.resizeSwapchain(h, pixel_size),
         }
     }
 
@@ -175,13 +175,13 @@ pub const Backend = union(enum) {
         }
     }
 
-    pub fn imageGetRtv(self: *Backend, h: types.ImageHandle) types.RenderTargetHandle {
+    pub fn imageGetRtv(self: *Backend, h: types.ImageHandle) ?types.RenderTargetHandle {
         return switch (self.*) {
             inline else => |*b| b.imageGetRtv(h),
         };
     }
 
-    pub fn imageGetDsv(self: *Backend, h: types.ImageHandle) types.DepthTargetHandle {
+    pub fn imageGetDsv(self: *Backend, h: types.ImageHandle) ?types.DepthTargetHandle {
         return switch (self.*) {
             inline else => |*b| b.imageGetDsv(h),
         };

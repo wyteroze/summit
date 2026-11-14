@@ -42,7 +42,7 @@ fn summitPixelFormatToDiligent(format: types.PixelFormat) graphics.types.Texture
         .d24_s8 => .d24_unorm_s8_uint,
         .d32 => .d32_float,
         .r8_unorm => .r8_unorm,
-        .bgra8 => .bgra8_unorm,
+        .bgra8 => .bgra8_unorm_srgb,
     };
 }
 
@@ -97,6 +97,57 @@ const Shader = struct {
         return @ptrCast(@alignCast(h));
     }
 };
+
+// For ComputePipelineHandle
+const ComputePipeline = struct {
+    pso: graphics.PipelineState,
+    srb: graphics.ShaderResourceBinding,
+
+    fn fromHandle(h: types.ComputePipelineHandle) *ComputePipeline {
+        return @ptrCast(@alignCast(h));
+    }
+};
+
+/// Binds each resource to the first stage in `stages` that has a variable with that name.
+fn bindResources(
+    srb: graphics.ShaderResourceBinding,
+    stages: []const graphics.types.ShaderType,
+    resources: []const desc.BoundResource,
+) !void {
+    for (resources) |res| {
+        const vari: graphics.ShaderResourceVariable = for (stages) |stage| {
+            if (srb.getVariableByName(stage, res.name)) |v| break v;
+        } else {
+            std.log.warn("No variable named '{s}'", .{res.name});
+            continue;
+        };
+
+        switch (res.handle) {
+            .uniform_buffer => |ub| {
+                const buf: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(ub)) };
+                vari.set(buf.asDeviceObject(), .{});
+            },
+            .storage_buffer => |sb| {
+                const buf: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(sb)) };
+                vari.set(buf.getDefaultView(.shader_resource).asDeviceObject(), .{});
+            },
+            .storage_buffer_rw => |sb| {
+                const buf: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(sb)) };
+                vari.set(buf.getDefaultView(.unordered_access).asDeviceObject(), .{});
+            },
+            .texture => |tx| {
+                const tex: graphics.Texture = .{ .raw = @ptrCast(@alignCast(tx)) };
+                const view = tex.getDefaultView(.shader_resource) orelse
+                    return error.ImageNotShaderResource;
+                vari.set(view.asDeviceObject(), .{});
+            },
+            .sampler => |sm| {
+                const smp: graphics.Sampler = .{ .raw = @ptrCast(@alignCast(sm)) };
+                vari.set(smp.asDeviceObject(), .{});
+            },
+        }
+    }
+}
 
 // For PipelineHandle
 const Pipeline = struct {
@@ -235,7 +286,7 @@ pub fn createSampler(self: *DiligentBackend, d: desc.SamplerDesc) !types.Sampler
     return @ptrCast(sampler.raw);
 }
 
-pub fn destroySampler(_: DiligentBackend, h: types.SamplerHandle) void {
+pub fn destroySampler(_: *DiligentBackend, h: types.SamplerHandle) void {
     const sampler: graphics.Sampler = .{ .raw = @ptrCast(@alignCast(h)) };
     sampler.release();
 }
@@ -310,7 +361,7 @@ pub fn createImage(self: *DiligentBackend, d: desc.ImageDesc) !types.ImageHandle
     return @ptrCast(image.raw);
 }
 
-pub fn destroyImage(_: DiligentBackend, h: types.ImageHandle) void {
+pub fn destroyImage(_: *DiligentBackend, h: types.ImageHandle) void {
     const texture: graphics.Texture = .{ .raw = @ptrCast(@alignCast(h)) };
     texture.release();
 }
@@ -466,7 +517,7 @@ pub fn drawPipeline(self: *DiligentBackend, h: types.PipelineHandle, base: u32, 
     }
 }
 
-pub fn applyPipelineBindings(self: *DiligentBackend, h: types.PipelineHandle, bindings: desc.Bindings) void {
+pub fn applyPipelineBindings(self: *DiligentBackend, h: types.PipelineHandle, bindings: desc.Bindings) !void {
     const pipeline: *Pipeline = .fromHandle(h);
 
     var vbufs: [4]graphics.Buffer = undefined;
@@ -489,81 +540,69 @@ pub fn applyPipelineBindings(self: *DiligentBackend, h: types.PipelineHandle, bi
         pipeline.has_index_buffer = false;
     }
 
-    for (bindings.resources) |res| {
-        const vari: graphics.ShaderResourceVariable = pipeline.srb.getVariableByName(.{ .vertex = true }, res.name) orelse
-            pipeline.srb.getVariableByName(.{ .pixel = true }, res.name) orelse {
-            std.log.warn("No variable named '{s}'!", .{res.name});
-            continue;
-        };
-
-        switch (res.handle) {
-            .uniform_buffer => |ub| {
-                const buf: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(ub)) };
-                vari.set(buf.asDeviceObject(), .{});
-            },
-            .storage_buffer => |sb| {
-                const buf: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(sb)) };
-                vari.set(buf.getDefaultView(.shader_resource).asDeviceObject(), .{});
-            },
-            .storage_buffer_rw => |sb| {
-                const buf: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(sb)) };
-                vari.set(buf.getDefaultView(.unordered_access).asDeviceObject(), .{});
-            },
-            .texture => |tx| {
-                const tex: graphics.Texture = .{ .raw = @ptrCast(@alignCast(tx)) };
-                vari.set(tex.getDefaultView(.shader_resource).asDeviceObject(), .{});
-            },
-            .sampler => |sm| {
-                const smp: graphics.Sampler = .{ .raw = @ptrCast(@alignCast(sm)) };
-                vari.set(smp.asDeviceObject(), .{});
-            },
-        }
-    }
-
+    try bindResources(pipeline.srb, &.{ .{ .vertex = true }, .{ .pixel = true } }, bindings.resources);
     self.context.commitShaderResources(pipeline.srb, .transition);
 }
 
 // Compute pipeline
 
-pub fn createComputePipeline(_: DiligentBackend, _: desc.ComputePipelineDesc) !types.ComputePipelineHandle {
-    // std.debug.assert(d.resources.len <= 16);
-    // var resource_buf: [16]c.SummitResourceDesc = undefined;
-    // const resources = buildResourceDescs(&resource_buf, d.resources);
+pub fn createComputePipeline(self: *DiligentBackend, d: desc.ComputePipelineDesc) !types.ComputePipelineHandle {
+    const allocator = self.alloc.allocator;
 
-    // const pipe_h = c.diligent_create_compute_pipeline(self.handle, .{
-    //     .name = d.name,
-    //     .shader = .{ .ptr = d.shader.ptr },
-    //     .resources = resources.ptr,
-    //     .resources_len = resources.len,
-    // });
+    const shader: *Shader = .fromHandle(d.shader);
+    const cs = shader.cs orelse return error.MissingComputeShader;
 
-    // return .{ .ptr = pipe_h.? };
-    return @ptrFromInt(1);
+    const vars = try buildResourceVars(allocator, d.resources);
+    defer allocator.free(vars);
+
+    const pso = try self.device.createComputePipelineState(.{
+        .base = .{
+            .pso_desc = .{
+                .name = d.name,
+                .pipeline_type = .compute,
+                .resource_layout = .{
+                    .variables = vars.ptr,
+                    .num_variables = @intCast(vars.len),
+                },
+            },
+        },
+        .compute_shader = cs.raw,
+    });
+    errdefer pso.release();
+
+    const srb = try pso.createShaderResourceBinding(true);
+    errdefer srb.release();
+
+    const pipeline = try allocator.create(ComputePipeline);
+    pipeline.* = .{ .pso = pso, .srb = srb };
+
+    return @ptrCast(pipeline);
 }
 
-pub fn applyComputePipeline(_: DiligentBackend, _: types.ComputePipelineHandle) void {
-    // c.diligent_apply_compute_pipeline(self.handle, .{ .ptr = h });
+pub fn destroyComputePipeline(self: *DiligentBackend, h: types.ComputePipelineHandle) void {
+    const pipeline: *ComputePipeline = .fromHandle(h);
+    pipeline.srb.release();
+    pipeline.pso.release();
+    self.alloc.allocator.destroy(pipeline);
 }
 
-pub fn dispatchCompute(_: DiligentBackend, _: types.ComputePipelineHandle, _: u32, _: u32, _: u32) void {
-    // c.diligent_dispatch_compute(self.handle, .{ .ptr = h }, groups_x, groups_y, groups_z);
+pub fn applyComputePipeline(self: *DiligentBackend, h: types.ComputePipelineHandle) void {
+    const pipeline: *ComputePipeline = .fromHandle(h);
+    self.context.setPipelineState(pipeline.pso);
 }
 
-pub fn applyComputeBindings(_: DiligentBackend, _: types.ComputePipelineHandle, _: desc.Bindings) void {
-    // std.debug.assert(d.resources.len <= 16);
-    // var resource_buf: [16]c.SummitBoundResource = undefined;
-    // const resources = buildBoundResources(&resource_buf, d.resources);
-
-    // c.diligent_apply_compute_bindings(self.handle, .{ .ptr = h }, .{
-    //     .vertex_buffers = @splat(.{ .ptr = @ptrFromInt(0) }),
-    //     .index_buffer = .{ .ptr = @ptrFromInt(0) },
-    //     .resources = resources.ptr,
-    //     .resources_len = resources.len,
-    // });
+pub fn applyComputeBindings(self: *DiligentBackend, h: types.ComputePipelineHandle, bindings: desc.Bindings) !void {
+    const pipeline: *ComputePipeline = .fromHandle(h);
+    try bindResources(pipeline.srb, &.{.{ .compute = true }}, bindings.resources);
+    self.context.commitShaderResources(pipeline.srb, .transition);
 }
 
-pub fn destroyComputePipeline(_: DiligentBackend, _: types.ComputePipelineHandle) void {
-    // c.diligent_destroy_compute_pipeline(self.handle, .{ .ptr = h });
+pub fn dispatchCompute(self: *DiligentBackend, _: types.ComputePipelineHandle, groups_x: u32, groups_y: u32, groups_z: u32) void {
+    self.context.dispatchCompute(.{
+        .thread_group_count_x = groups_x,
+        .thread_group_count_y = groups_y,
+        .thread_group_count_z = groups_z,
+    });
 }
 
 // Shader
@@ -616,33 +655,45 @@ pub fn destroyShader(self: *DiligentBackend, h: types.ShaderHandle) void {
 
 // Pass
 
-pub fn beginPass(_: DiligentBackend, _: desc.PassDesc) void {
-    // c.diligent_begin_pass(self.handle, .{
-    //     .width = d.width,
-    //     .height = d.height,
-    //     .clear_color = if (d.clear_color) |cc| cc.toArr() else undefined,
-    //     .has_clear_color = d.clear_color != null,
-    //     .clear_depth = d.clear_depth orelse undefined,
-    //     .has_clear_depth = d.clear_depth != null,
-    //     .depth_target = if (d.depth_target) |dt| .{ .ptr = dt.ptr } else undefined,
-    //     .has_depth_target = d.depth_target != null,
-    //     .color_target = if (d.color_target) |ct| .{ .ptr = ct.ptr } else undefined,
-    //     .has_color_target = d.color_target != null,
-    // });
+pub fn beginPass(self: *DiligentBackend, d: desc.PassDesc) void {
+    const rtv: ?graphics.TextureView = if (d.color_target) |ct| .{ .raw = @ptrCast(@alignCast(ct)) } else null;
+    const dsv: ?graphics.TextureView = if (d.depth_target) |dt| .{ .raw = @ptrCast(@alignCast(dt)) } else null;
+
+    self.context.setRenderTargets(
+        if (rtv) |r| &.{r} else &.{},
+        dsv,
+        .transition,
+    );
+
+    // `clear_color` is set to null when the pass doesn't want to clear.
+    r_blk: {
+        const render_view = rtv orelse break :r_blk;
+        const rgba = if (d.clear_color) |cc| &cc.toArr() else break :r_blk;
+
+        self.context.clearRenderTarget(render_view, rgba, .transition);
+    }
+
+    d_blk: {
+        const depth_view = dsv orelse break :d_blk;
+        const depth = d.clear_depth orelse break :d_blk;
+        self.context.clearDepthStencil(depth_view, .{ .depth = true, .stencil = true }, depth, 0, .transition);
+    }
+
+    self.context.setViewports(&.{.{
+        .width = @floatFromInt(d.width),
+        .height = @floatFromInt(d.height),
+    }}, d.width, d.height);
 }
 
-pub fn endPass(_: DiligentBackend) void {
-    // c.diligent_end_pass(self.handle);
+pub fn endPass(self: *DiligentBackend) void {
+    // "Calling with an empty render_targets and a null depth_stencil,
+    // using RESOURCE_STATE_TRANSITION_MODE_NONE, explicitly ends the current render pass."
+    self.context.setRenderTargets(&.{}, null, .none);
 }
 
 // Swapchain
 
-pub fn createSwapchain(self: DiligentBackend, d: desc.SwapchainDesc) !types.SwapchainHandle {
-    // const swapchain_h = c.diligent_create_swapchain(self.handle, .{
-    //     .surface_handle = d.surface_handle,
-    //     .size = d.size,
-    // });
-
+pub fn createSwapchain(self: *DiligentBackend, d: desc.SwapchainDesc) !types.SwapchainHandle {
     const factory: engine.Factory = .fromBase(self.factory);
     const swapchain = try factory.createSwapchain(self.device, self.context, .{
         .depth_buffer_format = .unknown,
@@ -650,51 +701,54 @@ pub fn createSwapchain(self: DiligentBackend, d: desc.SwapchainDesc) !types.Swap
         .height = d.size[1],
     }, .init(d.surface_handle));
 
-    // return .{ .ptr = swapchain_h.? };
     return @ptrCast(swapchain.raw);
 }
 
-pub fn resizeSwapchain(_: DiligentBackend, _: types.SwapchainHandle, _: [2]u32) void {
-    // c.diligent_resize_swapchain(self.handle, .{ .ptr = h }, size[0], size[1]);
+pub fn resizeSwapchain(self: *DiligentBackend, h: types.SwapchainHandle, size: [2]u32) !void {
+    if (size[0] == 0 or size[1] == 0) return error.InvalidSwapchainSize;
+    self.context.setRenderTargets(&.{}, null, .none);
+
+    const swapchain: graphics.Swapchain = .{ .raw = @ptrCast(@alignCast(h)) };
+    swapchain.resize(size[0], size[1], .optimal);
 }
 
-pub fn presentSwapchain(_: DiligentBackend, h: types.SwapchainHandle, vsync: bool) void {
+pub fn presentSwapchain(_: *DiligentBackend, h: types.SwapchainHandle, vsync: bool) void {
     const swapchain: graphics.Swapchain = .{ .raw = @ptrCast(@alignCast(h)) };
     swapchain.present(if (vsync) 1 else 0);
 }
 
-pub fn getSwapchainBackbuffer(_: DiligentBackend, _: types.SwapchainHandle) types.RenderTargetHandle {
-    // const backbuffer_h = c.diligent_get_swapchain_backbuffer(self.handle, .{ .ptr = h });
-    // return .{ .ptr = backbuffer_h.? };
-    return @ptrFromInt(1);
+pub fn getSwapchainBackbuffer(_: *DiligentBackend, h: types.SwapchainHandle) types.RenderTargetHandle {
+    const swapchain: graphics.Swapchain = .{ .raw = @ptrCast(@alignCast(h)) };
+    const backbuffer = swapchain.getCurrentBackBufferRTV();
+    return @ptrCast(backbuffer.raw);
 }
 
-pub fn destroySwapchain(_: DiligentBackend, h: types.SwapchainHandle) void {
+pub fn destroySwapchain(_: *DiligentBackend, h: types.SwapchainHandle) void {
     const swapchain: graphics.Swapchain = .{ .raw = @ptrCast(@alignCast(h)) };
     swapchain.release();
 }
 
 // Misc
 
-pub fn imageGetRtv(_: DiligentBackend, _: types.ImageHandle) types.RenderTargetHandle {
-    // const rt_h = c.diligent_image_get_rtv(self.handle, .{ .ptr = h });
-    // return .{ .ptr = rt_h.? };
-    return @ptrFromInt(1);
+pub fn imageGetRtv(_: *DiligentBackend, h: types.ImageHandle) ?types.RenderTargetHandle {
+    const tex: graphics.Texture = .{ .raw = @ptrCast(@alignCast(h)) };
+    const view = tex.getDefaultView(.render_target) orelse return null;
+
+    return @ptrCast(view.raw);
 }
 
-pub fn imageGetDsv(_: DiligentBackend, _: types.ImageHandle) types.DepthTargetHandle {
-    // const dt_h = c.diligent_image_get_dsv(self.handle, .{ .ptr = h });
-    // return .{ .ptr = dt_h.? };
-    return @ptrFromInt(1);
+pub fn imageGetDsv(_: *DiligentBackend, h: types.ImageHandle) ?types.DepthTargetHandle {
+    const tex: graphics.Texture = .{ .raw = @ptrCast(@alignCast(h)) };
+    const view = tex.getDefaultView(.depth_stencil) orelse return null;
+
+    return @ptrCast(view.raw);
 }
 
-pub fn queryBackend(_: DiligentBackend) desc.Backend {
-    // return switch (c.diligent_query_backend()) {
-    //     c.SUMMIT_BACKEND_OPENGL => .opengl,
-    //     c.SUMMIT_BACKEND_DIRECT3D11 => .direct3d11,
-    //     c.SUMMIT_BACKEND_DIRECT3D12 => .direct3d12,
-    //     c.SUMMIT_BACKEND_VULKAN => .vulkan,
-    //     else => unreachable,
-    // };
-    return .vulkan;
+pub fn queryBackend(_: *DiligentBackend) desc.Backend {
+    return switch (build_opts.backend) {
+        .gl => .opengl,
+        .d3d11 => .direct3d11,
+        .d3d12 => .direct3d12,
+        .vulkan => .vulkan,
+    };
 }

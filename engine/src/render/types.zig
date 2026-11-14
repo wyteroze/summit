@@ -118,7 +118,7 @@ pub const RenderWindow = struct {
 
         if (std.mem.eql(u32, &self.pixel_size, &pixel_size)) return;
         self.pixel_size = pixel_size;
-        self.swapchain.resize(pixel_size);
+        try self.swapchain.resize(pixel_size);
     }
 };
 

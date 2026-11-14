@@ -21,6 +21,7 @@ const CullParams = extern struct {
 
 const LightCullPass = @This();
 compute_pipeline: gpu.GpuDevice.GpuComputePipeline,
+shader: gpu.GpuDevice.GpuShader,
 cull_ubuf: gpu.GpuDevice.GpuBuffer,
 
 pub fn init(gpu_device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader) !LightCullPass {
@@ -36,6 +37,7 @@ pub fn init(gpu_device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader) !LightC
                 .{ .name = "lightIndexList", .kind = .storage_buffer_rw, .visibility = .compute },
             },
         }),
+        .shader = shader,
         .cull_ubuf = try gpu_device.createBuffer(.{
             .name = "Light cull params ubuf",
             .type = .uniform,
@@ -74,12 +76,13 @@ pub fn execute(self: *LightCullPass, ctx: pass.PassContext) void {
             .{ .name = "lightGrid", .handle = .{ .storage_buffer_rw = grid } },
             .{ .name = "lightIndexList", .handle = .{ .storage_buffer_rw = index_list } },
         },
-    });
+    }) catch |e| std.log.err("Failed to apply bindings: {t}", .{e});
     self.compute_pipeline.dispatch(tile_count[0], tile_count[1], 1);
 }
 
 pub fn deinit(self: *LightCullPass, allocator: std.mem.Allocator) void {
     self.compute_pipeline.deinit();
+    self.shader.deinit();
     self.cull_ubuf.deinit();
     allocator.destroy(self);
 }

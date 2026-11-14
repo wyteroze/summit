@@ -46,8 +46,10 @@ pub fn createView(self: Texture, view_desc: graphics.types.TextureViewDesc) !gra
 ///
 /// **Note:** The function does **not** increase the reference counter for the returned interface, so
 /// Release() **must not** be called.
-pub fn getDefaultView(self: Texture, view_type: graphics.types.TextureViewType) graphics.TextureView {
+pub fn getDefaultView(self: Texture, view_type: graphics.types.TextureViewType) ?graphics.TextureView {
     const view = self.method("GetDefaultView")(self.raw, @bitCast(view_type));
+    if (view == null) return null;
+
     return .{ .raw = view.? };
 }
 

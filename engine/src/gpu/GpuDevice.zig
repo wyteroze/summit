@@ -19,7 +19,7 @@ pub const GpuBuffer = struct {
     }
 
     pub fn deinit(self: GpuBuffer) void {
-        self.backend.deleteBuffer(self.handle);
+        self.backend.destroyBuffer(self.handle);
     }
 
     pub fn update(self: GpuBuffer, data: []const u8) !void {
@@ -33,7 +33,7 @@ pub const GpuBuffer = struct {
         if (needed <= self.desc.size) return;
 
         const new_size = @max(needed, self.desc.size + self.desc.size / 2);
-        self.backend.deleteBuffer(self.handle);
+        self.backend.destroyBuffer(self.handle);
         self.desc.size = new_size;
         self.handle = try self.backend.createBuffer(self.desc);
     }
@@ -50,7 +50,7 @@ pub const GpuSampler = struct {
     }
 
     pub fn deinit(self: GpuSampler) void {
-        self.backend.deleteSampler(self.handle);
+        self.backend.destroySampler(self.handle);
     }
 };
 
@@ -67,14 +67,14 @@ pub const GpuImage = struct {
     }
 
     pub fn deinit(self: GpuImage) void {
-        self.backend.deleteImage(self.handle);
+        self.backend.destroyImage(self.handle);
     }
 
-    pub fn renderTarget(self: GpuImage) types.RenderTargetHandle {
+    pub fn renderTarget(self: GpuImage) ?types.RenderTargetHandle {
         return self.backend.imageGetRtv(self.handle);
     }
 
-    pub fn depthTarget(self: GpuImage) types.DepthTargetHandle {
+    pub fn depthTarget(self: GpuImage) ?types.DepthTargetHandle {
         return self.backend.imageGetDsv(self.handle);
     }
 };
@@ -90,7 +90,7 @@ pub const GpuPipeline = struct {
     }
 
     pub fn deinit(self: GpuPipeline) void {
-        self.backend.deletePipeline(self.handle);
+        self.backend.destroyPipeline(self.handle);
     }
 
     pub fn apply(self: GpuPipeline) void {
@@ -117,15 +117,15 @@ pub const GpuComputePipeline = struct {
     }
 
     pub fn deinit(self: GpuComputePipeline) void {
-        self.backend.deleteComputePipeline(self.handle);
+        self.backend.destroyComputePipeline(self.handle);
     }
 
     pub fn apply(self: GpuComputePipeline) void {
         self.backend.applyComputePipeline(self.handle);
     }
 
-    pub fn applyBindings(self: GpuComputePipeline, binds: desc.Bindings) void {
-        self.backend.applyComputeBindings(self.handle, binds);
+    pub fn applyBindings(self: GpuComputePipeline, binds: desc.Bindings) !void {
+        try self.backend.applyComputeBindings(self.handle, binds);
     }
 
     pub fn dispatch(self: GpuComputePipeline, group_x: u32, group_y: u32, group_z: u32) void {
@@ -173,7 +173,7 @@ pub const GpuShader = struct {
     }
 
     pub fn deinit(self: GpuShader) void {
-        self.backend.deleteShader(self.handle);
+        self.backend.destroyShader(self.handle);
     }
 };
 
@@ -194,8 +194,8 @@ pub const GpuSwapchain = struct {
         return self.backend.getSwapchainBackbuffer(self.handle);
     }
 
-    pub fn resize(self: GpuSwapchain, pixel_size: [2]u32) void {
-        self.backend.resizeSwapchain(self.handle, pixel_size);
+    pub fn resize(self: GpuSwapchain, pixel_size: [2]u32) !void {
+        try self.backend.resizeSwapchain(self.handle, pixel_size);
     }
 
     pub fn deinit(self: GpuSwapchain) void {

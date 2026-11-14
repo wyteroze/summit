@@ -173,9 +173,9 @@ pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: 
 
         self.scene_graph.resources.map.clearRetainingCapacity();
         try self.scene_graph.resources.put(resource.lights_buffer, .{ .storage_buffer = self.lights_ssbo.handle });
-        try self.scene_graph.resources.put(resource.depth_buffer, .{ .depth_target = rv.depth.depthTarget() });
+        try self.scene_graph.resources.put(resource.depth_buffer, .{ .depth_target = rv.depth.depthTarget().? });
         try self.scene_graph.resources.put(resource.depth_texture, .{ .image = rv.depth.handle });
-        try self.scene_graph.resources.put(resource.color_target, .{ .render_target = rv.target.renderTarget() });
+        try self.scene_graph.resources.put(resource.color_target, .{ .render_target = rv.target.renderTarget().? });
         try self.scene_graph.resources.put(resource.light_grid, .{ .storage_buffer = rv.light_grid.handle });
         try self.scene_graph.resources.put(resource.light_index_list, .{ .storage_buffer = rv.light_index_list.handle });
         try self.scene_graph.resources.put(resource.default_image, .{ .image = self.default_image.handle });

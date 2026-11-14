@@ -47,6 +47,7 @@ pub fn init(device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader, cubemap: gp
 
 pub fn deinit(self: *SkyboxPass, allocator: std.mem.Allocator) void {
     self.pipeline.deinit();
+    self.shader.deinit();
     self.sampler.deinit();
     self.view_ubo.deinit();
     allocator.destroy(self);

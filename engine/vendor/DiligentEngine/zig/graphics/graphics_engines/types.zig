@@ -5528,3 +5528,15 @@ pub const ShaderCreateInfo = extern struct {
         helpers.ensureSame(@This(), c.ShaderCreateInfo);
     }
 };
+
+/// Compute pipeline state description.
+pub const ComputePipelineStateCreateInfo = extern struct {
+    base: PipelineStateCreateInfo = .{},
+
+    /// Compute shader to be used with the pipeline
+    compute_shader: ?*c.IShader = null,
+
+    comptime {
+        helpers.ensureSame(@This(), c.ComputePipelineStateCreateInfo);
+    }
+};
