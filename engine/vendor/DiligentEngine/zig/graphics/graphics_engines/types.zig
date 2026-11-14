@@ -3415,3 +3415,226 @@ pub const SamplerDesc = extern struct {
         helpers.ensureSame(@This(), c.SamplerDesc);
     }
 };
+
+/// Describes resource dimension
+///
+/// This enumeration is used by
+/// - TextureDesc to describe texture type
+/// - TextureViewDesc to describe texture view type
+pub const ResourceDimension = enum(u8) {
+    /// Texture type undefined
+    undefined,
+    /// Buffer
+    buffer,
+    /// One-dimensional texture
+    tex_1d,
+    /// One-dimensional texture array
+    tex_1d_array,
+    /// Two-dimensional texture
+    tex_2d,
+    /// Two-dimensional texture array
+    tex_2d_array,
+    /// Three-dimensional texture
+    tex_3d,
+    /// Cube-map texture
+    tex_cube,
+    /// Cube-map array texture
+    tex_cube_array,
+};
+
+/// Miscellaneous texture flags
+///
+/// The enumeration is used by TextureDesc to describe misc texture flags
+/// **Zig Usage:** Default is equivalent to `MISC_TEXTURE_FLAG_NONE`.
+pub const MiscTextureFlags = packed struct(u8) {
+    /// Allow automatic mipmap generation with IDeviceContext::GenerateMips()
+    ///
+    /// **Note:** A texture must be created with BIND_RENDER_TARGET bind flag.
+    generate_mips: bool = false,
+
+    /// The texture will be used as a transient framebuffer attachment.
+    ///
+    /// Memoryless textures may only be used within a render pass in a framebuffer;
+    /// the corresponding subpass load operation must be CLEAR or DISCARD, and the
+    /// subpass store operation must be DISCARD.
+    memoryless: bool = false,
+
+    /// For sparse textures, allow binding the same memory range in different texture
+    /// regions or in different sparse textures.
+    sparse_aliasing: bool = false,
+
+    /// The texture will be used as an intermediate render target for rendering with
+    /// texture-based variable rate shading.
+    /// Requires SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET capability.
+    ///
+    /// **Note:** Copy operations are not supported for subsampled textures.
+    subsampled: bool = false,
+
+    _padding: u4 = 0,
+};
+
+/// Defines optimized depth-stencil clear value.
+pub const DepthStencilClearValue = extern struct {
+    /// Depth clear value
+    depth: f32 = 1.0,
+
+    /// Stencil clear value
+    stencil: u8 = 0,
+
+    comptime {
+        helpers.ensureSame(@This(), c.DepthStencilClearValue);
+    }
+};
+
+/// Defines optimized clear value.
+pub const OptimizedClearValue = extern struct {
+    /// Format
+    format: TextureFormat = .unknown,
+
+    /// Render target clear value
+    color: [4]f32 = @splat(0),
+
+    /// Depth stencil clear value
+    depth_stencil: DepthStencilClearValue = .{},
+
+    comptime {
+        helpers.ensureSame(@This(), c.OptimizedClearValue);
+    }
+};
+
+/// Texture description
+pub const TextureDesc = extern struct {
+    /// Object name
+    name: ?[*:0]const u8 = null,
+
+    /// Texture type. See Diligent::RESOURCE_DIMENSION for details.
+    type: ResourceDimension = .undefined,
+
+    /// Texture width, in pixels.
+    width: u32 = 0,
+
+    /// Texture height, in pixels.
+    height: u32 = 0,
+
+    array_size_or_depth: extern union {
+        /// For a 1D array or 2D array, number of array slices.
+        ///
+        /// For cube maps and cube map arrays, this value must be a multiple of 6.
+        /// The number of cube maps in the texture is ArraySize / 6.
+        array_size: u32,
+
+        /// For a 3D texture, number of depth slices
+        depth: u32,
+    } = .{ .array_size = 1 },
+
+    /// Texture format, see Diligent::TEXTURE_FORMAT.
+    ///
+    /// Use IRenderDevice::GetTextureFormatInfo() to check if format is supported.
+    format: TextureFormat = .unknown,
+
+    /// Number of Mip levels in the texture. Multisampled textures can only have 1 Mip level.
+    ///
+    /// Specify 0 to create full mipmap chain.
+    mip_levels: u32 = 1,
+
+    /// The number of samples.
+    ///
+    /// Only 2D textures or 2D texture arrays can be multisampled.
+    sample_count: u32 = 1,
+
+    /// Bind flags, see Diligent::BIND_FLAGS for details.
+    ///
+    /// Use IRenderDevice::GetTextureFormatInfoExt() to check which bind flags are supported.
+    bind_flags: BindFlags = .{},
+
+    /// Texture usage. See Diligent::USAGE for details.
+    usage: Usage = .default,
+
+    /// CPU access flags or 0 if no CPU access is allowed,
+    ///
+    /// see Diligent::CPU_ACCESS_FLAGS for details.
+    cpu_access_flags: CPUAccessFlags = .{},
+
+    /// Miscellaneous flags, see Diligent::MISC_TEXTURE_FLAGS for details.
+    misc_flags: MiscTextureFlags = .{},
+
+    /// Optimized clear value
+    clear_value: OptimizedClearValue = .{},
+
+    /// Defines which immediate contexts are allowed to execute commands that use this texture.
+    ///
+    /// When `ImmediateContextMask` contains a bit at position n, the texture may be
+    /// used in the immediate context with index n directly (see DeviceContextDesc::ContextId).
+    /// It may also be used in a command list recorded by a deferred context that will be executed
+    /// through that immediate context.
+    ///
+    /// **Remarks:** Only specify these bits that will indicate those immediate contexts where the texture
+    /// will actually be used. Do not set unnecessary bits as this will result in extra overhead.
+    immediate_context_mask: u64 = 1,
+
+    comptime {
+        helpers.ensureSame(@This(), c.TextureDesc);
+    }
+};
+
+/// Describes data for one subresource
+pub const TextureSubresData = extern struct {
+    /// Pointer to the subresource data in CPU memory.
+    ///
+    /// If provided, `pSrcBuffer` must be null.
+    data: ?*const anyopaque = null,
+
+    /// Pointer to the GPU buffer that contains the subresource data.
+    ///
+    /// If provided, `pData` must be null.
+    src_buffer: ?*c.IBuffer = null,
+
+    /// If `pSrcBuffer` is not null, offset, in bytes, from the beginning of the source
+    /// buffer to the subresource data.
+    ///
+    /// This value must be a multiple of `BufferProperties::TextureUpdateOffsetAlignment`,
+    /// which can be queried through `IRenderDevice::GetAdapterInfo()`.
+    src_offset: u64 = 0,
+
+    /// Row stride, in bytes, for 2D and 3D textures.
+    ///
+    /// When `pSrcBuffer` is not null, this value must be a multiple of
+    /// `BufferProperties::TextureUpdateStrideAlignment`, which can be queried through
+    /// `IRenderDevice::GetAdapterInfo()`.
+    stride: u64 = 0,
+
+    /// Depth slice stride, in bytes, for 3D textures.
+    ///
+    /// On OpenGL, this value must be a multiple of `Stride`.
+    depth_stride: u64 = 0,
+
+    comptime {
+        helpers.ensureSame(@This(), c.TextureSubResData);
+    }
+};
+
+/// Describes the initial data to store in the texture
+pub const TextureData = extern struct {
+    /// A pointer to the array of the TextureSubResData elements containing
+    /// information about each subresource.
+    sub_resources: ?[*]TextureSubresData = null,
+
+    /// The number of elements in `pSubResources` array.
+    ///
+    /// `NumSubresources` must exactly match the number
+    /// of subresources in the texture. Otherwise an error
+    /// occurs.
+    num_subresources: u32 = 0,
+
+    /// Defines which device context will be used to initialize the texture.
+    /// The texture will be in write state after the initialization.
+    /// If an application uses the texture in another context afterwards, it
+    /// must synchronize the access to the texture using fence.
+    /// When null is provided, the first context enabled by ImmediateContextMask
+    /// will be used.
+    context: ?*c.IDeviceContext = null,
+
+    comptime {
+        helpers.ensureSame(@This(), c.TextureData);
+    }
+};
