@@ -21,7 +21,6 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .sdk = sdk_path,
             .backend = backend,
-            .skip_cmake = true,
         });
 
         const exe_check_mod = b.createModule(.{
@@ -84,7 +83,7 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Test the app");
 
     const test_cmd = b.addTest(.{ .root_module = exe_mod });
-    const run_test_cmd = b.addRunArtifact(test_cmd); // Required to actually execute tests
+    const run_test_cmd = b.addRunArtifact(test_cmd);
     test_step.dependOn(&run_test_cmd.step);
 
     if (dep_engine.builder.top_level_steps.get("test")) |tls| {

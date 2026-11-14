@@ -177,22 +177,18 @@ pub fn build(b: *std.Build) !void {
     const sdk: ?SdkPaths = .resolve(b, sdk_path);
     // TODO: Allow enabling multiple backends
     const backend = b.option(diligent_vendor.Backend, "backend", "Backend to use\n(default: vulkan)") orelse .vulkan;
-    const skip_cmake = b.option(bool, "skip_cmake", "Skip CMake builds (for ZLS check)") orelse false;
 
     const dep_sdl3 = b.dependency("sdl3", .{ .target = target, .optimize = optimize, .ext_mixer = true });
     const dep_zlua = b.dependency("zlua", .{ .target = target, .optimize = optimize, .lang = .luau });
     const dep_toml = b.dependency("toml", .{ .target = target, .optimize = optimize });
     const dep_zigimg = b.dependency("zigimg", .{ .target = target, .optimize = optimize });
     const dep_translate_c = b.dependency("translate_c", .{});
-    const dep_diligent = b.dependency("diligent_engine", .{ .optimize = optimize, .backend = backend });
-    const dep_freetype = b.dependency("freetype", .{ .optimize = optimize, .skip_cmake = skip_cmake });
+    const dep_diligent = b.dependency("diligent_engine", .{ .target = target, .optimize = optimize });
+    const dep_freetype = b.dependency("freetype", .{ .target = target, .optimize = optimize });
     const dep_dr_libs = b.dependency("dr_libs", .{});
     const dep_assimp = b.dependency("zig_assimp", .{ .target = target, .optimize = optimize, .formats = "STL,Obj,FBX,glTF,glTF2", .double = false, .zlib = false });
     const dep_zphysics = b.dependency("zphysics", .{});
     const dep_zslang = b.dependency("zslang", .{ .target = target, .optimize = .fast });
-
-    // Runs cmake for freetype
-    const freetype_step = dependencyStep(dep_freetype, "freetype");
 
     const os_headers = switch (target.result.os.tag) {
         .windows => windows_c_headers,
@@ -238,11 +234,6 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         });
 
-    if (!skip_cmake) {
-        freetype_translator.addIncludePath(dep_freetype.namedLazyPath("include"));
-        freetype_translator.run.step.dependOn(freetype_step);
-    }
-
     var compile_commands: CompileCommands = .init(b);
     defer compile_commands.finalize() catch @panic("Out of memory");
 
@@ -279,15 +270,12 @@ pub fn build(b: *std.Build) !void {
     // Assimp
     const lib_assimp = dep_assimp.artifact("assimp");
     engine_mod.linkLibrary(lib_assimp);
-    engine_mod.addIncludePath(lib_assimp.getEmittedIncludeTree());
     assimp_translator.addIncludePath(lib_assimp.getEmittedIncludeTree());
 
     // Freetype
-    if (!skip_cmake) {
-        engine_mod.addIncludePath(dep_freetype.namedLazyPath("include"));
-        engine_mod.addLibraryPath(dep_freetype.namedLazyPath("lib"));
-        engine_mod.linkSystemLibrary("freetype", .{});
-    }
+    const lib_freetype = dep_freetype.artifact("freetype");
+    engine_mod.linkLibrary(lib_freetype);
+    freetype_translator.addIncludePath(lib_freetype.getEmittedIncludeTree());
 
     // zslang
     b.installDirectory(.{

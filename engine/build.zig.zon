@@ -12,7 +12,6 @@
         .zig_assimp = .{ .path = "vendor/zig_assimp" },
         .diligent_engine = .{ .path = "vendor/DiligentEngine" },
         .slang = .{ .path = "vendor/slang" },
-        .freetype = .{ .path = "vendor/freetype" },
         .zlua = .{ .path = "vendor/ziglua" },
         // Original repo credit to https://github.com/kcbanner/zphysics/tree/0.16.x_io
         .zphysics = .{ .path = "vendor/zphysics" },
@@ -37,6 +36,10 @@
         .zslang = .{
             .url = "git+https://github.com/zig-gamedev/zslang.git#b596cff7ac714c53832be5fa236e7e55aa5abca1",
             .hash = "zslang-2026.14.0-dev-c7-3i8uIAQAoRc4Zp-WzdhZ4VCjTxMZGEDIMe67gTjXk",
+        },
+        .freetype = .{
+            .url = "git+https://code.hexops.org/hexops/freetype.git#10e3f1e9476ae04cc626ac741f51ea127abcf4d3",
+            .hash = "freetype-0.0.0-Oa073UCreQChUO6C3DBpwOfEdX3fdDaOR_gxS9DugCmI",
         },
     },
 
