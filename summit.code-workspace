@@ -7,11 +7,7 @@
         {
             "name": "engine",
             "path": "engine"
-        },
-        {
-            "name": "docgen",
-            "path": "tools/docgen"
-        },
+        }
     ],
 	"settings": {
         "clangd.fallbackFlags": [
