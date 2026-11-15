@@ -159,5 +159,6 @@ fn frontmatter(w: *Writer, page: Entry) !void {
     if (page.icon) |i| try w.print("\nicon: {s}", .{i});
     if (page.since) |s| try w.print("\nsince: {s}", .{s});
     if (page.deprecated != null) try w.writeAll("\ndeprecated: true");
+    try w.print("\nlang: luau", .{});
     try w.writeAll("\n---\n\n");
 }
