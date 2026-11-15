@@ -430,7 +430,6 @@ pub const api = bind.module("ui", .{
         bind.variant(types.GridAxis, .{ .number = .fixed }),
         bind.func("createElement", Ui.createElement),
         Element.sub_api,
-        Painter.sub_api,
         Painter.PainterHandle.sub_api,
     },
 });
@@ -450,7 +449,7 @@ pub const Element = struct {
                 return ui.world.isEntityAlive(self.entity);
             }
         }.c),
-        .inherit = bind.inherit(Element.ToEntity, Ecs.lua_entity.sub_api.impl.recipe),
+        .inherit = bind.inherit(Element.ToEntity, Ecs.lua_entity.sub_api),
         .signals = &.{
             // `ui` argument is provided by marshaller
             bind.signal("pointerDown", struct {

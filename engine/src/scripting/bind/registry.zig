@@ -25,6 +25,11 @@ pub fn Registry(comptime api: anytype) type {
             return null;
         }
 
+        pub fn nameOf(comptime T: type) []const u8 {
+            inline for (entries) |e| if (e.T == T) return e.member.name;
+            @compileError(@typeName(T) ++ " is not registered!");
+        }
+
         pub fn recipeOf(comptime T: type) recipes.VariantRecipe {
             inline for (entries) |e| if (e.T == T and e.member.kind == .variant) return e.member.impl.recipe;
             @compileError(std.fmt.comptimePrint("{s} is not a registered variant!", .{@typeName(T)}));

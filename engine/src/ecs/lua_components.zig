@@ -54,6 +54,7 @@ pub fn getComponent(e: Ecs.Entity, l: *zlua.Lua, codecs: []const Ecs.Codec, name
     const id = world.components.id(name) orelse return error.UnknownComponent;
     const info = world.components.info(id);
 
+    // Returns nil if the component doesn't exist.
     const bytes = try world.getComponentRaw(e, id) orelse {
         l.pushNil();
         return .{ .n = 1 };

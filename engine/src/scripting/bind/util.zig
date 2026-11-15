@@ -84,10 +84,12 @@ pub fn signal(comptime name: [:0]const u8, comptime get: anytype) types.Member {
     } };
 }
 
-pub fn inherit(comptime V: type, comptime r: recipes.HandleRecipe) type {
+pub fn inherit(comptime V: type, comptime base: types.Member) type {
     return struct {
         pub const via = V;
-        pub const recipe = r;
+        pub const recipe = base.impl.recipe;
+        pub const Base = base.impl.Type;
+        pub const base_name = base.name;
     };
 }
 

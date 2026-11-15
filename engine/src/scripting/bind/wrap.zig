@@ -4,6 +4,36 @@ const std = @import("std");
 const zlua = @import("zlua");
 const Host = @import("Host.zig");
 
+pub const ParamKind = enum { host, lua_state, via_self, lua };
+
+pub fn classify(comptime P: type, comptime via: ?type) ParamKind {
+    if (hostField(P) != null) return .host;
+    if (P == *zlua.Lua) return .lua_state;
+    if (via != null and P == via.?.To) return .via_self;
+    return .lua;
+}
+
+pub const Signature = struct {
+    lua_params: []const type,
+    injected: []const []const u8,
+    raw: bool,
+};
+
+pub fn signature(comptime F: type, comptime via: ?type) Signature {
+    comptime {
+        var lua: []const type = &.{};
+        var inj: []const []const u8 = &.{};
+        var raw = false;
+        for (@typeInfo(F).@"fn".param_types) |P| switch (classify(P.?, via)) {
+            .host => inj = inj ++ .{hostField(P.?).?},
+            .lua_state => raw = true,
+            .via_self => lua = lua ++ .{via.?.From},
+            .lua => lua = lua ++ .{P.?},
+        };
+        return .{ .lua_params = lua, .injected = inj, .raw = raw };
+    }
+}
+
 pub const WrapOpts = struct { skip_after_self: u8 = 0, via: ?type = null };
 pub const Pushed = struct { n: i32 };
 
@@ -27,26 +57,27 @@ pub fn Wrap(comptime Mar: type) type {
                     comptime var has_self = false;
 
                     inline for (info.param_types, 0..) |P, i| {
-                        if (comptime hostField(P.?)) |name| {
-                            args[i] = @field(Host.fromState(l), name);
-                        } else if (P.? == *zlua.Lua) {
-                            args[i] = l;
-                        } else if (comptime o.via != null and P.? == o.via.?.To) {
-                            const outer = Mar.parse(o.via.?.From, l, next);
-                            args[i] = o.via.?.get(outer);
-                            next += 1;
+                        switch (comptime classify(P.?, o.via)) {
+                            .host => args[i] = @field(Host.fromState(l), hostField(P.?).?),
+                            .lua_state => args[i] = l,
+                            .via_self => {
+                                const outer = Mar.parse(o.via.?.From, l, next);
+                                args[i] = o.via.?.get(outer);
+                                next += 1;
 
-                            if (!has_self) {
-                                has_self = true;
-                                next += o.skip_after_self;
-                            }
-                        } else {
-                            args[i] = Mar.parse(P.?, l, next);
-                            next += 1;
-                            if (!has_self) {
-                                has_self = true;
-                                next += o.skip_after_self;
-                            }
+                                if (!has_self) {
+                                    has_self = true;
+                                    next += o.skip_after_self;
+                                }
+                            },
+                            .lua => {
+                                args[i] = Mar.parse(P.?, l, next);
+                                next += 1;
+                                if (!has_self) {
+                                    has_self = true;
+                                    next += o.skip_after_self;
+                                }
+                            },
                         }
                     }
 

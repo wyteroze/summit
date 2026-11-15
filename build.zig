@@ -10,10 +10,14 @@ pub fn build(b: *std.Build) void {
         std.zig.system.darwin.getSdk(b.allocator, b.graph.io, &target.result);
 
     const backend = b.option(enum { gl, d3d11, d3d12, vulkan }, "backend", "Backend to use\n(default: vulkan)") orelse .vulkan;
+    const docs_step = b.step("docs", "Generate docs");
 
-    // This only runs for real builds, not zls
-
-    const dep_engine = b.dependency("engine", .{ .target = target, .optimize = optimize, .sdk = sdk_path, .backend = backend });
+    const dep_engine = b.dependency("engine", .{
+        .target = target,
+        .optimize = optimize,
+        .sdk = sdk_path,
+        .backend = backend,
+    });
 
     const exe_mod = b.createModule(.{
         .root_source_file = b.path("runtime/src/main.zig"),
@@ -58,5 +62,9 @@ pub fn build(b: *std.Build) void {
 
     if (dep_engine.builder.top_level_steps.get("test")) |tls| {
         test_step.dependOn(&tls.step);
+    }
+
+    if (dep_engine.builder.top_level_steps.get("docs")) |tls| {
+        docs_step.dependOn(&tls.step);
     }
 }

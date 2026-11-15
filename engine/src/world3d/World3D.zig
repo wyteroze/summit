@@ -149,7 +149,7 @@ pub const World3DHandle = struct {
 
     pub const sub_api = bind.handle(World3DHandle, .{
         .alive = bind.func("isAlive", World3DHandle.isAlive),
-        .inherit = bind.inherit(World3DHandle.ToWorldHandle, Ecs.World.WorldHandle.sub_api.impl.recipe),
+        .inherit = bind.inherit(World3DHandle.ToWorldHandle, Ecs.World.WorldHandle.sub_api),
         .methods = &.{
             bind.func("raycast", World3DHandle.raycast),
         },
@@ -164,7 +164,9 @@ pub const api = bind.module("world3d", .{
         World3DHandle.sub_api,
         bind.record(types.Collider, .{}),
         bind.record(types.RigidBody, .{}),
-        bind.record(types.Axes, .{}),
+        bind.record(types.Axes, .{}).doc(.{
+            .icon = "axis-3d",
+        }),
         bind.record(types.LockedAxes, .{}),
         bind.record(types.PhysicsMaterial, .{}),
         // bind.record(Physics.RaycastOptions, .{}),

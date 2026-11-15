@@ -284,7 +284,14 @@ const bind = @import("../scripting/bind/bind.zig");
 pub const api = bind.module("input", .{
     .kind = .{ .singleton = Input },
     .members = &.{
-        bind.func("isCursorLocked", getCursorLocked),
+        bind.func("isCursorLocked", getCursorLocked).doc(.{
+            .summary = "Returns if the mouse cursor is locked.",
+            .since = "0.0.1",
+            .body =
+            \\Returns if the mouse cursor is locked.
+            \\If the player isn't using a mouse, the return value of this is irrelevant.
+            ,
+        }),
         bind.func("setCursorLocked", setCursorLocked),
         bind.func("isCursorVisible", getCursorVisible),
         bind.func("setCursorVisible", setCursorVisible),
@@ -381,4 +388,13 @@ pub const api = bind.module("input", .{
             .ops = .{ .eq = .{ .member = bind.func("eq", MouseHandle.eql) }, .tostring = .auto },
         }),
     },
+}).doc(.{
+    .since = "0.0.1",
+    .summary = "Provides functions for capturing input across common input methods",
+    .body =
+    \\The `input` module provides various functions for capturing and controlling user input 
+    \\across every common input method, including keyboards, mice, gamepads, and touchscreens.
+    \\
+    \\On desktop platforms, it also allows you to hide the mouse and lock its position.
+    ,
 });

@@ -232,11 +232,29 @@ pub fn build(b: *std.Build) !void {
 
     b.installArtifact(engine_lib);
 
-    const test_step = b.step("test", "Test the engine");
     const test_artifact = b.addTest(.{ .root_module = engine_mod });
-
     const run_test_cmd = b.addRunArtifact(test_artifact);
-
-    test_step.dependOn(&run_test_cmd.step);
     run_test_cmd.step.dependOn(b.getInstallStep());
+
+    const test_step = b.step("test", "Test the engine");
+    test_step.dependOn(&run_test_cmd.step);
+
+    // Docs
+    const docs_mod = b.addModule("docs", .{
+        .root_source_file = b.path("src/doc/gen.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "engine", .module = engine_mod },
+        },
+    });
+    const docs_lib = b.addExecutable(.{
+        .name = "docs",
+        .root_module = docs_mod,
+    });
+
+    const run_docs_cmd = b.addRunArtifact(docs_lib);
+    run_docs_cmd.addPassthruArgs();
+    const docs_step = b.step("docs", "Generate docs");
+    docs_step.dependOn(&run_docs_cmd.step);
 }

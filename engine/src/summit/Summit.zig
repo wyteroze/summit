@@ -22,6 +22,7 @@ const Audio = engine.Audio;
 const Windowing = engine.Windowing;
 const Assets = engine.Assets;
 const World3D = engine.World3D;
+const Doc = engine.Doc;
 
 var instantiated: *Summit = undefined;
 pub fn singleton() *Summit {

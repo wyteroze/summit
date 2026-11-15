@@ -8,6 +8,7 @@ pub const ValueRecipe = struct {
     name: ?[:0]const u8 = null,
     mutable: bool = false,
     fields: []const [:0]const u8 = &.{},
+    field_docs: []const types.NamedDoc = &.{},
     props: []const types.Member = &.{},
     statics: []const types.Member = &.{},
     methods: []const types.Member = &.{},

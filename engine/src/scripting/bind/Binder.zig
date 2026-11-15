@@ -6,71 +6,19 @@ const util = @import("util.zig");
 const types = @import("types.zig");
 const names = @import("names.zig");
 const recipes = @import("recipes.zig");
+const instance = @import("instance.zig");
+const InstanceEntry = instance.InstanceEntry;
 const Host = @import("Host.zig");
 const Ecs = @import("../../ecs/Ecs.zig");
 const Codec = Ecs.Codec;
-pub const registry = @import("registry.zig");
-pub const Marshal = @import("marshal.zig").Marshal;
-pub const Wrap = @import("wrap.zig").Wrap;
+const registry = @import("registry.zig");
+const Marshal = @import("marshal.zig").Marshal;
+const Wrap = @import("wrap.zig").Wrap;
 
 const Fallback = ?*const fn (*zlua.Lua) i32;
-const Bound = struct { m: types.Member, via: ?type = null };
-const InstanceEntry = union(enum) {
-    field: struct { zig: []const u8, lua: [:0]const u8 },
-    prop: Bound,
-    method: Bound,
-};
-
-fn entryName(comptime e: InstanceEntry) []const u8 {
-    return switch (e) {
-        .field => |f| f.lua,
-        .prop => |p| p.m.name,
-        .method => |m| m.m.name,
-    };
-}
-
-fn hasName(comptime list: []const InstanceEntry, comptime name: []const u8) bool {
-    for (list) |e| if (std.mem.eql(u8, entryName(e), name)) return true;
-    return false;
-}
 
 fn isGetter(comptime m: types.Member) bool {
     return m.kind == .prop or m.kind == .signal;
-}
-
-fn instanceEntries(comptime r: anytype) []const InstanceEntry {
-    comptime {
-        var out: []const InstanceEntry = &.{};
-        const T = @TypeOf(r);
-
-        if (@hasField(T, "fields")) {
-            for (r.fields) |f| out = out ++ .{InstanceEntry{ .field = .{ .zig = f, .lua = names.camel(f) } }};
-        }
-        if (@hasField(T, "props")) {
-            for (r.props) |p| out = out ++ .{InstanceEntry{ .prop = .{ .m = p } }};
-        }
-        if (@hasField(T, "methods")) {
-            for (r.methods) |m| out = out ++ .{InstanceEntry{ .method = .{ .m = m } }};
-        }
-        if (@hasField(T, "signals")) {
-            for (r.signals) |s| out = out ++ .{InstanceEntry{ .prop = .{ .m = s } }};
-        }
-
-        if (@hasField(T, "inherit")) if (r.inherit) |inh| {
-            const ir = inh.recipe;
-            for (ir.props) |p| if (!hasName(out, p.name)) {
-                out = out ++ .{InstanceEntry{ .prop = .{ .m = p, .via = inh.via } }};
-            };
-            for (ir.methods) |m| if (!hasName(out, m.name)) {
-                out = out ++ .{InstanceEntry{ .method = .{ .m = m, .via = inh.via } }};
-            };
-            for (ir.signals) |s| if (!hasName(out, s.name)) {
-                out = out ++ .{InstanceEntry{ .prop = .{ .m = s, .via = inh.via } }};
-            };
-        };
-
-        return out;
-    }
 }
 
 pub fn Binder(comptime api: anytype) type {
@@ -354,7 +302,7 @@ pub fn Binder(comptime api: anytype) type {
         fn entryMap(comptime E: []const InstanceEntry) std.StaticStringMap(u16) {
             comptime {
                 var kv: [E.len]struct { []const u8, u16 } = undefined;
-                for (E, 0..) |e, i| kv[i] = .{ entryName(e), i };
+                for (E, 0..) |e, i| kv[i] = .{ e.name(), i };
 
                 return .initComptime(kv);
             }
@@ -494,7 +442,7 @@ pub fn Binder(comptime api: anytype) type {
 
         /// Expects the module table at the top of the stack.
         fn installIndexing(l: *zlua.Lua, comptime T: type, comptime r: anytype) void {
-            const E = comptime instanceEntries(r);
+            const E = comptime instance.entries(r);
             const idx_fb = comptime fallbackOf(r, "index");
             const new_fb = comptime fallbackOf(r, "newindex");
 

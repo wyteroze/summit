@@ -16,3 +16,4 @@ pub const Ui = @import("ui/Ui.zig");
 pub const Audio = @import("audio/Audio.zig");
 pub const Windowing = @import("windowing/Windowing.zig");
 pub const World3D = @import("world3d/World3D.zig");
+pub const doc = @import("doc/doc.zig");

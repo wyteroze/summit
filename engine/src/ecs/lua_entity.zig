@@ -46,7 +46,9 @@ pub const sub_api = bind.handle(Entity, .{
     .methods = &.{
         bind.func("addComponent", lua_components.addComponent),
         bind.func("setComponent", lua_components.setComponent),
-        bind.func("getComponent", lua_components.getComponent),
+        bind.func("getComponent", lua_components.getComponent).doc(.{
+            .returns_luau = "any?",
+        }),
         bind.func("hasComponent", hasComponent),
         bind.func("removeComponent", removeComponent),
         bind.func("destroy", destroy),

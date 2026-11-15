@@ -16,8 +16,6 @@ min_distance: f32 = 1,
 max_distance: f32 = 100,
 attenuation: types.Attenuation = .inverse_square,
 
-pub const sub_api = bind.record(Speaker, .{ .handle = SpeakerHandle });
-
 pub const SpeakerHandle = struct {
     entity: Ecs.Entity,
     audio: *Audio,

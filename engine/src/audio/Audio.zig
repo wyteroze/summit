@@ -242,7 +242,6 @@ pub const api = bind.module("audio", .{
     .kind = .{ .singleton = Audio },
     .members = &.{
         track.sub_api,
-        Speaker.sub_api,
         Speaker.SpeakerHandle.sub_api,
     },
 });

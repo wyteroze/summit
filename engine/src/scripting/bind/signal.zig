@@ -12,7 +12,10 @@ const LuaCallback = struct {
 };
 
 pub fn Handle(comptime Sig: type) type {
-    return struct { signal: *Sig };
+    return struct {
+        pub const SignalType = Sig;
+        signal: *Sig,
+    };
 }
 
 pub const connection = bind.value(signal.Connection, .{

@@ -53,7 +53,6 @@ clip: bool = true,
 antialiased: bool = true,
 
 const bind = @import("../scripting/bind/bind.zig");
-pub const sub_api = bind.record(Painter, .{ .handle = PainterHandle });
 
 pub const PainterHandle = struct {
     ui: *Ui,
