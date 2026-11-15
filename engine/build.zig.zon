@@ -2,7 +2,7 @@
 
 .{
     .name = .engine,
-    .version = "0.0.0",
+    .version = "0.0.1",
 
     .fingerprint = 0xe8a81a8d888634b2,
     .minimum_zig_version = "0.17.0",
