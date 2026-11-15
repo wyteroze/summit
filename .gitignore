@@ -4,7 +4,6 @@ zig-pkg/
 .DS_Store
 build/
 install/
-.clangd-db/
 .cache/
 !engine/vendor/ziglua/build/
 engine/vendor/DiligentEngine/build-*

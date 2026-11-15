@@ -10,11 +10,6 @@
         }
     ],
 	"settings": {
-        "clangd.fallbackFlags": [
-            "-I./engine/vendor/slang/build/Release/include",
-            "-I./engine/src/gpu/glue/diligent",
-            "-I./engine/src/gpu/glue/slang"
-        ],
         "luau-lsp.platform.type": "standard",
         "luau-lsp.completion.imports.useConst": true,
         "luau-lsp.sourcemap.enabled": false,
