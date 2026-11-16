@@ -5,10 +5,10 @@ const gpu = @import("../gpu/gpu.zig");
 const bind = @import("../scripting/bind/bind.zig");
 const Source = @import("sources/Source.zig");
 const render = @import("../render/render.zig");
+const Uri = @import("../core/Uri.zig");
 const DirSource = @import("sources/DirSource.zig");
 const asset_sources = @import("sources/sources.zig").sources;
 pub const AssetData = @import("AssetData.zig");
-pub const AssetUri = @import("AssetUri.zig");
 pub const types = @import("types.zig");
 
 const purge_rate: std.Io.Duration = .fromMilliseconds(500);
@@ -180,8 +180,7 @@ pub fn deinit(self: *Assets) void {
 }
 
 pub fn load(self: *Assets, path: []const u8) !AssetHandle {
-    const uri: AssetUri = try .parse(self.allocator, path);
-    defer uri.deinit(self.allocator);
+    const uri: Uri = try .parse(path);
 
     const source = self.sources.get(uri.scheme) orelse {
         std.log.err("unknown scheme '{s}://'", .{uri.scheme});

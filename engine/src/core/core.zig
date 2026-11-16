@@ -8,3 +8,4 @@ pub const TrackedAllocator = @import("TrackedAllocator.zig");
 pub const SizeFormatter = @import("SizeFormatter.zig");
 pub const Color = @import("Color.zig");
 pub const signal = @import("signal.zig");
+pub const Uri = @import("Uri.zig");
