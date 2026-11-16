@@ -1,4 +1,6 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
+// TODO: Probably remove this and merge it with `Summit`. This is from
+// back when you couldn't pass the engine state around, which you can do now.
 
 const std = @import("std");
 const zlua = @import("zlua");
@@ -10,6 +12,7 @@ const Audio = @import("../../audio/Audio.zig");
 const Codec = @import("../../ecs/Codec.zig");
 const render = @import("../../render/render.zig");
 const Windowing = @import("../../windowing/Windowing.zig");
+const Filesystem = @import("../../filesystem/Filesystem.zig");
 
 var key: u8 = 0;
 const Host = @This();
@@ -20,6 +23,7 @@ ui: *Ui,
 audio: *Audio,
 windowing: *Windowing,
 gizmos: *render.Gizmos,
+filesystem: *Filesystem,
 codecs: []const Codec = &.{},
 
 pub fn attach(self: *Host, l: *zlua.Lua) void {

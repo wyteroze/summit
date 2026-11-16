@@ -22,7 +22,7 @@ const Audio = engine.Audio;
 const Windowing = engine.Windowing;
 const Assets = engine.Assets;
 const World3D = engine.World3D;
-const Doc = engine.Doc;
+const Filesystem = engine.Filesystem;
 
 var instantiated: *Summit = undefined;
 pub fn singleton() *Summit {
@@ -53,6 +53,7 @@ assets: Assets,
 windowing: Windowing,
 platform: Platform,
 world_3d: World3D,
+filesystem: Filesystem,
 
 pub fn init(self: *Summit, p_init: std.process.Init) !void {
     instantiated = self;
@@ -117,6 +118,9 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     try self.audio.init(io, try self.getAlloc("Audio"), &self.platform);
     errdefer self.audio.deinit();
 
+    self.filesystem = .init(io, try self.getAlloc("Filesystem"));
+    errdefer self.filesystem.deinit();
+
     self.host = .{
         .ecs = &self.ecs,
         .assets = &self.assets,
@@ -125,6 +129,7 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
         .audio = &self.audio,
         .windowing = &self.windowing,
         .gizmos = &self.renderer.gizmos,
+        .filesystem = &self.filesystem,
     };
     self.runtime = try .init(try self.getAlloc("LuaRuntime"), &self.host);
     errdefer self.runtime.deinit();
@@ -149,6 +154,7 @@ pub fn deinit(self: *Summit) void {
     self.gpu_device.deinit();
     self.windowing.deinit();
     self.platform.deinit();
+    self.filesystem.deinit();
     self.memory.deinit();
 }
 
