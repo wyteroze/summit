@@ -41,51 +41,42 @@ pub const CpuAssetData = union(AssetType) {
         }
     }
 
-    pub fn parse(allocator: std.mem.Allocator, io: std.Io, path: []const u8, bytes: []u8) !CpuAssetData {
+    pub fn parse(allocator: std.mem.Allocator, io: std.Io, path: []const u8, bytes: []const u8) !CpuAssetData {
         const ext = std.Io.Dir.path.extension(path);
 
-        // zig fmt: off
-        if (std.mem.eql(u8, ext, ".obj") 
-            or std.mem.eql(u8, ext, ".glb") 
-            or std.mem.eql(u8, ext, ".gltf") 
-            or std.mem.eql(u8, ext, ".stl") 
-            or std.mem.eql(u8, ext, ".fbx")
-        ) {
-            // zig fmt: on
-            defer allocator.free(bytes);
+        if (std.mem.eql(u8, ext, ".obj") or
+            std.mem.eql(u8, ext, ".glb") or
+            std.mem.eql(u8, ext, ".gltf") or
+            std.mem.eql(u8, ext, ".stl") or
+            std.mem.eql(u8, ext, ".fbx"))
+        {
             return .{ .mesh = try importers.mesh_assimp.importMesh(allocator, .{ .bytes = bytes }) };
         }
 
-        // zig fmt: off
-        if (std.mem.eql(u8, ext, ".png") 
-            or std.mem.eql(u8, ext, ".bmp") 
-            or std.mem.eql(u8, ext, ".jpg") 
-            or std.mem.eql(u8, ext, ".jpeg") 
-            or std.mem.eql(u8, ext, ".tiff") 
-            or std.mem.eql(u8, ext, ".png")
-        ) {
-            // zig fmt: on
-            defer allocator.free(bytes);
+        if (std.mem.eql(u8, ext, ".png") or
+            std.mem.eql(u8, ext, ".bmp") or
+            std.mem.eql(u8, ext, ".jpg") or
+            std.mem.eql(u8, ext, ".jpeg") or
+            std.mem.eql(u8, ext, ".tiff") or
+            std.mem.eql(u8, ext, ".png"))
+        {
             return .{ .image = try importers.image_zigimg.importImage(allocator, io, .{ .bytes = bytes }) };
         }
 
         if (std.mem.eql(u8, ext, ".lua") or std.mem.eql(u8, ext, ".luau")) {
-            return .{ .script_source = .{ .type = .text, .data = bytes } };
+            return .{ .script_source = .{ .type = .text, .data = try allocator.dupe(u8, bytes) } };
         } else if (std.mem.eql(u8, ext, ".luac") or std.mem.eql(u8, ext, ".luauc")) {
-            return .{ .script_source = .{ .type = .bytecode, .data = bytes } };
+            return .{ .script_source = .{ .type = .bytecode, .data = try allocator.dupe(u8, bytes) } };
         }
 
         if (std.mem.eql(u8, ext, ".ttf")) {
-            defer allocator.free(bytes);
             return .{ .font = try importers.font_freetype.importFont(allocator, .{ .bytes = bytes }, .{}) };
         }
 
         if (std.mem.eql(u8, ext, ".mp3")) {
-            defer allocator.free(bytes);
             return .{ .audio = try importers.audio_dr.importAudio(allocator, .{ .bytes = bytes }, .{ .format = .mp3 }) };
         }
         if (std.mem.eql(u8, ext, ".wav")) {
-            defer allocator.free(bytes);
             return .{ .audio = try importers.audio_dr.importAudio(allocator, .{ .bytes = bytes }, .{ .format = .wav }) };
         }
 

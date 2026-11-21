@@ -75,22 +75,31 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     }
 
     self.os = try .init(p_init, "net.wyteroze.summit");
+    self.filesystem = .init(try self.getAlloc("Filesystem"));
+    errdefer self.filesystem.deinit();
+    try self.registerDefaultMounts(project_path.?);
+
     try self.scheduler.init(try self.getAlloc("Scheduler"), io, &self.os);
     errdefer self.scheduler.deinit();
+
     try self.platform.init(try self.getAlloc("Platform"), .initSdl());
     errdefer self.platform.deinit();
+
     self.ecs = undefined;
     try self.ecs.init(try self.getAlloc("Ecs"));
     errdefer self.ecs.deinit();
+
     self.ui = try .init(&self.ecs, try self.getAlloc("Ui"));
     errdefer self.ui.deinit();
+
     self.gpu_device = try .init(
         try self.getAlloc("Gpu"),
         // Uses the same memory allocator as the one above
         try .initDiligent(try self.getAlloc("Gpu")),
     );
     errdefer self.gpu_device.deinit();
-    self.assets = try .init(try self.getAlloc("Assets"), io, &self.gpu_device, project_path);
+
+    self.assets = try .init(try self.getAlloc("Assets"), io, &self.gpu_device, &self.filesystem, project_path);
     errdefer self.assets.deinit();
 
     // Skybox
@@ -117,9 +126,6 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
 
     try self.audio.init(io, try self.getAlloc("Audio"), &self.platform);
     errdefer self.audio.deinit();
-
-    self.filesystem = .init(io, try self.getAlloc("Filesystem"));
-    errdefer self.filesystem.deinit();
 
     self.host = .{
         .ecs = &self.ecs,
@@ -164,6 +170,21 @@ fn onPlatformEvent(self: *Summit, evt: Platform.desc.PlatformEvent) void {
         .keyboard_key_down => |kb| if (kb.keycode == .Equals) self.memory.dumpCategories(),
         else => {},
     }
+}
+
+fn registerDefaultMounts(self: *Summit, project_path: []const u8) !void {
+    const alloc = try self.getAlloc("Filesystem");
+    const assets_path = try std.Io.Dir.path.join(alloc, &.{ project_path, "assets" });
+    defer alloc.free(assets_path);
+
+    var assets = try Filesystem.Directory.open(
+        self.io,
+        alloc,
+        std.Io.Dir.cwd(),
+        assets_path,
+        .{ .writable = false },
+    );
+    try self.filesystem.mount("asset", assets.backend(), .{ .scoped = true });
 }
 
 pub fn update(self: *Summit) void {

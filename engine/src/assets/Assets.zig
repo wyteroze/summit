@@ -2,6 +2,7 @@
 
 const std = @import("std");
 const gpu = @import("../gpu/gpu.zig");
+const Filesystem = @import("../filesystem/Filesystem.zig");
 const bind = @import("../scripting/bind/bind.zig");
 const Source = @import("sources/Source.zig");
 const render = @import("../render/render.zig");
@@ -123,12 +124,12 @@ pub const AssetEntry = struct {
     gpu_data: ?AssetData.GpuAssetData = null,
     cpu_data_refcount: ?u32,
     gpu_data_refcount: ?u32 = null,
-    path: []const u8,
+    uri: []const u8,
 
     pub fn deinit(self: AssetEntry, allocator: std.mem.Allocator) void {
         if (self.cpu_data) |d| d.deinit(allocator);
         if (self.gpu_data) |d| d.deinit();
-        allocator.free(self.path);
+        allocator.free(self.uri);
     }
 };
 
@@ -138,11 +139,12 @@ const Assets = @This();
 io: std.Io,
 allocator: std.mem.Allocator,
 gpu_device: *gpu.GpuDevice,
+filesystem: *Filesystem,
 slots: std.AutoHashMap(u64, AssetEntry),
 sources: std.StringHashMap(*DirSource),
 last_purge: std.Io.Timestamp,
 
-pub fn init(allocator: std.mem.Allocator, io: std.Io, gpu_device: *gpu.GpuDevice, proj_path: ?[]const u8) !Assets {
+pub fn init(allocator: std.mem.Allocator, io: std.Io, gpu_device: *gpu.GpuDevice, filesystem: *Filesystem, proj_path: ?[]const u8) !Assets {
     var sources: std.StringHashMap(*DirSource) = .init(allocator);
 
     inline for (asset_sources) |s| {
@@ -163,6 +165,7 @@ pub fn init(allocator: std.mem.Allocator, io: std.Io, gpu_device: *gpu.GpuDevice
         .io = io,
         .allocator = allocator,
         .gpu_device = gpu_device,
+        .filesystem = filesystem,
         .slots = .init(allocator),
         .sources = sources,
         .last_purge = .now(io, .awake),
@@ -179,22 +182,21 @@ pub fn deinit(self: *Assets) void {
     self.sources.deinit();
 }
 
-pub fn load(self: *Assets, path: []const u8) !AssetHandle {
-    const uri: Uri = try .parse(path);
-
-    const source = self.sources.get(uri.scheme) orelse {
-        std.log.err("unknown scheme '{s}://'", .{uri.scheme});
-        return error.UnknownScheme;
-    };
-    const id = std.hash.Wyhash.hash(hash_seed, path);
+pub fn load(self: *Assets, uri: []const u8) !AssetHandle {
+    // TODO: Probably hash uri *and* stat, so if someone mounts a directory,
+    // loads asset, then unmounts it and mounts a new directory ands loads a file with the same name,
+    // it won't be incorrectly cached. Or something like that.
+    const id = std.hash.Wyhash.hash(hash_seed, uri);
     if (self.slots.getPtr(id)) |slot| if (slot.cpu_data != null) {
         slot.cpu_data_refcount.? += 1;
         return .{ .id = id, .assets = self };
     };
 
-    const bytes = try source.source().read(uri.path);
-    const data: AssetData.CpuAssetData = try .parse(self.allocator, self.io, path, bytes);
-    try self.slots.put(id, .{ .cpu_data = data, .cpu_data_refcount = 1, .path = try self.allocator.dupe(u8, path) });
+    const bytes = try self.filesystem.read(self.allocator, uri);
+    defer self.allocator.free(bytes);
+
+    const data: AssetData.CpuAssetData = try .parse(self.allocator, self.io, uri, bytes);
+    try self.slots.put(id, .{ .cpu_data = data, .cpu_data_refcount = 1, .uri = try self.allocator.dupe(u8, uri) });
 
     return .{ .id = id, .assets = self };
 }
@@ -211,7 +213,7 @@ pub fn upload(self: *Assets, handle: AssetHandle, upload_ctx: UploadContext) !vo
     if (!asset_type.uploadable()) return error.IncompatibleAssetType;
 
     const gpu_data: AssetData.GpuAssetData =
-        try .fromCpuData(entry.cpu_data.?, entry.path, self.allocator, self.gpu_device, upload_ctx);
+        try .fromCpuData(entry.cpu_data.?, entry.uri, self.allocator, self.gpu_device, upload_ctx);
 
     entry.gpu_data = gpu_data;
     entry.gpu_data_refcount = 1;
