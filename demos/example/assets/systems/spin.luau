@@ -4,10 +4,43 @@
 const ENTITY_COLUMNS, ENTITY_ROWS = 1, 1
 local assets = require("@assets")
 local gizmos = require("@render/gizmos")
+local fs = require("@fs")
 local spin: System = {}
 spin.query = { "Spin" }
 
 function spin.init()
+    -- I should implement a testing suite soon..
+    print(`I have a secret to share... {fs.readText("asset://data/test.txt")}`)
+    do
+        local buf = fs.read("asset://data/test.txt"):: buffer
+        for i = 0, buffer.len(buf)-1 do
+            print(buffer.readstring(buf, i, 1))
+        end
+        buf=nil
+    end
+    do
+        local str = "1337"
+        local buf = buffer.create(#str)
+        buffer.writestring(buf, 0, str)
+        fs.write("cache://leet.txt", buf)
+    end
+    do
+        print(fs.exists("asset://thingthatdoesnotexist"))
+        print(fs.exists("cache://leet.txt"))
+        for i,v in fs.stat("cache://") do print(i, v) end
+    end
+    do
+        for i,v in fs.list("asset://") do print(i, v) end
+    end
+    do
+        fs.createDirectory("cache://deez")
+        print(fs.exists("cache://deez"))
+    end
+    do
+        fs.remove("cache://deez")
+        print(fs.exists("cache://deez"))
+    end
+
     world:registerComponent("Spin")
     for c = 1, ENTITY_COLUMNS do
         for r = 1, ENTITY_ROWS do

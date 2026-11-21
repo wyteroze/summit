@@ -116,8 +116,8 @@ fn stat(ptr: *anyopaque, path: []const u8) anyerror!?File.Stat {
 
     return .{
         .kind = if (s.kind == .directory) .directory else .file,
-        .size = s.size,
-        .modified_ns = s.mtime.toNanoseconds(),
+        .size_bytes = s.size,
+        .modified_ms = s.mtime.toMilliseconds(),
     };
 }
 

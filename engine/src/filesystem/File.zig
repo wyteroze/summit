@@ -5,12 +5,12 @@ const Mount = @import("Mount.zig");
 
 pub const OpenMode = enum { read, write, append };
 pub const FileError = error{ ReadOnly, FileTooLarge, UnexpectedEof, IsDir, NotFound, AccessDenied };
-pub const Stat = struct { kind: enum { file, directory }, size: u64, modified_ns: i96 };
+pub const Stat = struct { kind: enum { file, directory }, size_bytes: u64, modified_ms: i64 };
 
 const File = @This();
 mount: *Mount,
 backend: Backend,
-pos: u64 = 0,
+position: u64 = 0,
 closed: bool = false,
 
 pub const Backend = struct {
@@ -32,15 +32,15 @@ pub fn size(self: *File) !u64 {
 }
 
 pub fn seek(self: *File, offset: u64) void {
-    self.pos = offset;
+    self.position = offset;
 }
 
 /// Returns the number of bytes read, which is zero at the end of the file.
 /// May return fewer bytes than requested.
 pub fn read(self: *File, buf: []u8) !usize {
     const b = self.backend;
-    const n = try b.vtable.pread(b.ptr, buf, self.pos);
-    self.pos += n;
+    const n = try b.vtable.pread(b.ptr, buf, self.position);
+    self.position += n;
 
     return n;
 }
@@ -59,8 +59,8 @@ pub fn write(self: *File, data: []const u8) !void {
     if (b.vtable.pwrite) |pwrite| {
         var done: usize = 0;
         while (done < data.len) {
-            const n = try pwrite(b.ptr, data[done..], self.pos);
-            self.pos += n;
+            const n = try pwrite(b.ptr, data[done..], self.position);
+            self.position += n;
             done += n;
         }
     } else return FileError.ReadOnly;

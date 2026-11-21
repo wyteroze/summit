@@ -572,6 +572,7 @@ pub const LuaType = switch (lang) {
         function = c.LUA_TFUNCTION,
         userdata = c.LUA_TUSERDATA,
         thread = c.LUA_TTHREAD,
+        buffer = c.LUA_TBUFFER,
     },
     else => enum(i5) {
         none = c.LUA_TNONE,
@@ -2150,8 +2151,8 @@ pub const Lua = opaque {
     /// * Lua Runtime Errors: `none`
     ///
     /// See https://www.lua.org/manual/5.4/manual.html#lua_pushinteger
-    pub fn pushInteger(lua: *Lua, n: Integer) void {
-        c.lua_pushinteger(@ptrCast(lua), n);
+    pub fn pushInteger(lua: *Lua, n: i64) void {
+        c.lua_pushinteger64(@ptrCast(lua), n);
     }
 
     /// Pushes a light userdata onto the stack.
@@ -3993,6 +3994,63 @@ pub const Lua = opaque {
         c.lua_setsafeenv(@as(*LuaState, @ptrCast(lua)), idx, @intFromBool(enabled));
     }
 
+    /// Returns 1 if the value at the index is a buffer.
+    ///
+    /// Only available in Luau
+    ///
+    /// * Pops from Stack: `0`
+    /// * Pushes to Stack: `0`
+    pub fn isBuffer(lua: *Lua, idx: i32) bool {
+        comptime checkSupport(.{.luau}, @src().fn_name);
+        return c.lua_isbuffer(@as(*LuaState, @ptrCast(lua)), idx);
+    }
+
+    /// Converts the buffer at the index to a pointer to its data.
+    /// Returns an error if the value is not a buffer.
+    ///
+    /// Only available in Luau
+    ///
+    /// * Pops from Stack: `0`
+    /// * Pushes to Stack: `0`
+    pub fn toBuffer(lua: *Lua, idx: i32) error{NotABuffer}![]u8 {
+        comptime checkSupport(.{.luau}, @src().fn_name);
+        var b_len: usize = 0;
+        const ptr = c.lua_tobuffer(@as(*LuaState, @ptrCast(lua)), idx, &b_len) orelse
+            return error.NotABuffer;
+
+        const bytes: [*]u8 = @ptrCast(ptr);
+        return bytes[0..b_len];
+    }
+
+    /// Creates a new buffer value of size sz and places it on the top of the stack.
+    /// Buffer data is zero-initialized. Returns the pointer to the buffer’s data.
+    ///
+    /// Only available in Luau
+    ///
+    /// * Pops from Stack: `0`
+    /// * Pushes to Stack: `1`
+    pub fn newBuffer(lua: *Lua, size: usize) []u8 {
+        comptime checkSupport(.{.luau}, @src().fn_name);
+        const ptr = c.lua_newbuffer(@as(*LuaState, @ptrCast(lua)), size);
+        const bytes: [*]u8 = @ptrCast(ptr);
+        return bytes[0..size];
+    }
+
+    /// Checks for a buffer argument, and throws an invalid argument type error otherwise.
+    /// Returns a pointer to its data.
+    ///
+    /// Only available in Luau
+    ///
+    /// * Pops from Stack: `0`
+    /// * Pushes to Stack: `1`
+    pub fn checkBuffer(lua: *Lua, idx: i32) []u8 {
+        comptime checkSupport(.{.luau}, @src().fn_name);
+        var b_len: usize = 0;
+        const ptr = c.luaL_checkbuffer(@as(*LuaState, @ptrCast(lua)), idx, &b_len);
+        const bytes: [*]u8 = @ptrCast(ptr);
+        return bytes[0..b_len];
+    }
+
     // Stock ziglua
 
     /// Ensures that the value `t[field]`, where `t` is the value at `index`, is a table, and pushes that table onto the stack.
@@ -5440,8 +5498,7 @@ pub const Buffer = struct {
     /// Any changes to the buffer may invalidate this slice
     /// See https://www.lua.org/manual/5.4/manual.html#luaL_buffaddr
     pub fn addr(buf: *Buffer) []u8 {
-        const length = buf.b.n;
-        return c.luaL_buffaddr(&buf.b)[0..length];
+        return buf.b.p;
     }
 
     /// Returns the length of the buffer

@@ -36,13 +36,13 @@ pub fn open(self: *Mount, path: []const u8, mode: File.OpenMode) !File {
 }
 
 /// Returns basic information about a file at the given path.
-/// Returns null if the backend doesn't provide information.
+/// Returns null if the file doesn't exist.
 pub fn stat(self: Mount, path: []const u8) !?File.Stat {
     const b = self.backend;
     return b.vtable.stat(b.ptr, path);
 }
 
-/// Returns a list of files at the given path.
+/// Returns a list of files/directories at the given path.
 pub fn list(self: Mount, path: []const u8, allocator: std.mem.Allocator) ![][]const u8 {
     const b = self.backend;
     return b.vtable.list(b.ptr, path, allocator);
@@ -51,13 +51,13 @@ pub fn list(self: Mount, path: []const u8, allocator: std.mem.Allocator) ![][]co
 /// Removes a file or path at the given path.
 pub fn remove(self: Mount, path: []const u8) !void {
     const b = self.backend;
-    return b.vtable.remove(b.ptr, path);
+    return if (b.vtable.remove) |rm| rm(b.ptr, path) else error.ReadOnlyMount;
 }
 
 /// Creates a directory at the given path.
 pub fn createDir(self: Mount, path: []const u8) !void {
     const b = self.backend;
-    return b.vtable.createDir(b.ptr, path);
+    return if (b.vtable.createDir) |cd| cd(b.ptr, path) else error.ReadOnlyMount;
 }
 
 /// Adds a reference to this Mount.
