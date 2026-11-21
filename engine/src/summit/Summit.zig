@@ -174,17 +174,28 @@ fn onPlatformEvent(self: *Summit, evt: Platform.desc.PlatformEvent) void {
 
 fn registerDefaultMounts(self: *Summit, project_path: []const u8) !void {
     const alloc = try self.getAlloc("Filesystem");
+
+    // `asset://` (game `assets` directory)
     const assets_path = try std.Io.Dir.path.join(alloc, &.{ project_path, "assets" });
     defer alloc.free(assets_path);
+    var assets = try Filesystem.Directory.open(self.io, alloc, std.Io.Dir.cwd(), assets_path, .{ .writable = false });
+    try self.filesystem.mount("asset", assets.backend(), .{ .reserved = true });
 
-    var assets = try Filesystem.Directory.open(
-        self.io,
-        alloc,
-        std.Io.Dir.cwd(),
-        assets_path,
-        .{ .writable = false },
-    );
-    try self.filesystem.mount("asset", assets.backend(), .{ .scoped = true });
+    // `persist://` (directory in OS appdata directory named after project id)
+    const persist_path = try self.os.filesystem().getPersistPath(alloc);
+    defer alloc.free(persist_path);
+    var persist = try Filesystem.Directory.open(self.io, alloc, std.Io.Dir.cwd(), persist_path, .{ .writable = true, .create = true });
+    try self.filesystem.mount("persist", persist.backend(), .{ .reserved = true });
+
+    // `cache://` (OS cache directory)
+    const cache_path = try self.os.filesystem().getCachePath(alloc);
+    defer alloc.free(cache_path);
+    var cache = try Filesystem.Directory.open(self.io, alloc, std.Io.Dir.cwd(), cache_path, .{ .writable = true, .create = true });
+    try self.filesystem.mount("cache", cache.backend(), .{ .reserved = true });
+
+    // `file://` (OS file path)
+    var file = try Filesystem.Directory.open(self.io, alloc, std.Io.Dir.cwd(), "/", .{ .writable = true });
+    try self.filesystem.mount("file", file.backend(), .{ .scoped = false });
 }
 
 pub fn update(self: *Summit) void {
