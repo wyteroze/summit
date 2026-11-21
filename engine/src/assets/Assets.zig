@@ -4,11 +4,8 @@ const std = @import("std");
 const gpu = @import("../gpu/gpu.zig");
 const Filesystem = @import("../filesystem/Filesystem.zig");
 const bind = @import("../scripting/bind/bind.zig");
-const Source = @import("sources/Source.zig");
 const render = @import("../render/render.zig");
 const Uri = @import("../core/Uri.zig");
-const DirSource = @import("sources/DirSource.zig");
-const asset_sources = @import("sources/sources.zig").sources;
 pub const AssetData = @import("AssetData.zig");
 pub const types = @import("types.zig");
 
@@ -141,33 +138,15 @@ allocator: std.mem.Allocator,
 gpu_device: *gpu.GpuDevice,
 filesystem: *Filesystem,
 slots: std.AutoHashMap(u64, AssetEntry),
-sources: std.StringHashMap(*DirSource),
 last_purge: std.Io.Timestamp,
 
-pub fn init(allocator: std.mem.Allocator, io: std.Io, gpu_device: *gpu.GpuDevice, filesystem: *Filesystem, proj_path: ?[]const u8) !Assets {
-    var sources: std.StringHashMap(*DirSource) = .init(allocator);
-
-    inline for (asset_sources) |s| {
-        const src_ptr = try allocator.create(DirSource);
-        errdefer allocator.destroy(src_ptr);
-
-        src_ptr.* = try s.init(allocator, io);
-        if (std.mem.eql(u8, s.scheme, "asset") and proj_path != null) {
-            const path = try std.Io.Dir.path.join(allocator, &.{ proj_path.?, "assets" });
-            defer allocator.free(path);
-            src_ptr.*.base_dir = try .openDir(.cwd(), io, path, .{});
-        }
-
-        try sources.put(s.scheme, src_ptr);
-    }
-
+pub fn init(allocator: std.mem.Allocator, io: std.Io, gpu_device: *gpu.GpuDevice, filesystem: *Filesystem) !Assets {
     return .{
         .io = io,
         .allocator = allocator,
         .gpu_device = gpu_device,
         .filesystem = filesystem,
         .slots = .init(allocator),
-        .sources = sources,
         .last_purge = .now(io, .awake),
     };
 }
@@ -176,10 +155,6 @@ pub fn deinit(self: *Assets) void {
     var slots_iter = self.slots.iterator();
     while (slots_iter.next()) |s| s.value_ptr.deinit(self.allocator);
     self.slots.deinit();
-
-    var sources_iter = self.sources.iterator();
-    while (sources_iter.next()) |s| self.allocator.destroy(s.value_ptr.*);
-    self.sources.deinit();
 }
 
 pub fn load(self: *Assets, uri: []const u8) !AssetHandle {

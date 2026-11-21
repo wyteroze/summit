@@ -99,7 +99,7 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     );
     errdefer self.gpu_device.deinit();
 
-    self.assets = try .init(try self.getAlloc("Assets"), io, &self.gpu_device, &self.filesystem, project_path);
+    self.assets = try .init(try self.getAlloc("Assets"), io, &self.gpu_device, &self.filesystem);
     errdefer self.assets.deinit();
 
     // Skybox
