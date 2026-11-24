@@ -6,6 +6,7 @@ const Ecs = @import("../ecs/Ecs.zig");
 const core = @import("../core/core.zig");
 const math = @import("../core/math/math.zig");
 const render = @import("../render/render.zig");
+const Perf = @import("../perf/Perf.zig");
 const reflow = @import("reflow.zig");
 const tessellate = @import("tessellate.zig").tessellate;
 const Windowing = @import("../windowing/Windowing.zig");
@@ -57,6 +58,7 @@ pub const ComponentIds = struct {
     painter: Ecs.ComponentId,
 };
 
+const PerfCategory = Perf.Category("Ui");
 const Ui = @This();
 allocator: std.mem.Allocator,
 frame_allocator: std.heap.ArenaAllocator,
@@ -135,6 +137,8 @@ pub fn deinit(self: *Ui) void {
 }
 
 pub fn update(self: *Ui) void {
+    const z = PerfCategory.beginZone(@src(), "Update");
+    defer PerfCategory.endZone(z);
     self.dispatcher.flush();
 
     const world = self.world;
@@ -155,6 +159,8 @@ pub fn update(self: *Ui) void {
 }
 
 pub fn paint(self: *Ui) void {
+    const z = PerfCategory.beginZone(@src(), "Update painters");
+    defer PerfCategory.endZone(z);
     const allocator = self.frame_allocator.allocator();
     const ids = self.component_ids;
     const w = self.world;
@@ -330,6 +336,9 @@ fn isInteractive(self: *Ui, e: Ecs.Entity) bool {
 }
 
 fn hitTest(self: *Ui, e: Ecs.Entity, p: math.Vec2) ?Ecs.Entity {
+    const z = PerfCategory.beginZone(@src(), "Hit test");
+    defer PerfCategory.endZone(z);
+
     const w = self.world;
     const pos = w.getComponentUnchecked(e, self.component_ids.computed_position, math.Vec2) orelse return null;
     const size = w.getComponentUnchecked(e, self.component_ids.computed_size, math.Vec2) orelse return null;

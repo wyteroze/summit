@@ -1,4 +1,5 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
+//! TODO: Revamp this. It honestly kinda sucks.
 
 const std = @import("std");
 const core = @import("../core/core.zig");
@@ -7,6 +8,7 @@ const signal = @import("../core/signal.zig");
 const Platform = @import("../platform/Platform.zig");
 const Windowing = @import("../windowing/Windowing.zig");
 const Ui = @import("../ui/Ui.zig");
+const Perf = @import("../perf/Perf.zig");
 
 const max_usize = std.math.maxInt(usize);
 
@@ -22,6 +24,7 @@ pub const MouseHandle = devices.DeviceHandle(devices.MouseDevice, "mice");
 pub const GamepadHandle = devices.DeviceHandle(devices.GamepadDevice, "gamepads");
 pub const TouchHandle = devices.DeviceHandle(devices.TouchDevice, "touch_devices");
 
+const PerfCategory = Perf.Category("Input");
 const Input = @This();
 allocator: std.mem.Allocator,
 platform: *Platform,
@@ -242,6 +245,8 @@ fn onPlatformEvent(self: *Input, event: Platform.desc.PlatformEvent) !void {
 
 // Called at the start of every frame
 pub fn tick(self: *Input) void {
+    const z = PerfCategory.beginZone(@src(), "Input tick");
+    defer PerfCategory.endZone(z);
     var ms_iter = self.mice.valueIterator();
     while (ms_iter.next()) |ms| ms.*.resetDeltas();
     self.dispatcher.flush();

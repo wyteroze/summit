@@ -12,11 +12,11 @@ function floor.init(entity: Entity)
 end
 
 function floor.contactBegan()
-    print("Floor contact began")
+    -- print("Floor contact began")
 end
 
 function floor.contactEnded()
-    print("Floor contact ended")
+    -- print("Floor contact ended")
 end
 
 return floor

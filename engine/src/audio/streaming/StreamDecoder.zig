@@ -4,8 +4,10 @@ const std = @import("std");
 const audio_dr = @import("dr_libs");
 const SampleRing = @import("SampleRing.zig");
 const Assets = @import("../../assets/Assets.zig");
+const Perf = @import("../../perf/Perf.zig");
 
 pub const ring_samples = 1 << 17;
+const PerfCategory = Perf.Category("Audio.StreamDecoder");
 
 const StreamDecoder = @This();
 decoder: union(Assets.types.AudioFormat) { mp3: audio_dr.drmp3, wav: audio_dr.drwav },
@@ -58,6 +60,9 @@ pub fn needsFill(self: *const StreamDecoder) bool {
 }
 
 pub fn fill(self: *StreamDecoder, max_frames: usize) void {
+    const z = PerfCategory.beginZone(@src(), "Decode audio");
+    defer PerfCategory.endZone(z);
+
     var budget = max_frames;
     while (budget > 0 and !self.end_of_stream.load(.monotonic)) {
         const want = @min(self.ring.writable() / self.channels, self.temp_storage.len / self.channels, budget);

@@ -3,9 +3,11 @@
 
 const std = @import("std");
 const types = @import("types.zig");
+const Perf = @import("../perf/Perf.zig");
 const math = @import("../core/math/math.zig");
 const FontAtlas = @import("../render/text/FontAtlas.zig");
 
+const PerfCategory = Perf.Category("Ui.Text");
 pub const GlyphQuad = struct {
     pos: [2]f32,
     size: [2]f32,
@@ -113,6 +115,9 @@ pub fn layoutGlyphs(
     origin: math.Vec2,
     size: math.Vec2,
 ) ![]GlyphQuad {
+    const z = PerfCategory.beginZone(@src(), "Layout glyphs");
+    defer PerfCategory.endZone(z);
+
     const scale = atlas.calculateScale(t.size);
     const line_h = lineHeight(atlas, t.size);
     const asc = ascent(atlas, t.size);

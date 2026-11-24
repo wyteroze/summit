@@ -3,7 +3,9 @@
 const std = @import("std");
 const zlua = @import("zlua");
 const Host = @import("Host.zig");
+const Perf = @import("../../perf/Perf.zig");
 
+const PerfCategory = Perf.Category("scripting.bind.wrap");
 pub const ParamKind = enum { host, lua_state, via_self, lua };
 
 pub fn classify(comptime P: type, comptime via: ?type) ParamKind {
@@ -48,6 +50,9 @@ pub fn Wrap(comptime Mar: type) type {
             const info = @typeInfo(F).@"fn";
             return struct {
                 pub fn call(l: *zlua.Lua) i32 {
+                    const z = PerfCategory.beginZone(@src(), "Lua engine invocation");
+                    defer PerfCategory.endZone(z);
+
                     return invoke(l);
                 }
 

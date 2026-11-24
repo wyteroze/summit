@@ -5,6 +5,7 @@ const gpu = @import("../gpu/gpu.zig");
 const Ecs = @import("../ecs/Ecs.zig");
 const types = @import("types.zig");
 const core = @import("../core/core.zig");
+const Perf = @import("../perf/Perf.zig");
 const RenderGraph = @import("RenderGraph.zig");
 const RenderView = @import("RenderView.zig");
 const Gizmos = @import("Gizmos.zig");
@@ -20,6 +21,7 @@ pub const max_lights = 256;
 pub const tile_size = 16;
 pub const max_lights_per_tile = 64;
 
+const PerfCategory = Perf.Category("Renderer");
 const Renderer = @This();
 allocator: std.mem.Allocator,
 /// Freed at the end of every frame. Always use this instead
@@ -161,7 +163,13 @@ pub fn deinit(self: *Renderer) void {
 }
 
 pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: []types.RenderWindowRequest) !void {
+    const z = PerfCategory.beginZone(@src(), "Render");
+    defer PerfCategory.endZone(z);
+
     for (views) |req| {
+        const zn = PerfCategory.beginZone(@src(), "Render RenderView");
+        defer PerfCategory.endZone(zn);
+
         var scene = req.scene;
         scene.gizmo_tested = self.gizmos.tested.items;
         scene.gizmo_overlay = self.gizmos.overlay.items;
@@ -195,6 +203,8 @@ pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: 
     var rendered: std.ArrayList(*types.RenderWindow) = .empty;
 
     for (windows) |req| {
+        const zn = PerfCategory.beginZone(@src(), "Render window");
+        defer PerfCategory.endZone(zn);
         const win = self.getWindow(req.window_id) orelse continue;
         if (win.pixel_size[0] == 0 or win.pixel_size[1] == 0) continue;
         rendered.append(self.frame_allocator.allocator(), win) catch {};
@@ -224,7 +234,9 @@ pub fn render(self: *Renderer, views: []const types.RenderViewRequest, windows: 
             .frame_allocator = self.frame_allocator.allocator(),
         });
     }
+    const zn = PerfCategory.beginZone(@src(), "Present windows");
     for (rendered.items) |w| w.swapchain.present(w.vsync);
+    PerfCategory.endZone(zn);
 
     if (self.gizmos.dropped > 0) std.log.warn("Gizmos: dropped {d} vertices!", .{self.gizmos.dropped});
     self.gizmos.clear();

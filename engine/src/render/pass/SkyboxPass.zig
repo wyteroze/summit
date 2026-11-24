@@ -6,8 +6,10 @@ const RenderGraph = @import("../RenderGraph.zig");
 const resource = @import("../resource.zig");
 const pass = @import("pass.zig");
 const core = @import("../../core/core.zig");
+const Perf = @import("../../perf/Perf.zig");
 const math = core.math;
 
+const PerfCategory = Perf.Category("Renderer.SkyboxPass");
 const SkyboxPass = @This();
 pipeline: gpu.GpuDevice.GpuPipeline,
 shader: gpu.GpuDevice.GpuShader,
@@ -54,6 +56,9 @@ pub fn deinit(self: *SkyboxPass, allocator: std.mem.Allocator) void {
 }
 
 fn execute(self: *SkyboxPass, ctx: pass.PassContext) void {
+    const z = PerfCategory.beginZone(@src(), "Execute");
+    defer PerfCategory.endZone(z);
+
     const depth_handle = ctx.resources.get(resource.depth_buffer, .depth_target) orelse @panic("depth_buffer resource missing!");
     const color_handle = ctx.resources.get(resource.color_target, .render_target);
     ctx.device.beginPass(.{

@@ -5,9 +5,11 @@ const builtin = @import("builtin");
 const sdl3 = @import("sdl3");
 const desc = @import("../desc.zig");
 const types = @import("../types.zig");
+const Perf = @import("../../perf/Perf.zig");
 
 const flags: sdl3.InitFlags = .{ .video = true, .audio = true };
 
+const PerfCategory = Perf.Category("Platform.SdlBackend");
 const SdlBackend = @This();
 
 pub fn init(_: SdlBackend) void {
@@ -21,6 +23,8 @@ pub fn deinit(_: SdlBackend) void {
 }
 
 pub fn createSurface(_: SdlBackend, d: desc.SurfaceDesc) !types.SurfaceHandle {
+    const z = PerfCategory.beginZone(@src(), "Create surface");
+    defer PerfCategory.endZone(z);
     const w: sdl3.video.Window = try .init(d.title, @intCast(d.width), @intCast(d.height), .{
         .metal = true,
         .high_pixel_density = true,
@@ -195,11 +199,9 @@ pub fn pollEvent(_: SdlBackend) ?desc.PlatformEvent {
     };
 }
 
-pub fn showError(_: SdlBackend, msg: [:0]const u8) void {
-    sdl3.message_box.showSimple(.{ .error_dialog = true }, "Sorry, something happened.", msg, null) catch {};
-}
-
 pub fn setCursorLocked(_: SdlBackend, mode: bool) void {
+    const z = PerfCategory.beginZone(@src(), "Set cursor locked");
+    defer PerfCategory.endZone(z);
     const windows = sdl3.video.getWindows() catch |e| {
         std.log.err("Failed to get windows: {s}", .{@errorName(e)});
         return;
@@ -211,6 +213,8 @@ pub fn setCursorLocked(_: SdlBackend, mode: bool) void {
 }
 
 pub fn getCursorLocked(_: SdlBackend) bool {
+    const z = PerfCategory.beginZone(@src(), "Get cursor locked");
+    defer PerfCategory.endZone(z);
     const windows = sdl3.video.getWindows() catch |e| {
         std.log.err("Failed to get windows: {s}", .{@errorName(e)});
         return false;
@@ -269,18 +273,26 @@ pub fn deinitStream(_: SdlBackend, h: types.AudioStreamHandle) void {
 }
 
 pub fn pauseAudioStream(_: SdlBackend, h: types.AudioStreamHandle) void {
+    const z = PerfCategory.beginZone(@src(), "Pause audio stream");
+    defer PerfCategory.endZone(z);
     (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).pauseDevice() catch |e| std.log.err("Failed to pause audio stream: {s}", .{@errorName(e)});
 }
 
 pub fn resumeAudioStream(_: SdlBackend, h: types.AudioStreamHandle) void {
+    const z = PerfCategory.beginZone(@src(), "Resume audio stream");
+    defer PerfCategory.endZone(z);
     (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).resumeDevice() catch |e| std.log.err("Failed to resume audio stream: {s}", .{@errorName(e)});
 }
 
 pub fn setAudioStreamGain(_: SdlBackend, h: types.AudioStreamHandle, gain: f32) void {
+    const z = PerfCategory.beginZone(@src(), "Set audio stream gain");
+    defer PerfCategory.endZone(z);
     (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).setGain(gain) catch |e| std.log.err("Failed to set audio gain: {s}", .{@errorName(e)});
 }
 
 pub fn getAudioStreamGain(_: SdlBackend, h: types.AudioStreamHandle) f32 {
+    const z = PerfCategory.beginZone(@src(), "Get audio stream gain");
+    defer PerfCategory.endZone(z);
     return (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).getGain() catch |e| blk: {
         std.log.err("Failed to get audio gain: {s}", .{@errorName(e)});
         break :blk 0;
@@ -288,6 +300,8 @@ pub fn getAudioStreamGain(_: SdlBackend, h: types.AudioStreamHandle) f32 {
 }
 
 pub fn putAudioStreamData(_: SdlBackend, h: types.AudioStreamHandle, data: []const u8) !void {
+    const z = PerfCategory.beginZone(@src(), "Put audio stream data");
+    defer PerfCategory.endZone(z);
     try (sdl3.audio.Stream{ .value = @ptrCast(h.handle) }).putData(data);
 }
 

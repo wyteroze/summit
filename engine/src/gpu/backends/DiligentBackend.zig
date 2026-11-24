@@ -1,6 +1,7 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
+const Perf = @import("../../perf/Perf.zig");
 const desc = @import("../desc.zig");
 const types = @import("../types.zig");
 const diligent = @import("diligent");
@@ -172,6 +173,7 @@ comptime {
     if (build_opts.backend == .gl) @compileError("GL backend isn't currently supported. It'll be fixed later.");
 }
 
+const PerfCategory = Perf.Category("Gpu.DiligentBackend");
 const DiligentBackend = @This();
 factory: graphics.EngineFactory,
 device: graphics.RenderDevice,
@@ -205,6 +207,9 @@ pub fn deinit(self: *DiligentBackend) void {
 // Buffer
 
 pub fn createBuffer(self: *DiligentBackend, d: desc.BufferDesc) !types.BufferHandle {
+    const z = PerfCategory.beginZone(@src(), "Create buffer");
+    defer PerfCategory.endZone(z);
+
     if (d.type == .storage and d.stride == 0)
         return error.InvalidStride;
 
@@ -241,6 +246,9 @@ pub fn createBuffer(self: *DiligentBackend, d: desc.BufferDesc) !types.BufferHan
 }
 
 pub fn updateBuffer(self: *DiligentBackend, h: types.BufferHandle, data: []const u8) !void {
+    const z = PerfCategory.beginZone(@src(), "Update buffer");
+    defer PerfCategory.endZone(z);
+
     const buffer: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(h)) };
     const d = buffer.getDesc();
 
@@ -268,6 +276,8 @@ pub fn updateBuffer(self: *DiligentBackend, h: types.BufferHandle, data: []const
 }
 
 pub fn destroyBuffer(_: *DiligentBackend, h: types.BufferHandle) void {
+    const z = PerfCategory.beginZone(@src(), "Destroy buffer");
+    defer PerfCategory.endZone(z);
     const buffer: graphics.Buffer = .{ .raw = @ptrCast(@alignCast(h)) };
     buffer.release();
 }
@@ -275,6 +285,9 @@ pub fn destroyBuffer(_: *DiligentBackend, h: types.BufferHandle) void {
 // Sampler
 
 pub fn createSampler(self: *DiligentBackend, d: desc.SamplerDesc) !types.SamplerHandle {
+    const z = PerfCategory.beginZone(@src(), "Create sampler");
+    defer PerfCategory.endZone(z);
+
     const sampler = try self.device.createSampler(.{
         .min_filter = summitFilterToDiligent(d.min_filter),
         .mag_filter = summitFilterToDiligent(d.mag_filter),
@@ -287,6 +300,9 @@ pub fn createSampler(self: *DiligentBackend, d: desc.SamplerDesc) !types.Sampler
 }
 
 pub fn destroySampler(_: *DiligentBackend, h: types.SamplerHandle) void {
+    const z = PerfCategory.beginZone(@src(), "Destroy sampler");
+    defer PerfCategory.endZone(z);
+
     const sampler: graphics.Sampler = .{ .raw = @ptrCast(@alignCast(h)) };
     sampler.release();
 }
@@ -294,6 +310,9 @@ pub fn destroySampler(_: *DiligentBackend, h: types.SamplerHandle) void {
 // Image
 
 pub fn createImage(self: *DiligentBackend, d: desc.ImageDesc) !types.ImageHandle {
+    const z = PerfCategory.beginZone(@src(), "Create image");
+    defer PerfCategory.endZone(z);
+
     const is_depth = switch (d.format) {
         .d24_s8, .d32 => true,
         else => false,
@@ -362,6 +381,9 @@ pub fn createImage(self: *DiligentBackend, d: desc.ImageDesc) !types.ImageHandle
 }
 
 pub fn destroyImage(_: *DiligentBackend, h: types.ImageHandle) void {
+    const z = PerfCategory.beginZone(@src(), "Destroy image");
+    defer PerfCategory.endZone(z);
+
     const texture: graphics.Texture = .{ .raw = @ptrCast(@alignCast(h)) };
     texture.release();
 }
@@ -369,6 +391,9 @@ pub fn destroyImage(_: *DiligentBackend, h: types.ImageHandle) void {
 // Pipeline
 
 pub fn createPipeline(self: *DiligentBackend, d: desc.PipelineDesc) !types.PipelineHandle {
+    const z = PerfCategory.beginZone(@src(), "Create pipeline");
+    defer PerfCategory.endZone(z);
+
     const allocator = self.alloc.allocator;
     if (d.index_type == .none) return error.InvalidIndexType;
 
@@ -485,6 +510,9 @@ pub fn createPipeline(self: *DiligentBackend, d: desc.PipelineDesc) !types.Pipel
 }
 
 pub fn destroyPipeline(self: *DiligentBackend, h: types.PipelineHandle) void {
+    const z = PerfCategory.beginZone(@src(), "Destroy pipeline");
+    defer PerfCategory.endZone(z);
+
     const pipeline: *Pipeline = .fromHandle(h);
     pipeline.srb.release();
     pipeline.pso.release();
@@ -492,11 +520,17 @@ pub fn destroyPipeline(self: *DiligentBackend, h: types.PipelineHandle) void {
 }
 
 pub fn applyPipeline(self: *DiligentBackend, h: types.PipelineHandle) void {
+    const z = PerfCategory.beginZone(@src(), "Apply pipeline");
+    defer PerfCategory.endZone(z);
+
     const pipeline: *Pipeline = .fromHandle(h);
     self.context.setPipelineState(pipeline.pso);
 }
 
 pub fn drawPipeline(self: *DiligentBackend, h: types.PipelineHandle, base: u32, count: u32, instances: u32) void {
+    const z = PerfCategory.beginZone(@src(), "Draw pipeline");
+    defer PerfCategory.endZone(z);
+
     const pipeline: *Pipeline = .fromHandle(h);
 
     if (pipeline.has_index_buffer) {
@@ -518,6 +552,9 @@ pub fn drawPipeline(self: *DiligentBackend, h: types.PipelineHandle, base: u32, 
 }
 
 pub fn applyPipelineBindings(self: *DiligentBackend, h: types.PipelineHandle, bindings: desc.Bindings) !void {
+    const z = PerfCategory.beginZone(@src(), "Apply pipeline bindings");
+    defer PerfCategory.endZone(z);
+
     const pipeline: *Pipeline = .fromHandle(h);
 
     var vbufs: [4]graphics.Buffer = undefined;
@@ -547,6 +584,9 @@ pub fn applyPipelineBindings(self: *DiligentBackend, h: types.PipelineHandle, bi
 // Compute pipeline
 
 pub fn createComputePipeline(self: *DiligentBackend, d: desc.ComputePipelineDesc) !types.ComputePipelineHandle {
+    const z = PerfCategory.beginZone(@src(), "Create compute pipeline");
+    defer PerfCategory.endZone(z);
+
     const allocator = self.alloc.allocator;
 
     const shader: *Shader = .fromHandle(d.shader);
@@ -580,6 +620,9 @@ pub fn createComputePipeline(self: *DiligentBackend, d: desc.ComputePipelineDesc
 }
 
 pub fn destroyComputePipeline(self: *DiligentBackend, h: types.ComputePipelineHandle) void {
+    const z = PerfCategory.beginZone(@src(), "Destroy compute pipeline");
+    defer PerfCategory.endZone(z);
+
     const pipeline: *ComputePipeline = .fromHandle(h);
     pipeline.srb.release();
     pipeline.pso.release();
@@ -587,17 +630,26 @@ pub fn destroyComputePipeline(self: *DiligentBackend, h: types.ComputePipelineHa
 }
 
 pub fn applyComputePipeline(self: *DiligentBackend, h: types.ComputePipelineHandle) void {
+    const z = PerfCategory.beginZone(@src(), "Apply compute pipeline");
+    defer PerfCategory.endZone(z);
+
     const pipeline: *ComputePipeline = .fromHandle(h);
     self.context.setPipelineState(pipeline.pso);
 }
 
 pub fn applyComputeBindings(self: *DiligentBackend, h: types.ComputePipelineHandle, bindings: desc.Bindings) !void {
+    const z = PerfCategory.beginZone(@src(), "Apply compute pipeline bindings");
+    defer PerfCategory.endZone(z);
+
     const pipeline: *ComputePipeline = .fromHandle(h);
     try bindResources(pipeline.srb, &.{.{ .compute = true }}, bindings.resources);
     self.context.commitShaderResources(pipeline.srb, .transition);
 }
 
 pub fn dispatchCompute(self: *DiligentBackend, _: types.ComputePipelineHandle, groups_x: u32, groups_y: u32, groups_z: u32) void {
+    const z = PerfCategory.beginZone(@src(), "Dispatch compute pipeline");
+    defer PerfCategory.endZone(z);
+
     self.context.dispatchCompute(.{
         .thread_group_count_x = groups_x,
         .thread_group_count_y = groups_y,
@@ -608,6 +660,9 @@ pub fn dispatchCompute(self: *DiligentBackend, _: types.ComputePipelineHandle, g
 // Shader
 
 pub fn createShader(self: *DiligentBackend, d: desc.ShaderDesc) !types.ShaderHandle {
+    const z = PerfCategory.beginZone(@src(), "Create shader");
+    defer PerfCategory.endZone(z);
+
     const shader = try self.alloc.allocator.create(Shader);
     errdefer self.alloc.allocator.destroy(shader);
     shader.* = .{};
@@ -648,6 +703,9 @@ pub fn createShader(self: *DiligentBackend, d: desc.ShaderDesc) !types.ShaderHan
 }
 
 pub fn destroyShader(self: *DiligentBackend, h: types.ShaderHandle) void {
+    const z = PerfCategory.beginZone(@src(), "Destroy shader");
+    defer PerfCategory.endZone(z);
+
     const shader: *Shader = .fromHandle(h);
     shader.release();
     self.alloc.allocator.destroy(shader);
@@ -656,6 +714,9 @@ pub fn destroyShader(self: *DiligentBackend, h: types.ShaderHandle) void {
 // Pass
 
 pub fn beginPass(self: *DiligentBackend, d: desc.PassDesc) void {
+    const z = PerfCategory.beginZone(@src(), "Begin pass");
+    defer PerfCategory.endZone(z);
+
     const rtv: ?graphics.TextureView = if (d.color_target) |ct| .{ .raw = @ptrCast(@alignCast(ct)) } else null;
     const dsv: ?graphics.TextureView = if (d.depth_target) |dt| .{ .raw = @ptrCast(@alignCast(dt)) } else null;
 
@@ -686,6 +747,9 @@ pub fn beginPass(self: *DiligentBackend, d: desc.PassDesc) void {
 }
 
 pub fn endPass(self: *DiligentBackend) void {
+    const z = PerfCategory.beginZone(@src(), "End pass");
+    defer PerfCategory.endZone(z);
+
     // "Calling with an empty render_targets and a null depth_stencil,
     // using RESOURCE_STATE_TRANSITION_MODE_NONE, explicitly ends the current render pass."
     self.context.setRenderTargets(&.{}, null, .none);
@@ -694,6 +758,9 @@ pub fn endPass(self: *DiligentBackend) void {
 // Swapchain
 
 pub fn createSwapchain(self: *DiligentBackend, d: desc.SwapchainDesc) !types.SwapchainHandle {
+    const z = PerfCategory.beginZone(@src(), "Create swapchain");
+    defer PerfCategory.endZone(z);
+
     const factory: engine.Factory = .fromBase(self.factory);
     const swapchain = try factory.createSwapchain(self.device, self.context, .{
         .depth_buffer_format = .unknown,
@@ -705,6 +772,9 @@ pub fn createSwapchain(self: *DiligentBackend, d: desc.SwapchainDesc) !types.Swa
 }
 
 pub fn resizeSwapchain(self: *DiligentBackend, h: types.SwapchainHandle, size: [2]u32) !void {
+    const z = PerfCategory.beginZone(@src(), "Resize swapchain");
+    defer PerfCategory.endZone(z);
+
     if (size[0] == 0 or size[1] == 0) return error.InvalidSwapchainSize;
     self.context.setRenderTargets(&.{}, null, .none);
 
@@ -713,17 +783,26 @@ pub fn resizeSwapchain(self: *DiligentBackend, h: types.SwapchainHandle, size: [
 }
 
 pub fn presentSwapchain(_: *DiligentBackend, h: types.SwapchainHandle, vsync: bool) void {
+    const z = PerfCategory.beginZone(@src(), "Present swapchain");
+    defer PerfCategory.endZone(z);
+
     const swapchain: graphics.Swapchain = .{ .raw = @ptrCast(@alignCast(h)) };
     swapchain.present(if (vsync) 1 else 0);
 }
 
 pub fn getSwapchainBackbuffer(_: *DiligentBackend, h: types.SwapchainHandle) types.RenderTargetHandle {
+    const z = PerfCategory.beginZone(@src(), "Get swapchain backbuffer");
+    defer PerfCategory.endZone(z);
+
     const swapchain: graphics.Swapchain = .{ .raw = @ptrCast(@alignCast(h)) };
     const backbuffer = swapchain.getCurrentBackBufferRTV();
     return @ptrCast(backbuffer.raw);
 }
 
 pub fn destroySwapchain(_: *DiligentBackend, h: types.SwapchainHandle) void {
+    const z = PerfCategory.beginZone(@src(), "Destroy swapchain");
+    defer PerfCategory.endZone(z);
+
     const swapchain: graphics.Swapchain = .{ .raw = @ptrCast(@alignCast(h)) };
     swapchain.release();
 }
@@ -731,6 +810,9 @@ pub fn destroySwapchain(_: *DiligentBackend, h: types.SwapchainHandle) void {
 // Misc
 
 pub fn imageGetRtv(_: *DiligentBackend, h: types.ImageHandle) ?types.RenderTargetHandle {
+    const z = PerfCategory.beginZone(@src(), "Get image render target view");
+    defer PerfCategory.endZone(z);
+
     const tex: graphics.Texture = .{ .raw = @ptrCast(@alignCast(h)) };
     const view = tex.getDefaultView(.render_target) orelse return null;
 
@@ -738,6 +820,9 @@ pub fn imageGetRtv(_: *DiligentBackend, h: types.ImageHandle) ?types.RenderTarge
 }
 
 pub fn imageGetDsv(_: *DiligentBackend, h: types.ImageHandle) ?types.DepthTargetHandle {
+    const z = PerfCategory.beginZone(@src(), "Get image depth stencil view");
+    defer PerfCategory.endZone(z);
+
     const tex: graphics.Texture = .{ .raw = @ptrCast(@alignCast(h)) };
     const view = tex.getDefaultView(.depth_stencil) orelse return null;
 

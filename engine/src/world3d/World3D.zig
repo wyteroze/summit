@@ -10,6 +10,7 @@ const math = @import("../core/math/math.zig");
 const scripting = @import("../scripting/scripting.zig");
 const render = @import("../render/render.zig");
 const gpu = @import("../gpu/gpu.zig");
+const Perf = @import("../perf/Perf.zig");
 pub const types = @import("types.zig");
 pub const collect = @import("collect.zig");
 pub const Physics = @import("physics/Physics.zig");
@@ -32,6 +33,7 @@ pub const ComponentIds = struct {
     physics_body: Ecs.ComponentId,
 };
 
+const PerfCategory = Perf.Category("World3D");
 const World3D = @This();
 allocator: std.mem.Allocator,
 world: *Ecs.World,
@@ -91,6 +93,9 @@ pub fn deinit(self: *World3D) void {
 }
 
 pub fn update(self: *World3D, dt: f32) void {
+    const z = PerfCategory.beginZone(@src(), "Update");
+    defer PerfCategory.endZone(z);
+
     self.physics.reconcile(dt) catch |e|
         std.log.err("Physics.reconcile() failed: {t}", .{e});
     self.physics.step(dt);

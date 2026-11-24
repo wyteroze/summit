@@ -6,6 +6,7 @@ const Filesystem = @import("../filesystem/Filesystem.zig");
 const bind = @import("../scripting/bind/bind.zig");
 const render = @import("../render/render.zig");
 const Uri = @import("../core/Uri.zig");
+const Perf = @import("../perf/Perf.zig");
 pub const AssetData = @import("AssetData.zig");
 pub const types = @import("types.zig");
 
@@ -131,6 +132,7 @@ pub const AssetEntry = struct {
 };
 
 const hash_seed = 1337;
+const PerfCategory = Perf.Category("Assets");
 
 const Assets = @This();
 io: std.Io,
@@ -158,6 +160,9 @@ pub fn deinit(self: *Assets) void {
 }
 
 pub fn load(self: *Assets, uri: []const u8) !AssetHandle {
+    const z = PerfCategory.beginZone(@src(), "Load asset");
+    defer PerfCategory.endZone(z);
+
     // TODO: Probably hash uri *and* stat, so if someone mounts a directory,
     // loads asset, then unmounts it and mounts a new directory ands loads a file with the same name,
     // it won't be incorrectly cached. Or something like that.
@@ -177,6 +182,9 @@ pub fn load(self: *Assets, uri: []const u8) !AssetHandle {
 }
 
 pub fn upload(self: *Assets, handle: AssetHandle, upload_ctx: UploadContext) !void {
+    const z = PerfCategory.beginZone(@src(), "Upload asset to GPU");
+    defer PerfCategory.endZone(z);
+
     const entry = self.slots.getPtr(handle.id) orelse return error.InvalidHandle;
     if (entry.gpu_data != null) {
         entry.gpu_data_refcount.? += 1;
@@ -195,6 +203,9 @@ pub fn upload(self: *Assets, handle: AssetHandle, upload_ctx: UploadContext) !vo
 }
 
 pub fn tick(self: *Assets, now: std.Io.Timestamp) void {
+    const z = PerfCategory.beginZone(@src(), "Asset tick");
+    defer PerfCategory.endZone(z);
+
     if (self.last_purge.addDuration(purge_rate).compare(.gt, now)) return;
 
     var it = self.slots.iterator();

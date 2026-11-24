@@ -2,11 +2,13 @@
 
 const std = @import("std");
 const core = @import("../../core/core.zig");
+const Perf = @import("../../perf/Perf.zig");
 const math = core.math;
 const pass = @import("pass.zig");
 const gpu = @import("../../gpu/gpu.zig");
 const resource = @import("../resource.zig");
 
+const PerfCategory = Perf.Category("Renderer.DepthPrepassPass");
 const DepthPrepassPass = @This();
 pipeline: gpu.GpuDevice.GpuPipeline,
 shader: gpu.GpuDevice.GpuShader,
@@ -43,6 +45,9 @@ pub fn init(gpu_device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader) !DepthP
 }
 
 pub fn execute(self: *DepthPrepassPass, ctx: pass.PassContext) void {
+    const z = PerfCategory.beginZone(@src(), "Execute");
+    defer PerfCategory.endZone(z);
+
     const depth_handle = ctx.resources.get(resource.depth_buffer, .depth_target) orelse @panic("depth_buffer resource is missing!");
     ctx.device.beginPass(.{
         .clear_depth = 0.0,

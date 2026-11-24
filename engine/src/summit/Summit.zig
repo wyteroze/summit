@@ -23,6 +23,7 @@ const Windowing = engine.Windowing;
 const Assets = engine.Assets;
 const World3D = engine.World3D;
 const Filesystem = engine.Filesystem;
+const Perf = engine.Perf;
 
 var instantiated: *Summit = undefined;
 pub fn singleton() *Summit {
@@ -54,6 +55,7 @@ windowing: Windowing,
 platform: Platform,
 world_3d: World3D,
 filesystem: Filesystem,
+perf: Perf,
 
 pub fn init(self: *Summit, p_init: std.process.Init) !void {
     instantiated = self;
@@ -78,6 +80,9 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     self.filesystem = .init(try self.getAlloc("Filesystem"));
     errdefer self.filesystem.deinit();
     try self.registerDefaultMounts(project_path.?);
+
+    self.perf.init(io, try self.getAlloc("Perf"), &self.filesystem);
+    errdefer self.perf.deinit();
 
     try self.scheduler.init(try self.getAlloc("Scheduler"), io, &self.os);
     errdefer self.scheduler.deinit();
@@ -136,6 +141,7 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
         .windowing = &self.windowing,
         .gizmos = &self.renderer.gizmos,
         .filesystem = &self.filesystem,
+        .perf = &self.perf,
     };
     self.runtime = try .init(try self.getAlloc("LuaRuntime"), &self.host);
     errdefer self.runtime.deinit();
@@ -161,13 +167,21 @@ pub fn deinit(self: *Summit) void {
     self.windowing.deinit();
     self.platform.deinit();
     self.filesystem.deinit();
+    self.perf.deinit();
     self.memory.deinit();
 }
 
 fn onPlatformEvent(self: *Summit, evt: Platform.desc.PlatformEvent) void {
     switch (evt) {
         .quit => self.running = false,
-        .keyboard_key_down => |kb| if (kb.keycode == .Equals) self.memory.dumpCategories(),
+        .keyboard_key_down => |kb| {
+            switch (kb.keycode) {
+                .Equals => self.memory.dumpCategories(),
+                .Minus => self.perf.dumpTrace("file://perfdump.json.gz") catch |e|
+                    std.log.err("Failed to dump performance trace: {t}", .{e}),
+                else => {},
+            }
+        },
         else => {},
     }
 }
@@ -194,11 +208,15 @@ fn registerDefaultMounts(self: *Summit, project_path: []const u8) !void {
     try self.filesystem.mount("cache", cache.backend(), .{ .reserved = true });
 
     // `file://` (OS file path)
-    var file = try Filesystem.Directory.open(self.io, alloc, std.Io.Dir.cwd(), "/", .{ .writable = true });
+    var file = try Filesystem.Directory.open(self.io, alloc, std.Io.Dir.cwd(), ".", .{ .writable = true });
     try self.filesystem.mount("file", file.backend(), .{ .scoped = false });
 }
 
+const PerfCategory = Perf.Category("Summit.update");
 pub fn update(self: *Summit) void {
+    const f = self.perf.beginFrame();
+    defer self.perf.endFrame(f);
+
     const p = self.memory.pushMemoryPool();
     defer self.memory.popMemoryPool(p);
 
@@ -207,10 +225,12 @@ pub fn update(self: *Summit) void {
     const dt_seconds: f32 = @floatCast(@as(f32, @floatFromInt(dt.toNanoseconds())) / std.time.ns_per_s);
     self.last_frame = start;
 
-    for (self.world_3d.getContacts()) |c| {
-        self.dispatchContact(c);
-        self.dispatchContact(c.flipped());
+    const z = PerfCategory.beginZone(@src(), "Dispatch contacts");
+    for (self.world_3d.getContacts()) |ct| {
+        self.dispatchContact(ct);
+        self.dispatchContact(ct.flipped());
     }
+    PerfCategory.endZone(z);
 
     self.audio.tick();
     self.input.tick();

@@ -3,8 +3,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const registry = @import("shaders/registry.zig");
+const Perf = @import("../perf/Perf.zig");
 const slang = @import("slang");
 
+const PerfCategory = Perf.Category("Gpu.ShaderCompiler");
 const ShaderCompiler = @This();
 
 pub const TargetKind = enum {
@@ -58,6 +60,9 @@ pub fn compileStage(
     entrypoint: [:0]const u8,
     target: TargetKind,
 ) !CompileResult {
+    const z = PerfCategory.beginZone(@src(), "Compile shader stage");
+    PerfCategory.endZone(z);
+
     var diag: slang.Diagnostics = .{};
     defer diag.deinit();
 

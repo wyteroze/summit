@@ -6,6 +6,7 @@ const RenderGraph = @import("../RenderGraph.zig");
 const resource = @import("../resource.zig");
 const pass = @import("pass.zig");
 const core = @import("../../core/core.zig");
+const Perf = @import("../../perf/Perf.zig");
 const render_types = @import("../types.zig");
 const text = @import("../text/text.zig");
 const math = core.math;
@@ -43,6 +44,7 @@ const GpuPainterParams = extern struct {
     }
 };
 
+const PerfCategory = Perf.Category("Renderer.UiPass");
 const UiPass = @This();
 ui_pipeline: gpu.GpuDevice.GpuPipeline,
 ui_shader: gpu.GpuDevice.GpuShader,
@@ -131,8 +133,17 @@ pub fn init(device: *gpu.GpuDevice, ui_shader: gpu.GpuDevice.GpuShader, painter_
             .usage = .dynamic,
             .size = @sizeOf(GpuPainterParams),
         }),
-        .painter_vbuf = try device.createBuffer(.{ .name = "Painter vertex buffer", .usage = .dynamic, .size = initial_vertex_bytes }),
-        .painter_ibuf = try device.createBuffer(.{ .name = "Painter index buffer", .type = .index, .usage = .dynamic, .size = initial_index_bytes }),
+        .painter_vbuf = try device.createBuffer(.{
+            .name = "Painter vertex buffer",
+            .usage = .dynamic,
+            .size = initial_vertex_bytes,
+        }),
+        .painter_ibuf = try device.createBuffer(.{
+            .name = "Painter index buffer",
+            .type = .index,
+            .usage = .dynamic,
+            .size = initial_index_bytes,
+        }),
     };
 }
 
@@ -153,6 +164,9 @@ pub fn deinit(self: *UiPass, allocator: std.mem.Allocator) void {
 }
 
 fn execute(self: *UiPass, ctx: pass.PassContext) void {
+    const z = PerfCategory.beginZone(@src(), "Execute");
+    defer PerfCategory.endZone(z);
+
     const size = ctx.view.viewport_size;
     const scale = ctx.view.scale;
     const items = ctx.scene.ui_items;

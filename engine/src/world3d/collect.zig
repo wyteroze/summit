@@ -6,9 +6,11 @@ const Assets = @import("../assets/Assets.zig");
 const math = @import("../core/math/math.zig");
 const render = @import("../render/render.zig");
 const gpu = @import("../gpu/gpu.zig");
+const Perf = @import("../perf/Perf.zig");
 const World3D = @import("World3D.zig");
 const types = @import("types.zig");
 
+const PerfCategory = Perf.Category("World3D");
 pub const Defaults = struct {
     quad: gpu.types.GpuMesh,
     image: gpu.GpuDevice.GpuImage,
@@ -30,6 +32,8 @@ fn quatOr(w: *Ecs.World, e: Ecs.Entity, cid: Ecs.ComponentId, default: math.Quat
 
 /// Collects all lights and converts them to `GpuLight`'s.
 pub fn lights(self: *World3D, allocator: std.mem.Allocator) ![]gpu.types.GpuLight {
+    const z = PerfCategory.beginZone(@src(), "Collect lights");
+    defer PerfCategory.endZone(z);
     const w = self.world;
     const cids = self.component_ids;
 
@@ -64,6 +68,8 @@ pub fn lights(self: *World3D, allocator: std.mem.Allocator) ![]gpu.types.GpuLigh
 
 /// Collects all visible objects and returns them as `RenderObject`'s.
 pub fn objects(self: *World3D, allocator: std.mem.Allocator, defaults: Defaults) ![]render.types.RenderObject {
+    const z = PerfCategory.beginZone(@src(), "Collect objects");
+    defer PerfCategory.endZone(z);
     const w = self.world;
     const cids = self.component_ids;
 

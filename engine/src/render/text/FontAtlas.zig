@@ -5,6 +5,7 @@ const gpu = @import("../../gpu/gpu.zig");
 const text = @import("text.zig");
 const math = @import("../../core/math/math.zig");
 const Assets = @import("../../assets/Assets.zig");
+const Perf = @import("../../perf/Perf.zig");
 
 pub const GlyphInfo = struct {
     uv_pos: [2]f32,
@@ -14,6 +15,7 @@ pub const GlyphInfo = struct {
     advance: f32,
 };
 
+const PerfCategory = Perf.Category("Renderer.Text");
 const FontAtlas = @This();
 texture: gpu.GpuDevice.GpuImage,
 sampler: gpu.GpuDevice.GpuSampler,
@@ -32,6 +34,9 @@ pub fn deinit(self: FontAtlas) void {
 }
 
 pub fn bake(allocator: std.mem.Allocator, name: [:0]const u8, device: *gpu.GpuDevice, font: Assets.types.Font) !FontAtlas {
+    const z = PerfCategory.beginZone(@src(), "Bake FontAtlas");
+    defer PerfCategory.endZone(z);
+
     var max_w: u32 = 0;
     var max_h: u32 = 0;
     for (font.glyphs) |g| {

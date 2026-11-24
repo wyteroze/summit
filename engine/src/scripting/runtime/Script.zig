@@ -8,10 +8,12 @@ const core = @import("../../core/core.zig");
 const Ecs = @import("../../ecs/Ecs.zig");
 const bind = @import("../bind/bind.zig");
 const types = @import("../../assets/types.zig");
+const Perf = @import("../../perf/Perf.zig");
 const Lua = zlua.Lua;
 
 pub const Lifecycle = enum { init, update, deinit };
 
+const PerfCategory = Perf.Category("scripting.Runtime.Script");
 const Script = @This();
 source: types.ScriptSource,
 arena: std.heap.ArenaAllocator,
@@ -227,6 +229,9 @@ pub fn setGlobal(self: *const Script, name: [:0]const u8, val: anytype) void {
 /// Calls the Lua callback for `evt` as callback(entity, ...payload).
 /// Does nothing if the callback is not implemented.
 pub fn dispatch(self: *const Script, entity: Ecs.Entity, evt: Ecs.EventCallback) void {
+    const z = PerfCategory.beginZone(@src(), "Dispatch event function");
+    defer PerfCategory.endZone(z);
+
     const ref = self.event_refs.get(std.meta.activeTag(evt)) orelse return;
     const l = self.state;
     const top = l.getTop();

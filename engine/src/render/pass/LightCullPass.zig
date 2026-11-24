@@ -4,6 +4,7 @@ const std = @import("std");
 const pass = @import("pass.zig");
 const gpu = @import("../../gpu/gpu.zig");
 const core = @import("../../core/core.zig");
+const Perf = @import("../../perf/Perf.zig");
 const resource = @import("../resource.zig");
 const Renderer = @import("../Renderer.zig");
 const math = core.math;
@@ -19,6 +20,7 @@ const CullParams = extern struct {
     _pad: [3]u32 = undefined,
 };
 
+const PerfCategory = Perf.Category("Renderer.LightCullPass");
 const LightCullPass = @This();
 compute_pipeline: gpu.GpuDevice.GpuComputePipeline,
 shader: gpu.GpuDevice.GpuShader,
@@ -48,6 +50,8 @@ pub fn init(gpu_device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader) !LightC
 }
 
 pub fn execute(self: *LightCullPass, ctx: pass.PassContext) void {
+    const z = PerfCategory.beginZone(@src(), "Execute");
+    defer PerfCategory.endZone(z);
     const depth_tex = ctx.resources.get(resource.depth_texture, .image) orelse @panic("depth_texture missing!");
     const lights_handle = ctx.resources.get(resource.lights_buffer, .storage_buffer) orelse @panic("lights_buffer missing!");
     const grid = ctx.resources.get(resource.light_grid, .storage_buffer) orelse @panic("light_grid missing!");

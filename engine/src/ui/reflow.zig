@@ -2,6 +2,7 @@
 
 const std = @import("std");
 const Ecs = @import("../ecs/Ecs.zig");
+const Perf = @import("../perf/Perf.zig");
 const math = @import("../core/math/math.zig");
 const text = @import("text.zig");
 const types = @import("types.zig");
@@ -10,6 +11,7 @@ const ComponentIds = @import("Ui.zig").ComponentIds;
 const MeasureCache = std.AutoHashMap(Ecs.Entity, math.Vec2);
 const GridDims = struct { cols: usize, rows: usize };
 const GridCell = struct { col: usize, row: usize };
+const PerfCategory = Perf.Category("Ui");
 
 pub fn reflowUi(
     world: *Ecs.World,
@@ -19,6 +21,8 @@ pub fn reflowUi(
     frame_allocator: std.mem.Allocator,
 ) void {
     var dirty: std.AutoHashMap(Ecs.Entity, void) = .init(frame_allocator);
+    const z = PerfCategory.beginZone(@src(), "Reflow");
+    defer PerfCategory.endZone(z);
 
     for (changed) |e| {
         if (!world.isEntityAlive(e)) continue;
@@ -212,6 +216,7 @@ fn arrange(
     cache: *MeasureCache,
     allocator: std.mem.Allocator,
 ) void {
+    const z = PerfCategory.beginZone(@src(), "Ensure components exist");
     if (!world.hasComponentUnchecked(entity, ids.computed_position)) world.setUnchecked(entity, ids.computed_position, math.Vec2, .zero) catch {};
     if (!world.hasComponentUnchecked(entity, ids.computed_size)) world.setUnchecked(entity, ids.computed_size, math.Vec2, .zero) catch {};
     world.setUnchecked(entity, ids.computed_position, math.Vec2, origin) catch {};
@@ -229,6 +234,7 @@ fn arrange(
     };
     const layout = layout_ptr.*;
     const children = world.getChildrenUnchecked(entity);
+    PerfCategory.endZone(z);
 
     const pad = switch (layout) {
         inline else => |l| l.padding,
@@ -252,6 +258,8 @@ fn arrangeFlex(
     cache: *MeasureCache,
     allocator: std.mem.Allocator,
 ) void {
+    const z = PerfCategory.beginZone(@src(), "Arrange generic layout");
+    defer PerfCategory.endZone(z);
     var main_sum: f32 = 0;
     var fill_count: u32 = 0;
 
@@ -324,6 +332,8 @@ fn arrangeGrid(
     cache: *MeasureCache,
     allocator: std.mem.Allocator,
 ) void {
+    const z = PerfCategory.beginZone(@src(), "Arrange grid layout");
+    defer PerfCategory.endZone(z);
     if (children.len == 0) return;
 
     const dims = gridDims(layout, children.len);

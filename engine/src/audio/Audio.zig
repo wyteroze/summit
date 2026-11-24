@@ -2,10 +2,11 @@
 
 const std = @import("std");
 const Ecs = @import("../ecs/Ecs.zig");
+const threading = @import("../core/threading/threading.zig");
 const signal = @import("../core/signal.zig");
 const Assets = @import("../assets/Assets.zig");
 const Platform = @import("../platform/Platform.zig");
-const RingBuffer = @import("RingBuffer.zig").RingBuffer;
+const Perf = @import("../perf/Perf.zig");
 pub const streaming = @import("streaming/streaming.zig");
 pub const types = @import("types.zig");
 pub const Mixer = @import("mixer/Mixer.zig");
@@ -18,8 +19,9 @@ pub const channels = 2;
 pub const chunk_frames = 512;
 pub const sample_rate = 48000; // 48khz.. duh
 pub const max_voices = 256;
+const PerfCategory = Perf.Category("Audio");
 
-pub const AudioEvents = RingBuffer(Event, 1024);
+pub const AudioEvents = threading.RingBuffer(Event, 1024);
 pub const Event = union(enum) {
     voice_started: Mixer.Voice.VoiceId,
     voice_looped: Mixer.Voice.VoiceId,
@@ -96,6 +98,8 @@ pub fn deinit(self: *Audio) void {
 }
 
 pub fn create(self: *Audio, asset: Assets.AssetHandle, owner: ?Ecs.Entity) !track.TrackHandle {
+    const z = PerfCategory.beginZone(@src(), "Create track");
+    defer PerfCategory.endZone(z);
     if (self.free_len == 0) return error.TooManyVoices;
     self.free_len -= 1;
     const index = self.free[self.free_len];
@@ -113,6 +117,8 @@ pub fn create(self: *Audio, asset: Assets.AssetHandle, owner: ?Ecs.Entity) !trac
 }
 
 pub fn start(self: *Audio, h: track.TrackHandle, params: Mixer.Voice.VoiceParams) !void {
+    const z = PerfCategory.beginZone(@src(), "Start track");
+    defer PerfCategory.endZone(z);
     const t = try h.require();
     if (self.slot_state[h.id.index] != .reserved) return error.AlreadyPlaying;
 
@@ -137,6 +143,8 @@ pub fn start(self: *Audio, h: track.TrackHandle, params: Mixer.Voice.VoiceParams
 }
 
 pub fn destroy(self: *Audio, id: Mixer.Voice.VoiceId) void {
+    const z = PerfCategory.beginZone(@src(), "Destroy track");
+    defer PerfCategory.endZone(z);
     if (!self.isAlive(id)) return;
     const index = id.index;
 
@@ -156,6 +164,8 @@ pub fn destroy(self: *Audio, id: Mixer.Voice.VoiceId) void {
 }
 
 fn release(self: *Audio, index: u16) void {
+    const z = PerfCategory.beginZone(@src(), "Release track");
+    defer PerfCategory.endZone(z);
     const t = &self.tracks[index];
     t.played.deinit();
     t.stopped.deinit();
@@ -200,6 +210,9 @@ pub fn getHandle(self: *Audio, index: u16) track.TrackHandle {
 }
 
 pub fn tick(self: *Audio) void {
+    const z = PerfCategory.beginZone(@src(), "Audio tick");
+    defer PerfCategory.endZone(z);
+
     while (self.events.pop()) |ev| switch (ev) {
         .voice_started => |id| if (self.isAlive(id)) {
             self.tracks[id.index].played.fire(.{self.getHandle(id.index)});

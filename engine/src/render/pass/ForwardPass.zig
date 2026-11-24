@@ -5,9 +5,11 @@ const pass = @import("pass.zig");
 const types = @import("../types.zig");
 const gpu = @import("../../gpu/gpu.zig");
 const core = @import("../../core/core.zig");
+const Perf = @import("../../perf/Perf.zig");
 const resource = @import("../resource.zig");
 const math = core.math;
 
+const PerfCategory = Perf.Category("Renderer.ForwardPass");
 const ForwardPass = @This();
 pipeline: gpu.GpuDevice.GpuPipeline,
 shader: gpu.GpuDevice.GpuShader,
@@ -55,6 +57,8 @@ pub fn init(gpu_device: *gpu.GpuDevice, shader: gpu.GpuDevice.GpuShader) !Forwar
 }
 
 pub fn execute(self: *ForwardPass, ctx: pass.PassContext) void {
+    const z = PerfCategory.beginZone(@src(), "Execute");
+    defer PerfCategory.endZone(z);
     const depth_handle = ctx.resources.get(resource.depth_buffer, .depth_target) orelse @panic("depth_buffer resource missing!");
     const color_handle = ctx.resources.get(resource.color_target, .render_target);
     ctx.device.beginPass(.{

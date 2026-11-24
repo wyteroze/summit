@@ -3,7 +3,9 @@
 const std = @import("std");
 const pass = @import("pass/pass.zig");
 const resource = @import("resource.zig");
+const Perf = @import("../perf/Perf.zig");
 
+const PerfCategory = Perf.Category("Renderer.RenderGraph");
 const RenderGraph = @This();
 allocator: std.mem.Allocator,
 nodes: std.ArrayList(pass.PassNode),
@@ -42,6 +44,8 @@ pub fn markExternal(self: *RenderGraph, ref: resource.ResourceRef) !void {
 }
 
 pub fn compile(self: *RenderGraph) !void {
+    const z = PerfCategory.beginZone(@src(), "Compile graph");
+    defer PerfCategory.endZone(z);
     self.sorted.clearRetainingCapacity();
 
     var producer_of: std.AutoHashMap(u64, usize) = .init(self.allocator);
@@ -139,6 +143,8 @@ pub fn compile(self: *RenderGraph) !void {
 }
 
 pub fn execute(self: *RenderGraph, ctx: pass.PassContext) void {
+    const z = PerfCategory.beginZone(@src(), "Execute graph");
+    defer PerfCategory.endZone(z);
     std.debug.assert(!self.dirty);
 
     for (self.sorted.items) |n| n.execute(ctx);

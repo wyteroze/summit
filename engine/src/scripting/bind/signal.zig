@@ -5,7 +5,9 @@ const zlua = @import("zlua");
 const bind = @import("bind.zig");
 const types = @import("types.zig");
 const signal = @import("../../core/signal.zig");
+const Perf = @import("../../perf/Perf.zig");
 
+const PerfCategory = Perf.Category("scripting.bind.signal");
 const LuaCallback = struct {
     l: *zlua.Lua,
     ref: i32,
@@ -44,6 +46,9 @@ fn freeCallback(allocator: std.mem.Allocator, ctx: *anyopaque) void {
 fn callbackWrapper(comptime S: type, comptime Mar: type) fn (*LuaCallback, S.Args) void {
     return struct {
         fn f(cb: *LuaCallback, args: S.Args) void {
+            const z = PerfCategory.beginZone(@src(), "Call lua signal callback");
+            defer PerfCategory.endZone(z);
+
             // The callback might free itself, so we copy this out.
             const l = cb.l;
 

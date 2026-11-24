@@ -13,6 +13,7 @@ const Codec = @import("../../ecs/Codec.zig");
 const render = @import("../../render/render.zig");
 const Windowing = @import("../../windowing/Windowing.zig");
 const Filesystem = @import("../../filesystem/Filesystem.zig");
+const Perf = @import("../../perf/Perf.zig");
 
 var key: u8 = 0;
 const Host = @This();
@@ -24,6 +25,7 @@ audio: *Audio,
 windowing: *Windowing,
 gizmos: *render.Gizmos,
 filesystem: *Filesystem,
+perf: *Perf,
 codecs: []const Codec = &.{},
 
 pub fn attach(self: *Host, l: *zlua.Lua) void {

@@ -5,11 +5,13 @@ const gpu = @import("../../gpu/gpu.zig");
 const resource = @import("../resource.zig");
 const pass = @import("pass.zig");
 const core = @import("../../core/core.zig");
+const Perf = @import("../../perf/Perf.zig");
 const Gizmos = @import("../Gizmos.zig");
 const math = core.math;
 
 const initial_vertex_bytes = 4096 * @sizeOf(Gizmos.Vertex);
 
+const PerfCategory = Perf.Category("Renderer.GizmoPass");
 const GizmoPass = @This();
 tested_pipeline: gpu.GpuDevice.GpuPipeline,
 overlay_pipeline: gpu.GpuDevice.GpuPipeline,
@@ -71,6 +73,9 @@ pub fn deinit(self: *GizmoPass, allocator: std.mem.Allocator) void {
 }
 
 fn execute(self: *GizmoPass, ctx: pass.PassContext) void {
+    const z = PerfCategory.beginZone(@src(), "Execute");
+    defer PerfCategory.endZone(z);
+
     const tested = ctx.scene.gizmo_tested;
     const overlay = ctx.scene.gizmo_overlay;
     const total = tested.len + overlay.len;

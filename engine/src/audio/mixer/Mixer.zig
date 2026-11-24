@@ -1,9 +1,10 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
 
 const std = @import("std");
+const threading = @import("../../core/threading/threading.zig");
 const Assets = @import("../../assets/Assets.zig");
+const Perf = @import("../../perf/Perf.zig");
 const Platform = @import("../../platform/Platform.zig");
-const RingBuffer = @import("../RingBuffer.zig").RingBuffer;
 const StreamDecoder = @import("../streaming/StreamDecoder.zig");
 const Audio = @import("../Audio.zig");
 pub const Voice = @import("Voice.zig");
@@ -15,8 +16,10 @@ pub const Command = union(enum) {
     set_params: struct { voice: Voice.VoiceId, params: Voice.VoiceParams },
     set_listener: Audio.types.AudioListener,
 };
-pub const MixerCommands = RingBuffer(Command, 1024);
+pub const MixerCommands = threading.RingBuffer(Command, 1024);
 pub const AudioEvents = Audio.AudioEvents;
+
+const PerfCategory = Perf.Category("Mixer");
 
 const Mixer = @This();
 mixer_commands: MixerCommands = .{},
@@ -27,7 +30,10 @@ temp_storage: [Audio.chunk_frames * Audio.channels]f32 = undefined,
 voices: [Audio.max_voices]Voice = @splat(.{}),
 
 pub fn init(platform: *Platform, audio_events: *AudioEvents) !Mixer {
-    return .{ .audio_events = audio_events, .platform = platform };
+    return .{
+        .audio_events = audio_events,
+        .platform = platform,
+    };
 }
 
 pub fn deinit(self: *Mixer) void {
@@ -36,7 +42,11 @@ pub fn deinit(self: *Mixer) void {
 
 pub fn streamCallback(ctx: ?*Mixer, stream: Platform.types.AudioStreamHandle, needed: usize, _: usize) void {
     const self = ctx.?;
-    while (self.mixer_commands.pop()) |c| self.doCommand(c);
+    {
+        const z = PerfCategory.beginZone(@src(), "Process pending mixer commands");
+        while (self.mixer_commands.pop()) |c| self.doCommand(c);
+        defer PerfCategory.endZone(z);
+    }
 
     const bytes_per_frame = Audio.channels * @sizeOf(f32);
     var frames_left = needed / bytes_per_frame;
@@ -46,6 +56,7 @@ pub fn streamCallback(ctx: ?*Mixer, stream: Platform.types.AudioStreamHandle, ne
         const out = self.temp_storage[0 .. n * Audio.channels];
         @memset(out, 0);
 
+        const z = PerfCategory.beginZone(@src(), "Process/mix voices");
         for (&self.voices) |*v| {
             if (!v.active) continue;
 
@@ -60,6 +71,7 @@ pub fn streamCallback(ctx: ?*Mixer, stream: Platform.types.AudioStreamHandle, ne
                 v.active = false;
             }
         }
+        PerfCategory.endZone(z);
 
         self.platform.putAudioStreamData(stream, std.mem.sliceAsBytes(out)) catch continue;
         frames_left -= n;

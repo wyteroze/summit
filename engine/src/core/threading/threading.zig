@@ -2,3 +2,4 @@
 
 pub const Deque = @import("Deque.zig").Deque;
 pub const MPMCQueue = @import("MPMCQueue.zig").MPMCQueue;
+pub const RingBuffer = @import("RingBuffer.zig").RingBuffer;

@@ -5,10 +5,12 @@ const types = @import("types.zig");
 const gpu = @import("../gpu/gpu.zig");
 const Renderer = @import("Renderer.zig");
 const Ecs = @import("../ecs/Ecs.zig");
+const Perf = @import("../perf/Perf.zig");
 
 const tile_size = Renderer.tile_size;
 const max_lights_per_tile = Renderer.max_lights_per_tile;
 
+const PerfCategory = Perf.Category("Renderer.RenderView");
 const RenderView = @This();
 id: u64,
 size: [2]u32,
@@ -69,6 +71,9 @@ pub fn deinit(self: *RenderView) void {
 }
 
 pub fn resize(self: *RenderView, size: [2]u32) !void {
+    const z = PerfCategory.beginZone(@src(), "Resize RenderView");
+    defer PerfCategory.endZone(z);
+
     if (size[0] == 0 or size[1] == 0) return;
     if (std.mem.eql(u32, &self.size, &size)) return;
     self.size = size;

@@ -10,7 +10,9 @@ const World3D = engine.World3D;
 const render = engine.render;
 const math = engine.core.math;
 const gpu = engine.gpu;
+const Perf = engine.Perf;
 
+const PerfCategory = Perf.Category("Summit.update");
 const WindowList = struct {
     id: u64,
     entity: Ecs.Entity,
@@ -26,6 +28,9 @@ const WindowLists = std.AutoHashMap(u64, WindowList);
 // Rendering
 
 pub fn renderFrame(summit: *Summit) !void {
+    const z = PerfCategory.beginZone(@src(), "Render frame");
+    defer PerfCategory.endZone(z);
+
     const world_3d = &summit.world_3d;
     const ui = &summit.ui;
     const renderer = &summit.renderer;
@@ -41,16 +46,24 @@ pub fn renderFrame(summit: *Summit) !void {
 
     var window_lists = try collectWindows(ui, allocator);
     var requests: std.ArrayList(render.types.RenderViewRequest) = .empty;
-    try collectRenderViews(world_3d, ui, renderer, allocator, .{
-        .lights = lights,
-        .objects = objects,
-    }, &window_lists, &requests);
+    {
+        const zn = PerfCategory.beginZone(@src(), "Collect RenderViews");
+        defer PerfCategory.endZone(zn);
+        try collectRenderViews(world_3d, ui, renderer, allocator, .{
+            .lights = lights,
+            .objects = objects,
+        }, &window_lists, &requests);
+    }
 
     var window_requests: std.ArrayList(render.types.RenderWindowRequest) = .empty;
     var iter = window_lists.valueIterator();
-    while (iter.next()) |wl| {
-        Ui.collect.items(ui, wl.entity, &wl.items, allocator);
-        try window_requests.append(allocator, .{ .window_id = wl.id, .ui_items = wl.items.items });
+    {
+        const zn = PerfCategory.beginZone(@src(), "Collect ui elements");
+        defer PerfCategory.endZone(zn);
+        while (iter.next()) |wl| {
+            Ui.collect.items(ui, wl.entity, &wl.items, allocator);
+            try window_requests.append(allocator, .{ .window_id = wl.id, .ui_items = wl.items.items });
+        }
     }
 
     try renderer.render(requests.items, window_requests.items);
@@ -145,6 +158,9 @@ fn rootOf(ui: *Ui, entity: Ecs.Entity) Ecs.Entity {
 // Audio
 
 pub fn submitAudio(summit: *Summit) void {
+    const z = PerfCategory.beginZone(@src(), "Submit world state to Audio");
+    defer PerfCategory.endZone(z);
+
     const world_3d = &summit.world_3d;
     const audio = &summit.audio;
     const cids = world_3d.component_ids;

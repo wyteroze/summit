@@ -1,6 +1,10 @@
 // Copyright 2026 wyteroze. Licensed under the Apache-2.0 license.
+// TODO: Move away from signals
 
 const std = @import("std");
+const Perf = @import("../perf/Perf.zig");
+
+const PerfCategory = Perf.Category("Signal");
 
 pub const Connection = struct {
     signal: *anyopaque,
@@ -34,6 +38,9 @@ pub const Dispatcher = struct {
     }
 
     pub fn flush(self: *Dispatcher) void {
+        const z = PerfCategory.beginZone(@src(), "Dispatch events");
+        defer PerfCategory.endZone(z);
+
         std.mem.swap(std.ArrayList(Pending), &self.queue, &self.draining);
         for (self.draining.items) |p| p.flush_fn(p.signal);
 
@@ -115,6 +122,8 @@ pub fn Signal(comptime ArgTypes: anytype) type {
 
         pub fn fire(self: *Self, args: Args) void {
             if (self.callbacks.items.len == 0) return;
+            const z = PerfCategory.beginZone(@src(), "Fire signal");
+            defer PerfCategory.endZone(z);
 
             self.pending.append(self.allocator, args) catch {
                 std.log.err("Signal queue out of memory, dropping event", .{});
@@ -160,6 +169,8 @@ pub fn Signal(comptime ArgTypes: anytype) type {
         }
 
         pub fn disconnect(self: *Self, id: usize) !void {
+            const z = PerfCategory.beginZone(@src(), "Disconnect callback");
+            defer PerfCategory.endZone(z);
             for (self.callbacks.items, 0..) |*cb, i| {
                 if (cb.id != id or !cb.active) continue;
                 if (cb.dtor) |d| d(self.allocator, cb.ctx);

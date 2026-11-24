@@ -9,6 +9,7 @@ const Uri = @import("../core/Uri.zig");
 pub const File = @import("File.zig");
 pub const Mount = @import("Mount.zig");
 pub const Directory = @import("builtin/Directory.zig");
+pub const FileSink = @import("FileSink.zig");
 
 const Filesystem = @This();
 allocator: std.mem.Allocator,

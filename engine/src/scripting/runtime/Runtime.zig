@@ -9,10 +9,12 @@ const Assets = @import("../../assets/Assets.zig");
 const Input = @import("../../input/Input.zig");
 const Ui = @import("../../ui/Ui.zig");
 const Audio = @import("../../audio/Audio.zig");
+const Perf = @import("../../perf/Perf.zig");
 pub const Script = @import("Script.zig");
 
 pub const ScriptHandle = struct { id: u64 };
 
+const PerfCategory = Perf.Category("scripting.Runtime");
 const Runtime = @This();
 state: *zlua.Lua,
 binder: bind.Binder(bind.api),
@@ -26,7 +28,11 @@ pub fn init(alloc: std.mem.Allocator, host: *bind.Host) !Runtime {
     var binder: bind.Binder(bind.api) = .init(l, host);
     binder.install();
 
-    return .{ .state = l, .binder = binder, .scripts = .init(alloc) };
+    return .{
+        .state = l,
+        .binder = binder,
+        .scripts = .init(alloc),
+    };
 }
 
 pub fn deinit(self: *Runtime) void {
@@ -40,6 +46,9 @@ pub fn deinit(self: *Runtime) void {
 }
 
 pub fn loadScript(self: *Runtime, name: ?[:0]const u8, source: Assets.types.ScriptSource) !ScriptHandle {
+    const z = PerfCategory.beginZone(@src(), "Load script");
+    defer PerfCategory.endZone(z);
+
     const thread = self.state.newThread();
     thread.sandboxThread();
 
@@ -59,18 +68,26 @@ pub fn getScript(self: *Runtime, handle: ScriptHandle) !*Script {
 }
 
 pub fn instantiateSystem(self: *Runtime, handle: ScriptHandle, world: *Ecs.World) !Ecs.SystemRegistry.SystemHandle {
+    const z = PerfCategory.beginZone(@src(), "Instantiate system script");
+    defer PerfCategory.endZone(z);
     return (try self.getScript(handle)).instantiateSystem(world);
 }
 
 pub fn instantiateEntity(self: *Runtime, handle: ScriptHandle, entity: Ecs.Entity) !void {
+    const z = PerfCategory.beginZone(@src(), "Instantiate entity script");
+    defer PerfCategory.endZone(z);
     try (try self.getScript(handle)).instantiateEntity(entity);
 }
 
 pub fn setGlobal(self: *Runtime, handle: ScriptHandle, name: [:0]const u8, val: anytype) !void {
+    const z = PerfCategory.beginZone(@src(), "Set Lua global");
+    defer PerfCategory.endZone(z);
     (try self.getScript(handle)).setGlobal(name, val);
 }
 
 pub fn callFunction(self: *Runtime, handle: ScriptHandle, name: [:0]const u8, comptime ResultTypes: []const type, args: anytype) !@Tuple(ResultTypes) {
+    const z = PerfCategory.beginZone(@src(), "Call Lua function");
+    defer PerfCategory.endZone(z);
     return (try self.getScript(handle)).callFunction(name, ResultTypes, args);
 }
 
@@ -79,6 +96,8 @@ pub fn allocator(self: Runtime) std.mem.Allocator {
 }
 
 pub fn gcCollect(self: Runtime) void {
+    const z = PerfCategory.beginZone(@src(), "Forced garbage collection cycle");
+    defer PerfCategory.endZone(z);
     return self.state.gcCollect();
 }
 
@@ -90,7 +109,10 @@ pub fn allocationRate(self: Runtime) ?i64 {
     return self.state.allocationRate();
 }
 
-pub fn traceback(self: Runtime) [:0]const u8 {
+pub fn traceback(self: *Runtime) [:0]const u8 {
+    const z = PerfCategory.beginZone(@src(), "Generate traceback");
+    defer PerfCategory.endZone(z);
+
     self.state.traceback(self.state, null, 0);
     defer self.state.pop(1);
 

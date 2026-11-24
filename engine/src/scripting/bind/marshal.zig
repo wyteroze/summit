@@ -5,10 +5,16 @@ const zlua = @import("zlua");
 const names = @import("names.zig");
 const types = @import("types.zig");
 const signal = @import("signal.zig");
+const Perf = @import("../../perf/Perf.zig");
+
+const PerfCategory = Perf.Category("scripting.Marshal");
 
 pub fn Marshal(comptime Reg: type) type {
     return struct {
         pub fn parse(comptime T: type, l: *zlua.Lua, idx: i32) T {
+            const z = PerfCategory.beginZone(@src(), "Parse type " ++ @typeName(T) ++ " from Lua");
+            defer PerfCategory.endZone(z);
+
             @setEvalBranchQuota(1_000_000);
             if (comptime ptrToValue(T)) |V| return parseValue(V, l, idx);
             if (comptime Reg.kindOf(T)) |k| switch (k) {
@@ -43,9 +49,12 @@ pub fn Marshal(comptime Reg: type) type {
         }
 
         pub fn push(l: *zlua.Lua, v: anytype) void {
+            const T = @TypeOf(v);
+            const z = PerfCategory.beginZone(@src(), "Push type " ++ @typeName(T) ++ " to Lua");
+            defer PerfCategory.endZone(z);
+
             @setEvalBranchQuota(1_000_000);
 
-            const T = @TypeOf(v);
             if (comptime Reg.kindOf(T)) |k| switch (k) {
                 .value => return pushValue(l, v),
                 .handle => return pushHandle(l, v),

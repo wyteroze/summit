@@ -5,6 +5,7 @@ const zphysics = @import("zphysics");
 const core = @import("../../core/core.zig");
 const math = @import("../../core/math/math.zig");
 const Ecs = @import("../../ecs/Ecs.zig");
+const Perf = @import("../../perf/Perf.zig");
 const World3D = @import("../World3D.zig");
 const types = World3D.types;
 const BroadphaseLayerInterface = @import("broadphase_layer_interface.zig").BroadphaseLayerInterface;
@@ -91,6 +92,7 @@ pub const RaycastHit = struct {
     distance: f32,
 };
 
+const PerfCategory = Perf.Category("World3D.Physics");
 const Physics = @This();
 allocator: std.mem.Allocator,
 frame_allocator: std.heap.ArenaAllocator,
@@ -179,6 +181,8 @@ pub fn deinit(self: *Physics) void {
 }
 
 pub fn reconcile(self: *Physics, dt: f32) !void {
+    const z = PerfCategory.beginZone(@src(), "Reconcile physics objects to Jolt");
+    defer PerfCategory.endZone(z);
     const cids = self.getWorld().component_ids;
     const w = self.getWorld().world;
     self.contacts.clearRetainingCapacity();
@@ -204,16 +208,20 @@ pub fn reconcile(self: *Physics, dt: f32) !void {
     var iter = pending.valueIterator();
     while (iter.next()) |p| {
         self.apply(p.*, dt) catch |err|
-            std.log.err("Physics sync failed for entity {d}: {t}", .{ p.*.entity.toU64(), err });
+            std.log.err("Physics reconcile failed for entity {d}: {t}", .{ p.*.entity.toU64(), err });
     }
 
     if (self.added_bodies >= 64) {
+        const zn = PerfCategory.beginZone(@src(), "Optimize broadphase");
+        defer PerfCategory.endZone(zn);
         self.physics_system.optimizeBroadPhase();
         self.added_bodies = 0;
     }
 }
 
 pub fn step(self: *Physics, frame_dt: f32) void {
+    const z = PerfCategory.beginZone(@src(), "Physics step");
+    defer PerfCategory.endZone(z);
     self.accumulator = @min(self.accumulator + frame_dt, fixed_dt * max_substeps);
     while (self.accumulator >= fixed_dt) : (self.accumulator -= fixed_dt) {
         self.physics_system.update(fixed_dt, .{ .collision_steps = 1 }) catch |err| {
@@ -224,6 +232,8 @@ pub fn step(self: *Physics, frame_dt: f32) void {
 }
 
 pub fn pull(self: *Physics) !void {
+    const z = PerfCategory.beginZone(@src(), "Pull physics objects from Jolt");
+    defer PerfCategory.endZone(z);
     const w3d = self.getWorld();
     const cids = w3d.component_ids;
     const w = w3d.world;
@@ -270,6 +280,8 @@ pub fn pull(self: *Physics) !void {
 }
 
 pub fn raycast(self: *Physics, origin: math.Vec3, dir: math.Vec3, opts: RaycastOptions) ?RaycastHit {
+    const z = PerfCategory.beginZone(@src(), "Raycast");
+    defer PerfCategory.endZone(z);
     const w = self.getWorld().world;
     const dir_norm = dir.normalize();
     if (dir.eq(.zero)) return null;
@@ -410,6 +422,8 @@ fn destroyBody(self: *Physics, e: Ecs.Entity) void {
 }
 
 fn createBody(self: *Physics, e: Ecs.Entity) !void {
+    const z = PerfCategory.beginZone(@src(), "Create physics body");
+    defer PerfCategory.endZone(z);
     const w3d = self.getWorld();
     const cids = w3d.component_ids;
     const w = w3d.world;
@@ -486,6 +500,9 @@ fn getBodyInfo(self: *Physics, id: zphysics.BodyId) ?struct { zphysics.MotionTyp
 }
 
 fn apply(self: *Physics, p: Pending, dt: f32) !void {
+    const z = PerfCategory.beginZone(@src(), "Sync entity changes");
+    defer PerfCategory.endZone(z);
+
     const w3d = self.getWorld();
     const cids = w3d.component_ids;
     const w = w3d.world;
