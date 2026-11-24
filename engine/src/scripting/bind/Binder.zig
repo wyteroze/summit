@@ -7,6 +7,7 @@ const types = @import("types.zig");
 const names = @import("names.zig");
 const recipes = @import("recipes.zig");
 const instance = @import("instance.zig");
+const require = @import("require.zig");
 const InstanceEntry = instance.InstanceEntry;
 const Host = @import("Host.zig");
 const Ecs = @import("../../ecs/Ecs.zig");
@@ -73,18 +74,18 @@ pub fn Binder(comptime api: anytype) type {
             l.newTable();
             inline for (api) |entry| if (entry.kind == .module) {
                 l.newTable();
-                std.log.debug("---- Registered module '{s}' with entries:", .{entry.name});
                 fillTable(l, entry.impl.recipe.members, true);
                 installModuleProps(l, entry.impl.recipe.members);
-                std.log.debug("---- Module entries done", .{});
                 l.setReadonly(-1, true);
 
                 // Builtin modules in Luau are prefixed by the @ symbol.
                 l.setField(-2, "@" ++ entry.name);
             };
-            l.setReadonly(-1, true);
 
-            l.pushClosure(zlua.wrap(require), 1, "require");
+            l.pushValue(-1);
+            l.setField(zlua.registry_index, require.require_cache_key);
+
+            l.pushClosure(zlua.wrap(require.require), 1, "require");
             l.setGlobal("require");
         }
 
@@ -189,17 +190,6 @@ pub fn Binder(comptime api: anytype) type {
                 std.log.debug("{s} '{s}'", .{ @tagName(m.kind), m.name });
                 std.debug.assert(l.getTop() == top);
             }
-        }
-
-        fn require(l: *zlua.Lua) i32 {
-            const name = l.checkString(1);
-
-            const loaded = zlua.Lua.upvalueIndex(1);
-            if (l.getField(loaded, name) == .nil) {
-                l.raiseErrorStr("module '%s' not found", .{name.ptr});
-            }
-
-            return 1;
         }
 
         fn pushTypeTable(l: *zlua.Lua, comptime m: types.Member) void {

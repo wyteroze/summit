@@ -2,6 +2,7 @@
 
 local input = require("@input")
 local windowing = require("@windowing")
+local testModule = require("./testing")
 
 local speed = 1
 local yaw, pitch = 0, 0
@@ -38,6 +39,8 @@ function flyCam.init()
     input.mice.scrolled:connect(function(delta, consumed, win)
         speed = math.max(0, speed + delta.y)
     end)
+
+    testModule.sayHi()
 end
 
 function flyCam.update(entity: Entity, dt: number)

@@ -7,6 +7,7 @@ const Host = @import("../bind/bind.zig").Host;
 const core = @import("../../core/core.zig");
 const Ecs = @import("../../ecs/Ecs.zig");
 const bind = @import("../bind/bind.zig");
+const errors = bind.errors;
 const types = @import("../../assets/types.zig");
 const Perf = @import("../../perf/Perf.zig");
 const Lua = zlua.Lua;
@@ -15,7 +16,7 @@ pub const Lifecycle = enum { init, update, deinit };
 
 const PerfCategory = Perf.Category("scripting.Runtime.Script");
 const Script = @This();
-source: types.ScriptSource,
+uri: []const u8,
 arena: std.heap.ArenaAllocator,
 main: *Lua,
 state: *Lua,
@@ -26,28 +27,33 @@ lifecycle_refs: std.enums.EnumArray(Lifecycle, ?i32) = .initFill(null),
 event_refs: std.enums.EnumArray(Ecs.EventCallback.Tag, ?i32) = .initFill(null),
 
 pub fn init(
-    name: ?[:0]const u8,
+    uri: []const u8,
     main: *Lua,
     state: *Lua,
     thread_ref: i32,
-    source: types.ScriptSource,
+    source: []const u8,
+    src_type: enum { source, bytecode },
     binder: bind.Binder(bind.api),
 ) !Script {
     // compile and run script
-    const bytecode = switch (source.type) {
-        .text => try zlua.compile(state.allocator(), source.data, .{}),
-        .bytecode => source.data,
+    const bytecode = switch (src_type) {
+        .source => try zlua.compile(state.allocator(), source, .{}),
+        .bytecode => source,
     };
-    defer if (source.type == .text) state.allocator().free(bytecode);
+    defer if (src_type == .source) state.allocator().free(bytecode);
 
     if (bytecode.len > 0 and bytecode[0] == 0) {
-        std.log.err("Script compilation failed: {s}", .{bytecode[1..]});
+        errors.log(state.toString(-1) catch "unknown error", uri);
+        state.pop(1);
         return error.ScriptCompilationFailed;
     }
 
-    try state.loadBytecode(name orelse "Unnamed script", bytecode);
+    const chunk = try state.allocator().printSentinel("={s}", .{uri}, 0);
+    defer state.allocator().free(chunk);
+
+    try state.loadBytecode(chunk, bytecode);
     state.protectedCall(.{ .args = 0, .results = 1 }) catch {
-        std.log.err("Failed to initialize script: {s}", .{state.toString(-1) catch unreachable});
+        errors.log(state.toString(-1) catch "unknown error", uri);
         state.pop(1);
 
         return error.ScriptInitFailed;
@@ -66,9 +72,13 @@ pub fn init(
     state.setReadonly(-1, true);
     state.pop(1);
 
+    var arena: std.heap.ArenaAllocator = .init(state.allocator());
+    errdefer arena.deinit();
+    const uri_dupe = try arena.allocator().dupe(u8, uri);
+
     return .{
-        .source = source,
-        .arena = .init(state.allocator()),
+        .uri = uri_dupe,
+        .arena = arena,
         .main = main,
         .state = state,
         .thread_ref = thread_ref,
@@ -308,23 +318,6 @@ fn pushMsgHandler(self: *const Script) i32 {
 }
 
 fn luaErr(self: *const Script) void {
-    const msg = self.state.toString(-1) catch "unknown error";
-    var formatted = false;
-
-    // find the ": "
-    if (std.mem.indexOf(u8, msg, ": ")) |msg_sep| {
-        // search backwards in order to find the separator of file and line
-        if (std.mem.findScalarLast(u8, msg[0..msg_sep], ':')) |line_sep| {
-            const line = msg[line_sep + 1 .. msg_sep];
-            const err_msg = msg[msg_sep + 2 ..]; // skip ":"
-
-            // todo: change second format arg to script path, I removed it without
-            // knowing this needed it and I'm too lazy to add it back
-            std.log.err("{s}         in {s} (line {s})", .{ err_msg, "script", line });
-            formatted = true;
-        }
-    }
-
-    if (!formatted) std.log.err("{s}", .{msg});
-    self.state.pop(1);
+    defer self.state.pop(1);
+    errors.log(self.state.toString(-1) catch "unknown error", self.uri);
 }

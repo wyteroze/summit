@@ -45,9 +45,12 @@ pub fn deinit(self: *Runtime) void {
     self.state.deinit();
 }
 
-pub fn loadScript(self: *Runtime, name: ?[:0]const u8, source: Assets.types.ScriptSource) !ScriptHandle {
+pub fn loadScript(self: *Runtime, uri: []const u8) !ScriptHandle {
     const z = PerfCategory.beginZone(@src(), "Load script");
     defer PerfCategory.endZone(z);
+
+    const src = try self.binder.host.filesystem.read(self.allocator(), uri);
+    defer self.allocator().free(src);
 
     const thread = self.state.newThread();
     thread.sandboxThread();
@@ -59,7 +62,8 @@ pub fn loadScript(self: *Runtime, name: ?[:0]const u8, source: Assets.types.Scri
     const id = self.next_script_id;
     self.next_script_id +%= 1;
 
-    try self.scripts.put(id, try .init(name, self.state, thread, thread_ref, source, self.binder));
+    try self.scripts.put(id, try .init(uri, self.state, thread, thread_ref, src, .source, self.binder));
+
     return .{ .id = id };
 }
 

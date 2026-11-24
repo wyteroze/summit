@@ -30,15 +30,6 @@ pub const Image = struct {
     }
 };
 
-pub const ScriptSource = struct {
-    type: enum { text, bytecode },
-    data: []const u8,
-
-    pub fn deinit(self: *const ScriptSource, allocator: std.mem.Allocator) void {
-        allocator.free(self.data);
-    }
-};
-
 pub const Glyph = struct {
     codepoint: u32,
     size: [2]u32,

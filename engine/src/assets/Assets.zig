@@ -60,7 +60,6 @@ pub const AssetHandle = struct {
     pub fn cpuGet(self: AssetHandle, comptime asset_type: AssetData.AssetType) !switch (asset_type) {
         .mesh => types.Mesh,
         .image => types.Image,
-        .script_source => types.ScriptSource,
         .font => types.Font,
         .audio => types.AudioStream,
     } {
@@ -75,7 +74,7 @@ pub const AssetHandle = struct {
         .mesh => gpu.types.GpuMesh,
         .image => gpu.GpuDevice.GpuImage,
         .font => render.text.FontAtlas,
-        .script_source, .audio => unreachable,
+        else => unreachable,
     } {
         const data = try self.assets.getGpuData(self.id);
         const a_type = @as(AssetData.AssetType, data);
@@ -89,7 +88,7 @@ pub const AssetHandle = struct {
         .mesh => gpu.types.GpuMesh,
         .image => gpu.GpuDevice.GpuImage,
         .font => render.text.FontAtlas,
-        .script_source, .audio => unreachable,
+        else => unreachable,
     } {
         if (!self.hasGpuData()) try self.upload(upload_ctx);
         return self.gpuGet(asset_type);

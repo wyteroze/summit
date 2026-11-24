@@ -208,9 +208,10 @@ pub const DebugInfo51 = struct {
             var str: [10:0]u8 = @splat(0);
             var index: u8 = 0;
 
-            inline for (std.meta.fields(Options)) |field| {
-                if (@field(options, field.name)) {
-                    str[index] = field.name[0];
+            const info = @typeInfo(Options).@"struct";
+            inline for (info.field_names) |nm| {
+                if (@field(options, nm)) {
+                    str[index] = nm[0];
                     index += 1;
                 }
             }
@@ -260,9 +261,10 @@ const DebugInfo52 = struct {
             var str: [10:0]u8 = @splat(0);
             var index: u8 = 0;
 
-            inline for (std.meta.fields(Options)) |field| {
-                if (@field(options, field.name)) {
-                    str[index] = field.name[0];
+            const info = @typeInfo(Options).@"struct";
+            inline for (info.field_names) |nm| {
+                if (@field(options, nm)) {
+                    str[index] = nm[0];
                     index += 1;
                 }
             }
@@ -317,9 +319,10 @@ const DebugInfo54 = struct {
             var str: [10:0]u8 = @splat(0);
             var index: u8 = 0;
 
-            inline for (std.meta.fields(Options)) |field| {
-                if (@field(options, field.name)) {
-                    str[index] = field.name[0];
+            const info = @typeInfo(Options).@"struct";
+            inline for (info.field_names) |nm| {
+                if (@field(options, nm)) {
+                    str[index] = nm[0];
                     index += 1;
                 }
             }
@@ -374,9 +377,10 @@ const DebugInfo55 = struct {
             var str: [10:0]u8 = @splat(0);
             var index: u8 = 0;
 
-            inline for (std.meta.fields(Options)) |field| {
-                if (@field(options, field.name)) {
-                    str[index] = field.name[0];
+            const info = @typeInfo(Options).@"struct";
+            inline for (info.field_names) |nm| {
+                if (@field(options, nm)) {
+                    str[index] = nm[0];
                     index += 1;
                 }
             }
@@ -416,9 +420,10 @@ pub const DebugInfoLuau = struct {
             var str: [10:0]u8 = @splat(0);
             var index: u8 = 0;
 
-            inline for (std.meta.fields(Options)) |field| {
-                if (@field(options, field.name)) {
-                    str[index] = field.name[0];
+            const info = @typeInfo(Options).@"struct";
+            inline for (info.field_names) |nm| {
+                if (@field(options, nm)) {
+                    str[index] = nm[0];
                     index += 1;
                 }
             }

@@ -13,7 +13,6 @@ pub const AssetType = enum {
     image,
     font,
     audio,
-    script_source,
 
     pub fn uploadable(self: AssetType) bool {
         return switch (self) {
@@ -33,7 +32,6 @@ pub const CpuAssetData = union(AssetType) {
     image: types.Image,
     font: types.Font,
     audio: types.AudioStream,
-    script_source: types.ScriptSource,
 
     pub fn deinit(self: CpuAssetData, allocator: std.mem.Allocator) void {
         switch (self) {
@@ -63,12 +61,6 @@ pub const CpuAssetData = union(AssetType) {
             return .{ .image = try importers.image_zigimg.importImage(allocator, io, .{ .bytes = bytes }) };
         }
 
-        if (std.mem.eql(u8, ext, ".lua") or std.mem.eql(u8, ext, ".luau")) {
-            return .{ .script_source = .{ .type = .text, .data = try allocator.dupe(u8, bytes) } };
-        } else if (std.mem.eql(u8, ext, ".luac") or std.mem.eql(u8, ext, ".luauc")) {
-            return .{ .script_source = .{ .type = .bytecode, .data = try allocator.dupe(u8, bytes) } };
-        }
-
         if (std.mem.eql(u8, ext, ".ttf")) {
             return .{ .font = try importers.font_freetype.importFont(allocator, .{ .bytes = bytes }, .{}) };
         }
@@ -92,7 +84,6 @@ pub const GpuAssetData = union(AssetType) {
 
     // Not supported
     audio: noreturn,
-    script_source: noreturn,
 
     pub fn fromCpuData(from: CpuAssetData, name: []const u8, allocator: std.mem.Allocator, gpu_device: *gpu.GpuDevice, upload_ctx: Assets.UploadContext) !GpuAssetData {
         switch (from) {

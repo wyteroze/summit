@@ -24,6 +24,7 @@ const Assets = engine.Assets;
 const World3D = engine.World3D;
 const Filesystem = engine.Filesystem;
 const Perf = engine.Perf;
+const Packages = engine.Packages;
 
 var instantiated: *Summit = undefined;
 pub fn singleton() *Summit {
@@ -56,6 +57,7 @@ platform: Platform,
 world_3d: World3D,
 filesystem: Filesystem,
 perf: Perf,
+packages: Packages,
 
 pub fn init(self: *Summit, p_init: std.process.Init) !void {
     instantiated = self;
@@ -132,6 +134,9 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
     try self.audio.init(io, try self.getAlloc("Audio"), &self.platform);
     errdefer self.audio.deinit();
 
+    self.packages = .init(try self.getAlloc("Packages"), &self.filesystem);
+    errdefer self.packages.deinit();
+
     self.host = .{
         .ecs = &self.ecs,
         .assets = &self.assets,
@@ -142,6 +147,7 @@ pub fn init(self: *Summit, p_init: std.process.Init) !void {
         .gizmos = &self.renderer.gizmos,
         .filesystem = &self.filesystem,
         .perf = &self.perf,
+        .packages = &self.packages,
     };
     self.runtime = try .init(try self.getAlloc("LuaRuntime"), &self.host);
     errdefer self.runtime.deinit();
@@ -162,6 +168,7 @@ pub fn deinit(self: *Summit) void {
     self.input.deinit();
     self.scheduler.deinit();
     self.runtime.deinit();
+    self.packages.deinit();
     self.assets.deinit();
     self.gpu_device.deinit();
     self.windowing.deinit();
@@ -267,16 +274,12 @@ pub fn setupTestScene(self: *Summit) !void {
 
     // Systems
     {
-        const src = try self.assets.load("asset://systems/fly_cam.luau");
-        defer src.cpuRelease();
-        const script = try self.runtime.loadScript("fly_cam.luau", try src.cpuGet(.script_source));
+        const script = try self.runtime.loadScript("asset://systems/fly_cam.luau");
         try self.runtime.setGlobal(script, "world", World3D.World3DHandle{ .ecs = &self.ecs, .id = world.id });
         _ = self.runtime.instantiateSystem(script, world) catch |e| std.log.err("Failed to instantiate fly system: {t}", .{e});
     }
     {
-        const src = try self.assets.load("asset://systems/spin.luau");
-        defer src.cpuRelease();
-        const script = try self.runtime.loadScript("spin.luau", try src.cpuGet(.script_source));
+        const script = try self.runtime.loadScript("asset://systems/spin.luau");
         try self.runtime.setGlobal(script, "world", World3D.World3DHandle{ .ecs = &self.ecs, .id = world.id });
         _ = self.runtime.instantiateSystem(script, world) catch |e| std.log.err("Failed to instantiate spin system: {t}", .{e});
     }
@@ -316,17 +319,13 @@ pub fn setupTestScene(self: *Summit) !void {
 
     // Scripts
     {
-        const source = try self.assets.load("asset://scripts/camera.luau");
-        defer source.cpuRelease();
-        const script = try self.runtime.loadScript("camera.luau", try source.cpuGet(.script_source));
+        const script = try self.runtime.loadScript("asset://scripts/camera.luau");
         try world.set(camera, script_id, scripting.Runtime.ScriptHandle, script);
         try self.runtime.setGlobal(script, "world", World3D.World3DHandle{ .ecs = &self.ecs, .id = world.id });
         self.runtime.instantiateEntity(script, camera) catch |e| std.log.err("Failed to instantiate camera script: {t}", .{e});
     }
     {
-        const source = try self.assets.load("asset://scripts/floor.luau");
-        defer source.cpuRelease();
-        const script = try self.runtime.loadScript("floor.luau", try source.cpuGet(.script_source));
+        const script = try self.runtime.loadScript("asset://scripts/floor.luau");
         try world.set(floor, script_id, scripting.Runtime.ScriptHandle, script);
         try self.runtime.setGlobal(script, "world", World3D.World3DHandle{ .ecs = &self.ecs, .id = world.id });
         self.runtime.instantiateEntity(script, floor) catch |e| std.log.err("Failed to instantiate floor script: {t}", .{e});

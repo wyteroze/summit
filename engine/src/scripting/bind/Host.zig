@@ -14,6 +14,7 @@ const render = @import("../../render/render.zig");
 const Windowing = @import("../../windowing/Windowing.zig");
 const Filesystem = @import("../../filesystem/Filesystem.zig");
 const Perf = @import("../../perf/Perf.zig");
+const Packages = @import("../../packages/Packages.zig");
 
 var key: u8 = 0;
 const Host = @This();
@@ -26,6 +27,7 @@ windowing: *Windowing,
 gizmos: *render.Gizmos,
 filesystem: *Filesystem,
 perf: *Perf,
+packages: *Packages,
 codecs: []const Codec = &.{},
 
 pub fn attach(self: *Host, l: *zlua.Lua) void {

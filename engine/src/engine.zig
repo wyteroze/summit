@@ -19,3 +19,4 @@ pub const World3D = @import("world3d/World3D.zig");
 pub const doc = @import("doc/doc.zig");
 pub const Filesystem = @import("filesystem/Filesystem.zig");
 pub const Perf = @import("perf/Perf.zig");
+pub const Packages = @import("packages/Packages.zig");

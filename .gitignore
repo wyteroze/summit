@@ -10,3 +10,4 @@ engine/vendor/DiligentEngine/build-*
 engine/vendor/DiligentEngine/install-*
 docs/
 mkdocs.yml
+perfdump.json.gz

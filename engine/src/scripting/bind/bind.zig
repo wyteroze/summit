@@ -7,6 +7,8 @@ pub const registry = @import("registry.zig");
 pub const Marshal = @import("marshal.zig").Marshal;
 pub const Wrap = @import("wrap.zig").Wrap;
 pub const Pushed = @import("wrap.zig").Pushed;
+pub const require = @import("require.zig");
+pub const errors = @import("errors.zig");
 
 const util = @import("util.zig");
 pub const api = @import("api.zig").all;
